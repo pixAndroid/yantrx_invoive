@@ -43,11 +43,11 @@ export function errorHandler(
   // P2021 – Table or view does not exist in the current database
   // P2010 – Raw query failed (can occur when schema is missing)
   if (err.code === 'P2021' || err.code === 'P2010') {
-    console.error('❌ Database schema error – run `prisma db push` or `prisma migrate dev`:', err.message);
+    console.error('❌ Database schema error – run `pnpm db:push` or `pnpm db:seed`:', err.message);
     res.status(503).json({
       success: false,
       error: isDev
-        ? `Database schema not initialised. Run 'prisma db push' then 'prisma db:seed'. Detail: ${err.message}`
+        ? `Database schema not initialized. Run 'pnpm db:push' then 'pnpm db:seed'. Detail: ${err.message}`
         : 'Service temporarily unavailable. Please try again later.',
       code: 'DB_SCHEMA_ERROR',
     });

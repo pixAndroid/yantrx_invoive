@@ -23,7 +23,7 @@ async function bootstrap() {
       await prisma.user.count();
       console.log('✅ Database schema verified');
     } catch {
-      console.error('❌ Database schema is not initialised (tables missing).');
+      console.error('❌ Database schema is not initialized (tables missing).');
       console.error('   Run the following commands from the workspace root then restart:');
       console.error('     pnpm db:push     # apply schema to database');
       console.error('     pnpm db:seed     # seed plans, modules and demo data\n');
