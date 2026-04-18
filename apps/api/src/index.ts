@@ -15,6 +15,22 @@ async function bootstrap() {
     await prisma.$connect();
     console.log('✅ Database connected successfully');
 
+    // Verify the database schema has been initialised (tables exist).
+    // $connect() only tests the TCP connection; it does not check schema.
+    // Without this check a missing schema silently causes 500 errors on every
+    // auth request, which is very hard to diagnose.
+    try {
+      await prisma.user.count();
+      console.log('✅ Database schema verified');
+    } catch {
+      console.error('❌ Database schema is not initialized (tables missing).');
+      console.error('   Run the following commands from the workspace root then restart:');
+      console.error('     pnpm db:push     # apply schema to database');
+      console.error('     pnpm db:seed     # seed plans, modules and demo data\n');
+      await prisma.$disconnect();
+      process.exit(1);
+    }
+
     app.listen(PORT, () => {
       console.log(`\n🚀 Yantrix API Server running on port ${PORT}`);
       console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);

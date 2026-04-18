@@ -271,11 +271,6 @@ router.post(
         return;
       }
 
-      if (purpose === 'login' && user === null) {
-        res.status(404).json({ success: false, error: 'User not found' });
-        return;
-      }
-
       // For login OTP, create user if not exists (phone-first signup)
       if (!user && phone && purpose !== 'reset') {
         user = await prisma.user.create({
