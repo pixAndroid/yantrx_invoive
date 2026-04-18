@@ -1,21 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, Search, Package, Tag, TrendingUp } from 'lucide-react';
+import { Plus, Search, Package, Tag, TrendingUp, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
-const PRODUCTS = [
-  { id: '1', name: 'Web Development Services', type: 'service', hsnSac: '998314', price: 50000, gstRate: 18, category: 'Technology', stock: null },
-  { id: '2', name: 'Monthly Maintenance', type: 'service', hsnSac: '998313', price: 5000, gstRate: 18, category: 'Technology', stock: null },
-  { id: '3', name: 'Cloud Hosting (Annual)', type: 'product', hsnSac: '998315', price: 12000, gstRate: 18, category: 'Hosting', stock: 100 },
-  { id: '4', name: 'SEO Optimization', type: 'service', hsnSac: '998367', price: 15000, gstRate: 18, category: 'Marketing', stock: null },
-];
+interface Product {
+  id: string;
+  name: string;
+  type: string;
+  hsnSac: string | null;
+  price: number;
+  gstRate: number;
+  category: string | null;
+  stock: number | null;
+  isActive: boolean;
+}
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
-  const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()));
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ limit: '100' });
+      const res = await apiFetch<{ data: Product[] }>(`/products?${params}`);
+      setProducts(res.data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  const filtered = products.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
     <div className="p-6 lg:p-8">
@@ -24,10 +52,19 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Products & Services</h1>
           <p className="text-gray-500 mt-1">{filtered.length} items in catalog</p>
         </div>
-        <Link href="/products/new" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-          <Plus className="h-4 w-4" /> Add Product
-        </Link>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchProducts} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <Link href="/products/new" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Plus className="h-4 w-4" /> Add Product
+          </Link>
+        </div>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{error}</div>
+      )}
 
       <div className="mb-6">
         <div className="relative max-w-sm">
@@ -49,7 +86,21 @@ export default function ProductsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filtered.map((product, idx) => (
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <tr key={i}><td colSpan={6} className="px-4 py-4"><div className="h-8 bg-gray-100 rounded animate-pulse" /></td></tr>
+              ))
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center">
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No products found</p>
+                  <Link href="/products/new" className="mt-3 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+                    <Plus className="h-4 w-4" /> Add your first product
+                  </Link>
+                </td>
+              </tr>
+            ) : filtered.map((product, idx) => (
               <motion.tr key={product.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }} className="hover:bg-gray-50">
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
@@ -64,11 +115,13 @@ export default function ProductsPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 text-sm font-mono text-gray-500">{product.hsnSac}</td>
+                <td className="px-4 py-4 text-sm font-mono text-gray-500">{product.hsnSac || '—'}</td>
                 <td className="px-4 py-4">
-                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1">
-                    <Tag className="h-3 w-3" /> {product.category}
-                  </span>
+                  {product.category ? (
+                    <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1">
+                      <Tag className="h-3 w-3" /> {product.category}
+                    </span>
+                  ) : '—'}
                 </td>
                 <td className="px-4 py-4 text-right text-sm font-semibold text-gray-900">₹{product.price.toLocaleString('en-IN')}</td>
                 <td className="px-4 py-4 text-sm text-gray-600">{product.gstRate}%</td>
@@ -81,3 +134,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+

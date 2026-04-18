@@ -150,4 +150,46 @@ router.get('/audit-logs', async (req: AuthenticatedRequest, res: Response, next:
   } catch (error) { next(error); }
 });
 
+router.get('/subscriptions', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const page = parseInt(req.query.page as string || '1');
+    const limit = parseInt(req.query.limit as string || '20');
+    const [subs, total] = await Promise.all([
+      prisma.subscription.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          business: { select: { id: true, name: true } },
+          plan: { select: { id: true, name: true, price: true } },
+        },
+      }),
+      prisma.subscription.count(),
+    ]);
+    res.json({
+      success: true,
+      data: subs,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total, hasPrev: page > 1 },
+    });
+  } catch (error) { next(error); }
+});
+
+router.get('/modules', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const modules = await prisma.module.findMany({ orderBy: { sortOrder: 'asc' } });
+    res.json({ success: true, data: modules });
+  } catch (error) { next(error); }
+});
+
+router.put('/modules/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { isActive } = req.body;
+    const mod = await prisma.module.update({
+      where: { id: req.params.id },
+      data: { isActive },
+    });
+    res.json({ success: true, data: mod });
+  } catch (error) { next(error); }
+});
+
 export default router;

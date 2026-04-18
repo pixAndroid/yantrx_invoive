@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, FileText } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +19,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, password: formData.password }),
@@ -42,7 +43,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/otp/send`, {
+      const res = await fetch(`${API_URL}/auth/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: formData.phone, purpose: 'login' }),
@@ -65,7 +66,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/otp/verify`, {
+      const res = await fetch(`${API_URL}/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: formData.phone, code: formData.otp, purpose: 'login' }),

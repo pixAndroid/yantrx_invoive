@@ -1,80 +1,113 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Users, IndianRupee, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-
-const STAT_COLORS: Record<string, { bg: string; icon: string }> = {
-  indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-600' },
-  green: { bg: 'bg-green-50', icon: 'text-green-600' },
-  blue: { bg: 'bg-blue-50', icon: 'text-blue-600' },
-  amber: { bg: 'bg-amber-50', icon: 'text-amber-600' },
-};
-
-const STATS = [
-  {
-    label: 'Total Revenue',
-    value: '₹4,82,500',
-    change: '+12.5%',
-    trend: 'up',
-    icon: IndianRupee,
-    color: 'indigo',
-    description: 'vs. last month',
-  },
-  {
-    label: 'Invoices This Month',
-    value: '47',
-    change: '+8.3%',
-    trend: 'up',
-    icon: FileText,
-    color: 'green',
-    description: 'vs. last month',
-  },
-  {
-    label: 'Active Customers',
-    value: '89',
-    change: '+5.2%',
-    trend: 'up',
-    icon: Users,
-    color: 'blue',
-    description: 'total customers',
-  },
-  {
-    label: 'Pending Amount',
-    value: '₹38,200',
-    change: '-3.1%',
-    trend: 'down',
-    icon: Clock,
-    color: 'amber',
-    description: '4 invoices due',
-  },
-];
-
-const RECENT_INVOICES = [
-  { id: '1', number: 'INV-0047', customer: 'Acme Corporation', amount: '₹25,900', status: 'Paid', date: '2 hours ago' },
-  { id: '2', number: 'INV-0046', customer: 'Sharma Enterprises', amount: '₹12,400', status: 'Sent', date: '1 day ago' },
-  { id: '3', number: 'INV-0045', customer: 'Patel Trading', amount: '₹8,500', status: 'Overdue', date: '3 days ago' },
-  { id: '4', number: 'INV-0044', customer: 'Tech Solutions', amount: '₹45,000', status: 'Draft', date: '4 days ago' },
-  { id: '5', number: 'INV-0043', customer: 'Gupta & Sons', amount: '₹15,750', status: 'Paid', date: '5 days ago' },
-];
+import { apiFetch, getUserData } from '@/lib/api';
 
 const STATUS_CONFIG = {
-  Paid: { class: 'bg-green-100 text-green-700', icon: CheckCircle },
-  Sent: { class: 'bg-blue-100 text-blue-700', icon: Clock },
-  Overdue: { class: 'bg-red-100 text-red-700', icon: AlertCircle },
-  Draft: { class: 'bg-gray-100 text-gray-600', icon: FileText },
+  PAID: { label: 'Paid', class: 'bg-green-100 text-green-700', icon: CheckCircle },
+  SENT: { label: 'Sent', class: 'bg-blue-100 text-blue-700', icon: Clock },
+  OVERDUE: { label: 'Overdue', class: 'bg-red-100 text-red-700', icon: AlertCircle },
+  DRAFT: { label: 'Draft', class: 'bg-gray-100 text-gray-600', icon: FileText },
+  PARTIALLY_PAID: { label: 'Partial', class: 'bg-amber-100 text-amber-700', icon: Clock },
 };
 
 const CHART_DATA = [65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88, 72];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+interface DashboardStats {
+  totalRevenue: number;
+  invoicesThisMonth: number;
+  activeCustomers: number;
+  pendingAmount: number;
+  pendingInvoicesCount: number;
+  recentInvoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    total: number;
+    status: string;
+    createdAt: string;
+    customer: { name: string } | null;
+  }>;
+}
+
 export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const userData = getUserData();
+  const firstName = userData.name?.split(' ')[0] || 'there';
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  useEffect(() => {
+    Promise.all([
+      apiFetch<{ data: { totalRevenue: number; invoicesThisMonth: number; activeCustomers: number; pendingAmount: number; pendingInvoicesCount: number } }>('/business/stats').catch(() => null),
+      apiFetch<{ data: any[]; meta: object }>('/invoices?limit=5').catch(() => null),
+    ]).then(([statsRes, invoicesRes]) => {
+      setStats({
+        totalRevenue: statsRes?.data?.totalRevenue ?? 0,
+        invoicesThisMonth: statsRes?.data?.invoicesThisMonth ?? 0,
+        activeCustomers: statsRes?.data?.activeCustomers ?? 0,
+        pendingAmount: statsRes?.data?.pendingAmount ?? 0,
+        pendingInvoicesCount: statsRes?.data?.pendingInvoicesCount ?? 0,
+        recentInvoices: invoicesRes?.data ?? [],
+      });
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const statCards = [
+    {
+      label: 'Total Revenue',
+      value: stats ? `₹${stats.totalRevenue.toLocaleString('en-IN')}` : '—',
+      change: '+12.5%',
+      trend: 'up' as const,
+      icon: IndianRupee,
+      bg: 'bg-indigo-50',
+      iconColor: 'text-indigo-600',
+    },
+    {
+      label: 'Invoices This Month',
+      value: stats ? String(stats.invoicesThisMonth) : '—',
+      change: '+8.3%',
+      trend: 'up' as const,
+      icon: FileText,
+      bg: 'bg-green-50',
+      iconColor: 'text-green-600',
+    },
+    {
+      label: 'Active Customers',
+      value: stats ? String(stats.activeCustomers) : '—',
+      change: '+5.2%',
+      trend: 'up' as const,
+      icon: Users,
+      bg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+    },
+    {
+      label: 'Pending Amount',
+      value: stats ? `₹${stats.pendingAmount.toLocaleString('en-IN')}` : '—',
+      change: '-3.1%',
+      trend: 'down' as const,
+      icon: Clock,
+      bg: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+      sub: stats ? `${stats.pendingInvoicesCount} invoices due` : '',
+    },
+  ];
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Good morning, Demo! 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{getGreeting()}, {firstName}! 👋</h1>
           <p className="text-gray-500 mt-1">Here&apos;s what&apos;s happening with your business today.</p>
         </div>
         <Link
@@ -88,7 +121,7 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {STATS.map((stat, idx) => (
+        {statCards.map((stat, idx) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
@@ -97,15 +130,19 @@ export default function DashboardPage() {
             className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
           >
             <div className="flex items-start justify-between mb-3">
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${STAT_COLORS[stat.color]?.bg ?? 'bg-gray-50'}`}>
-                <stat.icon className={`h-5 w-5 ${STAT_COLORS[stat.color]?.icon ?? 'text-gray-600'}`} />
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.bg}`}>
+                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
               </div>
               <span className={`flex items-center gap-0.5 text-xs font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                 {stat.trend === 'up' ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                 {stat.change}
               </span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
+            {loading ? (
+              <div className="h-8 bg-gray-100 rounded animate-pulse mb-1" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
+            )}
             <p className="text-xs text-gray-500">{stat.label}</p>
           </motion.div>
         ))}
@@ -138,10 +175,7 @@ export default function DashboardPage() {
                   className="w-full rounded-t-sm bg-indigo-100 relative overflow-hidden group cursor-pointer"
                   style={{ height: `${(value / 100) * 140}px` }}
                 >
-                  <div
-                    className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600"
-                    style={{ height: '60%' }}
-                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600" style={{ height: '60%' }} />
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center">
                     <span className="text-xs font-bold text-indigo-700 bg-white/80 rounded px-1">{value}K</span>
                   </div>
@@ -207,8 +241,21 @@ export default function DashboardPage() {
         </div>
 
         <div className="divide-y divide-gray-50">
-          {RECENT_INVOICES.map(invoice => {
-            const statusConfig = STATUS_CONFIG[invoice.status as keyof typeof STATUS_CONFIG];
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-6 py-4">
+                <div className="h-8 bg-gray-100 rounded animate-pulse" />
+              </div>
+            ))
+          ) : (stats?.recentInvoices ?? []).length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <p className="text-gray-500 text-sm">No invoices yet.</p>
+              <Link href="/invoices/new" className="mt-2 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+                <Plus className="h-4 w-4" /> Create your first invoice
+              </Link>
+            </div>
+          ) : (stats?.recentInvoices ?? []).map(invoice => {
+            const statusConfig = STATUS_CONFIG[invoice.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT;
             return (
               <Link
                 key={invoice.id}
@@ -216,15 +263,17 @@ export default function DashboardPage() {
                 className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{invoice.number}</p>
-                  <p className="text-xs text-gray-500 truncate">{invoice.customer}</p>
+                  <p className="text-sm font-semibold text-gray-900">{invoice.invoiceNumber}</p>
+                  <p className="text-xs text-gray-500 truncate">{invoice.customer?.name || 'Unknown'}</p>
                 </div>
-                <div className="hidden sm:block text-xs text-gray-400">{invoice.date}</div>
+                <div className="hidden sm:block text-xs text-gray-400">
+                  {new Date(invoice.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                </div>
                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig.class}`}>
                   <statusConfig.icon className="h-3 w-3" />
-                  {invoice.status}
+                  {statusConfig.label}
                 </span>
-                <span className="text-sm font-semibold text-gray-900">{invoice.amount}</span>
+                <span className="text-sm font-semibold text-gray-900">₹{invoice.total.toLocaleString('en-IN')}</span>
               </Link>
             );
           })}
