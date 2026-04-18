@@ -60,6 +60,43 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
   } catch (error) { next(error); }
 });
 
+router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.user!.businessId;
+    if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalRevenue, invoicesThisMonth, activeCustomers, pendingAgg] = await Promise.all([
+      prisma.invoice.aggregate({
+        where: { businessId, isPaid: true },
+        _sum: { total: true },
+      }),
+      prisma.invoice.count({
+        where: { businessId, createdAt: { gte: startOfMonth } },
+      }),
+      prisma.customer.count({ where: { businessId } }),
+      prisma.invoice.aggregate({
+        where: { businessId, isPaid: false, status: { not: 'DRAFT' } },
+        _sum: { amountDue: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue: totalRevenue._sum.total || 0,
+        invoicesThisMonth,
+        activeCustomers,
+        pendingAmount: pendingAgg._sum.amountDue || 0,
+        pendingInvoicesCount: pendingAgg._count.id || 0,
+      },
+    });
+  } catch (error) { next(error); }
+});
+
 router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
