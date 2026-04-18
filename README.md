@@ -26,7 +26,6 @@ Yantrix Core is a **production-grade SaaS platform** with **Yantrix Invoice** as
 - ✅ **Phone OTP Auth** — Login via mobile OTP or email/password
 - ✅ **Super Admin Panel** — Manage all businesses, plans, reviews, audit logs
 - ✅ **REST API** — Full OpenAPI/Swagger documentation
-- ✅ **Docker Ready** — Complete Docker Compose setup
 
 ---
 
@@ -46,12 +45,9 @@ yantrx_invoive/
 ├── prisma/
 │   ├── schema.prisma # Complete PostgreSQL schema (20 models)
 │   └── seed.ts       # Seed data with test accounts
-├── docker/
-│   └── nginx/        # Nginx reverse proxy config
 ├── future/
 │   ├── crm/          # CRM module (planned)
 │   └── hrms/         # HRMS module (planned)
-├── docker-compose.yml
 ├── turbo.json
 └── .env.example
 ```
@@ -64,8 +60,8 @@ yantrx_invoive/
 
 - Node.js 18+
 - pnpm 9+
-- PostgreSQL 14+ (or use Docker)
-- Docker (optional)
+- PostgreSQL 14+
+- Redis
 
 ### 1. Clone & Install
 
@@ -82,11 +78,9 @@ cp .env.example .env
 # Edit .env with your database URL, JWT secrets, Razorpay keys, etc.
 ```
 
-### 3. Start Database (Docker)
+### 3. Start Database
 
-```bash
-docker-compose up postgres redis -d
-```
+Start PostgreSQL and Redis locally, then make sure they are accessible at the URLs configured in your `.env` file.
 
 ### 4. Setup Database
 
@@ -190,29 +184,6 @@ OtpCode, RefreshToken
 
 ---
 
-## 🐳 Docker Deployment
-
-### Full Stack (Production)
-
-```bash
-# Build and start all services
-docker-compose up -d --build
-
-# Run migrations
-docker-compose exec api npx prisma migrate deploy
-
-# Seed database
-docker-compose exec api npx prisma db seed
-```
-
-**Services:**
-- Web App: http://localhost:3000
-- Admin Panel: http://localhost:3001
-- API: http://localhost:4000
-- Nginx: http://localhost:80
-
----
-
 ## 🧱 Tech Stack
 
 | Layer | Technology |
@@ -225,7 +196,7 @@ docker-compose exec api npx prisma db seed
 | Auth | JWT (access + refresh tokens), OTP via SMS |
 | Payments | Razorpay |
 | Build | Turborepo, pnpm workspaces |
-| DevOps | Docker, Docker Compose, Nginx |
+| DevOps | Nginx |
 | API Docs | Swagger UI (swagger-jsdoc) |
 
 ---
