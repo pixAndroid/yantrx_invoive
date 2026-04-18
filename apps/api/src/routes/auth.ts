@@ -75,7 +75,7 @@ router.post(
             userId: user.id,
             businessId: business.id,
             role: UserRole.OWNER,
-            permissions: JSON.stringify(['*']),
+            permissions: ['*'],
             joinedAt: new Date(),
           },
         });

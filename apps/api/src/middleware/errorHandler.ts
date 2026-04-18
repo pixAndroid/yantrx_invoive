@@ -12,6 +12,17 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  // Prisma client / database connection errors — checked first so they return
+  // 503 before falling through to the generic 500 handler.
+  if (err.code === 'P1001' || err.code === 'P1003' || err.code === 'P1008' || err.code === 'P1017') {
+    res.status(503).json({
+      success: false,
+      error: 'Database unavailable. Please try again shortly.',
+      code: 'DB_UNAVAILABLE',
+    });
+    return;
+  }
+
   console.error('❌ API Error:', {
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
