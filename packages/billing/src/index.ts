@@ -2,10 +2,26 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { type Plan, type Subscription } from '@yantrix/shared-types';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+// Lazily create the Razorpay client so that importing this package does not
+// crash when RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are not yet present in the
+// environment (e.g. during server startup before dotenv has run, or when the
+// keys are intentionally omitted in non-payment environments).
+let _razorpay: Razorpay | null = null;
+
+function getRazorpay(): Razorpay {
+  if (!_razorpay) {
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!key_id || !key_secret) {
+      throw new Error(
+        'RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in the environment before using Razorpay.'
+      );
+    }
+    _razorpay = new Razorpay({ key_id, key_secret });
+  }
+  return _razorpay;
+}
+
 
 // ─── Order Creation ────────────────────────────────────────────────────────
 
@@ -17,7 +33,7 @@ export interface CreateOrderOptions {
 }
 
 export async function createOrder(options: CreateOrderOptions) {
-  return razorpay.orders.create({
+  return getRazorpay().orders.create({
     amount: Math.round(options.amount * 100),
     currency: options.currency || 'INR',
     receipt: options.receipt,
@@ -35,7 +51,7 @@ export interface CreateSubscriptionOptions {
 }
 
 export async function createSubscription(options: CreateSubscriptionOptions) {
-  return razorpay.subscriptions.create({
+  return getRazorpay().subscriptions.create({
     plan_id: options.planId,
     total_count: options.totalCount || 12,
     quantity: options.quantity || 1,
@@ -44,11 +60,11 @@ export async function createSubscription(options: CreateSubscriptionOptions) {
 }
 
 export async function cancelSubscription(subscriptionId: string, cancelAtEnd = true) {
-  return razorpay.subscriptions.cancel(subscriptionId, cancelAtEnd);
+  return getRazorpay().subscriptions.cancel(subscriptionId, cancelAtEnd);
 }
 
 export async function getSubscription(subscriptionId: string) {
-  return razorpay.subscriptions.fetch(subscriptionId);
+  return getRazorpay().subscriptions.fetch(subscriptionId);
 }
 
 // ─── Payment Link ──────────────────────────────────────────────────────────
@@ -67,7 +83,7 @@ export interface CreatePaymentLinkOptions {
 }
 
 export async function createPaymentLink(options: CreatePaymentLinkOptions) {
-  return razorpay.paymentLink.create({
+  return getRazorpay().paymentLink.create({
     amount: Math.round(options.amount * 100),
     currency: 'INR',
     description: options.description,
@@ -202,4 +218,4 @@ export function calculateTax(
   };
 }
 
-export { razorpay };
+
