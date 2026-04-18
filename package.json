@@ -21,6 +21,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "turbo run type-check"
   },
+  "dependencies": {
+    "@prisma/client": "^5.13.0"
+  },
   "devDependencies": {
     "turbo": "^2.0.0",
     "prettier": "^3.2.5",
