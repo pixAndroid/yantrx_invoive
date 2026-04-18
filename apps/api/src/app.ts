@@ -1,0 +1,105 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './swagger/config';
+import { errorHandler } from './middleware/errorHandler';
+import { rateLimiter } from './middleware/rateLimiter';
+
+// Routes
+import authRoutes from './routes/auth';
+import businessRoutes from './routes/business';
+import customerRoutes from './routes/customers';
+import productRoutes from './routes/products';
+import invoiceRoutes from './routes/invoices';
+import paymentRoutes from './routes/payments';
+import reportRoutes from './routes/reports';
+import subscriptionRoutes from './routes/subscriptions';
+import moduleRoutes from './routes/modules';
+import webhookRoutes from './routes/webhooks';
+import adminRoutes from './routes/admin';
+
+const app = express();
+
+// ─── Security Middleware ────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001').split(',');
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Business-Id'],
+}));
+
+// ─── General Middleware ─────────────────────────────────────────────────────
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Raw body for webhooks (must be before json parser)
+app.use('/api/v1/webhooks', express.raw({ type: 'application/json' }));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ─── Rate Limiting ──────────────────────────────────────────────────────────
+app.use('/api/v1/auth', rateLimiter({ max: 20, windowMs: 15 * 60 * 1000 }));
+app.use('/api/v1', rateLimiter({ max: 200, windowMs: 60 * 1000 }));
+
+// ─── Health Check ───────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'yantrix-api',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+// ─── API Documentation ──────────────────────────────────────────────────────
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Yantrix API Docs',
+  customCss: '.swagger-ui .topbar { background-color: #4f46e5; }',
+}));
+
+app.get('/api/docs.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// ─── API Routes ─────────────────────────────────────────────────────────────
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/business', businessRoutes);
+app.use('/api/v1/customers', customerRoutes);
+app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/subscriptions', subscriptionRoutes);
+app.use('/api/v1/modules', moduleRoutes);
+app.use('/api/v1/webhooks', webhookRoutes);
+app.use('/api/v1/admin', adminRoutes);
+
+// ─── 404 Handler ────────────────────────────────────────────────────────────
+app.use((_req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found',
+  });
+});
+
+// ─── Global Error Handler ───────────────────────────────────────────────────
+app.use(errorHandler);
+
+export default app;

@@ -1,0 +1,295 @@
+import { Router, Response, NextFunction } from 'express';
+import { body } from 'express-validator';
+import { validate } from '../middleware/validation';
+import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import prisma from '../utils/prisma';
+import { calculateTax } from '@yantrix/billing';
+
+const router = Router();
+router.use(authenticate);
+
+router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.user!.businessId;
+    if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    const page = parseInt(req.query.page as string || '1');
+    const limit = parseInt(req.query.limit as string || '20');
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const type = req.query.type as string;
+
+    const where = {
+      businessId,
+      ...(search && {
+        OR: [
+          { invoiceNumber: { contains: search, mode: 'insensitive' as const } },
+          { customer: { name: { contains: search, mode: 'insensitive' as const } } },
+        ],
+      }),
+      ...(status && { status: status as any }),
+      ...(type && { type: type as any }),
+    };
+
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { customer: { select: { id: true, name: true, email: true } }, _count: { select: { items: true } } },
+      }),
+      prisma.invoice.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: invoices,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total, hasPrev: page > 1 },
+    });
+  } catch (error) { next(error); }
+});
+
+router.post('/', [
+  body('customerId').notEmpty().withMessage('Customer required'),
+  body('items').isArray({ min: 1 }).withMessage('At least one item required'),
+  body('items.*.description').notEmpty().withMessage('Item description required'),
+  body('items.*.quantity').isFloat({ min: 0.01 }).withMessage('Valid quantity required'),
+  body('items.*.price').isFloat({ min: 0 }).withMessage('Valid price required'),
+], validate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.user!.businessId;
+    if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    const { customerId, branchId, type, issueDate, dueDate, items, discountType, discountValue, isInterState, placeOfSupply, notes, terms } = req.body;
+
+    // Verify customer belongs to business
+    const customer = await prisma.customer.findFirst({ where: { id: customerId, businessId } });
+    if (!customer) { res.status(404).json({ success: false, error: 'Customer not found' }); return; }
+
+    // Get next invoice number
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) { res.status(404).json({ success: false, error: 'Business not found' }); return; }
+
+    const invoiceNumber = `${business.invoicePrefix}-${String(business.invoiceSeq).padStart(4, '0')}`;
+
+    // Calculate totals
+    let subtotal = 0;
+    let cgstTotal = 0;
+    let sgstTotal = 0;
+    let igstTotal = 0;
+    let cessTotal = 0;
+
+    const processedItems = items.map((item: any, idx: number) => {
+      const itemSubtotal = item.quantity * item.price;
+      const itemDiscount = (item.discount || 0);
+      const taxableAmount = itemSubtotal - itemDiscount;
+      const tax = calculateTax(taxableAmount, item.gstRate || 0, item.cessRate || 0, isInterState || false);
+
+      subtotal += itemSubtotal;
+      cgstTotal += tax.cgst;
+      sgstTotal += tax.sgst;
+      igstTotal += tax.igst;
+      cessTotal += tax.cess;
+
+      return {
+        productId: item.productId || null,
+        description: item.description,
+        hsnSac: item.hsnSac || null,
+        quantity: item.quantity,
+        unit: item.unit || null,
+        price: item.price,
+        discount: itemDiscount,
+        taxableAmount,
+        gstRate: item.gstRate || 0,
+        cgst: tax.cgst,
+        sgst: tax.sgst,
+        igst: tax.igst,
+        cess: tax.cess,
+        total: tax.total,
+        sortOrder: idx,
+      };
+    });
+
+    // Apply invoice-level discount
+    let discountTotal = 0;
+    if (discountType && discountValue) {
+      discountTotal = discountType === 'percentage' ? (subtotal * discountValue) / 100 : discountValue;
+    }
+
+    const taxableAmount = subtotal - discountTotal;
+    const gstTotal = cgstTotal + sgstTotal + igstTotal + cessTotal;
+    const total = taxableAmount + gstTotal;
+
+    const invoice = await prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.create({
+        data: {
+          businessId,
+          customerId,
+          branchId: branchId || null,
+          invoiceNumber,
+          type: type || 'INVOICE',
+          status: 'DRAFT',
+          issueDate: issueDate ? new Date(issueDate) : new Date(),
+          dueDate: dueDate ? new Date(dueDate) : null,
+          subtotal,
+          discountType: discountType || null,
+          discountValue: discountValue || null,
+          discountTotal,
+          taxableAmount,
+          cgstTotal,
+          sgstTotal,
+          igstTotal,
+          cessTotal,
+          gstTotal,
+          total,
+          amountPaid: 0,
+          amountDue: total,
+          isInterState: isInterState || false,
+          placeOfSupply: placeOfSupply || null,
+          notes: notes || null,
+          terms: terms || business.termsAndConditions || null,
+          createdById: req.user!.id,
+          items: { create: processedItems },
+        },
+        include: { customer: true, items: { include: { product: true } } },
+      });
+
+      // Increment invoice sequence
+      await tx.business.update({
+        where: { id: businessId },
+        data: { invoiceSeq: { increment: 1 } },
+      });
+
+      return inv;
+    });
+
+    res.status(201).json({ success: true, data: invoice });
+  } catch (error) { next(error); }
+});
+
+router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId: req.user!.businessId! },
+      include: {
+        customer: true,
+        branch: true,
+        items: { include: { product: true }, orderBy: { sortOrder: 'asc' } },
+        payments: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+    if (!invoice) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+    res.json({ success: true, data: invoice });
+  } catch (error) { next(error); }
+});
+
+router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId: req.user!.businessId! },
+    });
+    if (!existing) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+
+    if (['PAID', 'CANCELLED'].includes(existing.status)) {
+      res.status(400).json({ success: false, error: `Cannot edit a ${existing.status.toLowerCase()} invoice` });
+      return;
+    }
+
+    const { businessId: _bId, createdById: _cId, invoiceNumber: _iN, items: _items, ...updateData } = req.body;
+
+    const invoice = await prisma.invoice.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: { customer: true, items: true },
+    });
+    res.json({ success: true, data: invoice });
+  } catch (error) { next(error); }
+});
+
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId: req.user!.businessId! },
+    });
+    if (!existing) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+
+    if (existing.status === 'PAID') {
+      res.status(400).json({ success: false, error: 'Cannot delete a paid invoice' });
+      return;
+    }
+
+    await prisma.invoice.update({
+      where: { id: req.params.id },
+      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    });
+
+    res.json({ success: true, message: 'Invoice cancelled' });
+  } catch (error) { next(error); }
+});
+
+router.post('/:id/send', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId: req.user!.businessId! },
+      include: { customer: true },
+    });
+    if (!invoice) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+
+    // TODO: Send email with PDF
+    const updated = await prisma.invoice.update({
+      where: { id: req.params.id },
+      data: { status: 'SENT', sentAt: new Date() },
+    });
+
+    res.json({ success: true, message: 'Invoice sent successfully', data: updated });
+  } catch (error) { next(error); }
+});
+
+router.post('/:id/mark-paid', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId: req.user!.businessId! },
+    });
+    if (!invoice) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+
+    const { amount, method, transactionRef, notes, paidAt } = req.body;
+    const paymentAmount = amount || invoice.amountDue;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.create({
+        data: {
+          invoiceId: invoice.id,
+          businessId: req.user!.businessId!,
+          amount: paymentAmount,
+          method: method || 'CASH',
+          status: 'SUCCESS',
+          transactionRef: transactionRef || null,
+          notes: notes || null,
+          paidAt: paidAt ? new Date(paidAt) : new Date(),
+        },
+      });
+
+      const newAmountPaid = invoice.amountPaid + paymentAmount;
+      const newAmountDue = Math.max(0, invoice.total - newAmountPaid);
+      const isPaid = newAmountDue <= 0;
+
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          amountPaid: newAmountPaid,
+          amountDue: newAmountDue,
+          status: isPaid ? 'PAID' : 'PARTIALLY_PAID',
+          isPaid,
+          paidAt: isPaid ? new Date() : null,
+        },
+      });
+    });
+
+    const updated = await prisma.invoice.findUnique({ where: { id: invoice.id }, include: { payments: true } });
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+export default router;
