@@ -6,30 +6,62 @@ export interface AppError extends Error {
   errors?: Record<string, string[]>;
 }
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 export function errorHandler(
   err: AppError,
   _req: Request,
   res: Response,
   _next: NextFunction
 ): void {
-  // Prisma client / database connection errors — checked first so they return
-  // 503 before falling through to the generic 500 handler.
-  if (err.code === 'P1001' || err.code === 'P1003' || err.code === 'P1008' || err.code === 'P1017') {
+  // ── Prisma connection / availability errors ─────────────────────────────
+  // P1001 – Can't reach database server
+  // P1002 – Database server timeout
+  // P1003 – Database file not found
+  // P1008 – Operations timed out
+  // P1009 – Database already exists (shouldn't bubble, but guard anyway)
+  // P1010 – User denied access on the database
+  // P1017 – Server closed the connection
+  if (
+    err.code === 'P1001' ||
+    err.code === 'P1002' ||
+    err.code === 'P1003' ||
+    err.code === 'P1008' ||
+    err.code === 'P1010' ||
+    err.code === 'P1017'
+  ) {
     res.status(503).json({
       success: false,
       error: 'Database unavailable. Please try again shortly.',
       code: 'DB_UNAVAILABLE',
+      ...(isDev && { detail: err.message }),
+    });
+    return;
+  }
+
+  // ── Database schema not initialised ────────────────────────────────────
+  // P2021 – Table or view does not exist in the current database
+  // P2010 – Raw query failed (can occur when schema is missing)
+  if (err.code === 'P2021' || err.code === 'P2010') {
+    console.error('❌ Database schema error – run `prisma db push` or `prisma migrate dev`:', err.message);
+    res.status(503).json({
+      success: false,
+      error: isDev
+        ? `Database schema not initialised. Run 'prisma db push' then 'prisma db:seed'. Detail: ${err.message}`
+        : 'Service temporarily unavailable. Please try again later.',
+      code: 'DB_SCHEMA_ERROR',
     });
     return;
   }
 
   console.error('❌ API Error:', {
     message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    code: err.code,
+    stack: isDev ? err.stack : undefined,
     statusCode: err.statusCode,
   });
 
-  // Prisma errors
+  // ── Prisma data errors ──────────────────────────────────────────────────
   if (err.code === 'P2002') {
     res.status(409).json({
       success: false,
@@ -48,7 +80,16 @@ export function errorHandler(
     return;
   }
 
-  // JWT errors
+  if (err.code === 'P2003') {
+    res.status(422).json({
+      success: false,
+      error: 'Related record not found',
+      code: 'FOREIGN_KEY_VIOLATION',
+    });
+    return;
+  }
+
+  // ── JWT errors ──────────────────────────────────────────────────────────
   if (err.name === 'JsonWebTokenError') {
     res.status(401).json({
       success: false,
@@ -67,7 +108,7 @@ export function errorHandler(
     return;
   }
 
-  // Validation errors
+  // ── Validation errors ───────────────────────────────────────────────────
   if (err.errors) {
     res.status(422).json({
       success: false,
@@ -77,13 +118,21 @@ export function errorHandler(
     return;
   }
 
+  // ── Generic fallback ────────────────────────────────────────────────────
   const statusCode = err.statusCode || 500;
-  const message = err.statusCode ? err.message : 'Internal server error';
+  // In development expose the real error message so the cause is visible in
+  // the browser console / UI.  In production always return a safe generic
+  // message so internal details are never leaked.
+  const message = err.statusCode
+    ? err.message
+    : isDev
+      ? (err.message || 'Internal server error')
+      : 'Internal server error';
 
   res.status(statusCode).json({
     success: false,
     error: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    ...(isDev && { stack: err.stack }),
   });
 }
 
