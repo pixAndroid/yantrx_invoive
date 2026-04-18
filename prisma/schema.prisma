@@ -1,0 +1,650 @@
+// Yantrix Core - Complete Prisma Schema
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  ACCOUNTANT
+  STAFF
+  CUSTOMER
+}
+
+enum InvoiceType {
+  INVOICE
+  PROFORMA
+  CREDIT_NOTE
+  DEBIT_NOTE
+  ESTIMATE
+  RECEIPT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  UPI
+  CHEQUE
+  CARD
+  RAZORPAY
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  EXPIRED
+  CANCELLED
+  PAST_DUE
+}
+
+enum NotificationType {
+  INVOICE_CREATED
+  INVOICE_SENT
+  INVOICE_PAID
+  INVOICE_OVERDUE
+  PAYMENT_RECEIVED
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_RENEWED
+  LOW_STOCK
+  NEW_CUSTOMER
+  SYSTEM
+}
+
+enum GstType {
+  REGULAR
+  COMPOSITION
+  UNREGISTERED
+  EXPORT
+  SEZ
+}
+
+enum ProductUnit {
+  PCS
+  KG
+  GRAM
+  LITRE
+  METRE
+  BOX
+  DOZEN
+  SET
+  PAIR
+  BUNDLE
+  HOUR
+  DAY
+  MONTH
+  SERVICE
+}
+
+// ─── Core Models ────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String?  @unique
+  phone        String?  @unique
+  name         String
+  passwordHash String?
+  role         UserRole @default(STAFF)
+  avatar       String?
+  isActive     Boolean  @default(true)
+  isVerified   Boolean  @default(false)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  ownedBusinesses Business[]      @relation("BusinessOwner")
+  memberships     Membership[]
+  createdInvoices Invoice[]       @relation("InvoiceCreatedBy")
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  otpCodes        OtpCode[]
+  refreshTokens   RefreshToken[]
+  reviews         Review[]
+
+  @@map("users")
+}
+
+model Business {
+  id          String  @id @default(cuid())
+  name        String
+  legalName   String?
+  gstin       String? @unique
+  pan         String?
+  tan         String?
+  cin         String?
+  email       String?
+  phone       String?
+  website     String?
+  logo        String?
+  signature   String?
+  gstType     GstType @default(REGULAR)
+  address     String?
+  city        String?
+  state       String?
+  pincode     String?
+  country     String  @default("India")
+  bankName    String?
+  accountNo   String?
+  ifsc        String?
+  upiId       String?
+  invoicePrefix String  @default("INV")
+  invoiceSeq  Int     @default(1)
+  currency    String  @default("INR")
+  timezone    String  @default("Asia/Kolkata")
+  termsAndConditions String?
+  notes       String?
+  ownerId     String
+  planId      String?
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  owner        User          @relation("BusinessOwner", fields: [ownerId], references: [id])
+  plan         Plan?         @relation(fields: [planId], references: [id])
+  branches     Branch[]
+  memberships  Membership[]
+  customers    Customer[]
+  products     Product[]
+  invoices     Invoice[]
+  payments     Payment[]
+  expenses     Expense[]
+  subscriptions Subscription[]
+  modules      BusinessModule[]
+  auditLogs    AuditLog[]
+  notifications Notification[]
+  apiKeys      ApiKey[]
+  reviews      Review[]
+
+  @@map("businesses")
+}
+
+model Branch {
+  id            String  @id @default(cuid())
+  businessId    String
+  name          String
+  address       String?
+  city          String?
+  state         String?
+  pincode       String?
+  phone         String?
+  email         String?
+  gstin         String?
+  invoicePrefix String?
+  isDefault     Boolean @default(false)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("branches")
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  userId      String
+  businessId  String
+  role        UserRole @default(STAFF)
+  permissions Json     @default("[]")
+  isActive    Boolean  @default(true)
+  invitedAt   DateTime @default(now())
+  joinedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@map("memberships")
+}
+
+// ─── Plans & Subscriptions ─────────────────────────────────────────────────
+
+model Plan {
+  id             String  @id @default(cuid())
+  name           String  @unique
+  slug           String  @unique
+  description    String?
+  price          Float   @default(0)
+  yearlyPrice    Float?
+  currency       String  @default("INR")
+  invoiceLimit   Int     @default(5)
+  customerLimit  Int     @default(100)
+  productLimit   Int     @default(50)
+  userLimit      Int     @default(1)
+  storageLimit   Int     @default(100)  // MB
+  features       Json    @default("[]")
+  isActive       Boolean @default(true)
+  isFeatured     Boolean @default(false)
+  sortOrder      Int     @default(0)
+  razorpayPlanId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  businesses    Business[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  businessId     String
+  planId         String
+  status         SubscriptionStatus @default(TRIAL)
+  startDate      DateTime           @default(now())
+  endDate        DateTime
+  trialEndsAt    DateTime?
+  razorpaySubId  String?
+  razorpayOrderId String?
+  amount         Float
+  currency       String             @default("INR")
+  autoRenew      Boolean            @default(true)
+  cancelledAt    DateTime?
+  cancelReason   String?
+  metadata       Json               @default("{}")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  plan     Plan     @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ─── Modules ──────────────────────────────────────────────────────────────
+
+model Module {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  icon        String?
+  color       String?
+  isCore      Boolean @default(false)
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+  requiredPlan String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  businesses BusinessModule[]
+
+  @@map("modules")
+}
+
+model BusinessModule {
+  id         String   @id @default(cuid())
+  businessId String
+  moduleId   String
+  isEnabled  Boolean  @default(true)
+  enabledAt  DateTime @default(now())
+  config     Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  module   Module   @relation(fields: [moduleId], references: [id])
+
+  @@unique([businessId, moduleId])
+  @@map("business_modules")
+}
+
+// ─── Customers ────────────────────────────────────────────────────────────
+
+model Customer {
+  id              String  @id @default(cuid())
+  businessId      String
+  name            String
+  email           String?
+  phone           String?
+  gstin           String?
+  pan             String?
+  gstType         GstType @default(UNREGISTERED)
+  billingAddress  String?
+  billingCity     String?
+  billingState    String?
+  billingPincode  String?
+  billingCountry  String  @default("India")
+  shippingAddress String?
+  shippingCity    String?
+  shippingState   String?
+  shippingPincode String?
+  shippingCountry String  @default("India")
+  ledgerBalance   Float   @default(0)
+  creditLimit     Float   @default(0)
+  creditDays      Int     @default(30)
+  notes           String?
+  tags            String[]
+  isActive        Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("customers")
+}
+
+// ─── Products & Services ──────────────────────────────────────────────────
+
+model Product {
+  id            String      @id @default(cuid())
+  businessId    String
+  name          String
+  description   String?
+  sku           String?
+  barcode       String?
+  hsnSac        String?
+  type          String      @default("product")  // product | service
+  unit          ProductUnit @default(PCS)
+  price         Float
+  costPrice     Float?
+  mrp           Float?
+  gstRate       Float       @default(18)
+  cessRate      Float?
+  category      String?
+  brand         String?
+  images        String[]
+  stockCount    Float?
+  lowStockAlert Float?
+  isActive      Boolean     @default(true)
+  isTaxable     Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoiceItems InvoiceItem[]
+
+  @@map("products")
+}
+
+// ─── Invoices ─────────────────────────────────────────────────────────────
+
+model Invoice {
+  id            String        @id @default(cuid())
+  businessId    String
+  customerId    String
+  branchId      String?
+  invoiceNumber String
+  type          InvoiceType   @default(INVOICE)
+  status        InvoiceStatus @default(DRAFT)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  subtotal      Float         @default(0)
+  discountType  String?       // percentage | amount
+  discountValue Float?
+  discountTotal Float         @default(0)
+  taxableAmount Float         @default(0)
+  cgstTotal     Float         @default(0)
+  sgstTotal     Float         @default(0)
+  igstTotal     Float         @default(0)
+  cessTotal     Float         @default(0)
+  gstTotal      Float         @default(0)
+  total         Float         @default(0)
+  roundOff      Float?
+  amountPaid    Float         @default(0)
+  amountDue     Float         @default(0)
+  isInterState  Boolean       @default(false)
+  placeOfSupply String?
+  notes         String?
+  terms         String?
+  isPaid        Boolean       @default(false)
+  paidAt        DateTime?
+  sentAt        DateTime?
+  viewedAt      DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdById   String
+  metadata      Json          @default("{}")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  business  Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer  Customer      @relation(fields: [customerId], references: [id])
+  branch    Branch?       @relation(fields: [branchId], references: [id])
+  createdBy User          @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  items     InvoiceItem[]
+  payments  Payment[]
+
+  @@unique([businessId, invoiceNumber])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  productId   String?
+  description String
+  hsnSac      String?
+  quantity    Float   @default(1)
+  unit        String?
+  price       Float
+  discount    Float   @default(0)
+  taxableAmount Float @default(0)
+  gstRate     Float   @default(0)
+  cgst        Float   @default(0)
+  sgst        Float   @default(0)
+  igst        Float   @default(0)
+  cess        Float   @default(0)
+  total       Float
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("invoice_items")
+}
+
+// ─── Payments ─────────────────────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(cuid())
+  invoiceId     String
+  businessId    String
+  amount        Float
+  currency      String        @default("INR")
+  method        PaymentMethod @default(CASH)
+  status        PaymentStatus @default(SUCCESS)
+  razorpayId    String?
+  razorpayOrderId String?
+  transactionRef String?
+  bankRef       String?
+  notes         String?
+  paidAt        DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@map("payments")
+}
+
+// ─── Expenses ─────────────────────────────────────────────────────────────
+
+model Expense {
+  id          String   @id @default(cuid())
+  businessId  String
+  category    String
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  receipt     String?
+  vendor      String?
+  gstAmount   Float?
+  isReimbursable Boolean @default(false)
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+// ─── Reviews ──────────────────────────────────────────────────────────────
+
+model Review {
+  id          String  @id @default(cuid())
+  userId      String
+  businessId  String?
+  rating      Int
+  comment     String?
+  isApproved  Boolean @default(false)
+  adminReply  String?
+  repliedAt   DateTime?
+  platform    String  @default("app")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id])
+  business Business? @relation(fields: [businessId], references: [id])
+
+  @@map("reviews")
+}
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String?
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    Json     @default("{}")
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  business Business? @relation(fields: [businessId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  businessId String?
+  type       NotificationType
+  title      String
+  message    String
+  link       String?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business? @relation(fields: [businessId], references: [id])
+
+  @@map("notifications")
+}
+
+// ─── API Keys ─────────────────────────────────────────────────────────────
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  keyHash     String   @unique
+  keyPrefix   String
+  permissions Json     @default("[]")
+  lastUsed    DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// ─── OTP Codes ────────────────────────────────────────────────────────────
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  type      String   // email | sms
+  purpose   String   // login | verify | reset
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otp_codes")
+}
+
+// ─── Refresh Tokens ───────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}

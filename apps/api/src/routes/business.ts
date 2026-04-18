@@ -1,0 +1,77 @@
+import { Router, Response, NextFunction } from 'express';
+import { body } from 'express-validator';
+import { validate } from '../middleware/validation';
+import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import prisma from '../utils/prisma';
+
+const router = Router();
+router.use(authenticate);
+
+router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const memberships = await prisma.membership.findMany({
+      where: { userId: req.user!.id, isActive: true },
+      include: { business: { include: { plan: true } } },
+    });
+    res.json({ success: true, data: memberships.map(m => m.business) });
+  } catch (error) { next(error); }
+});
+
+router.post('/', [
+  body('name').trim().notEmpty().withMessage('Business name required'),
+], validate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const freePlan = await prisma.plan.findFirst({ where: { slug: 'free' } });
+    const business = await prisma.business.create({
+      data: {
+        ...req.body,
+        ownerId: req.user!.id,
+        planId: freePlan?.id,
+      },
+    });
+    await prisma.membership.create({
+      data: {
+        userId: req.user!.id,
+        businessId: business.id,
+        role: 'OWNER',
+        permissions: JSON.stringify(['*']),
+        joinedAt: new Date(),
+      },
+    });
+    res.status(201).json({ success: true, data: business });
+  } catch (error) { next(error); }
+});
+
+router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const membership = await prisma.membership.findFirst({
+      where: { userId: req.user!.id, businessId: req.params.id, isActive: true },
+    });
+    if (!membership) {
+      res.status(403).json({ success: false, error: 'Access denied' });
+      return;
+    }
+    const business = await prisma.business.findUnique({
+      where: { id: req.params.id },
+      include: { plan: true, branches: true, subscriptions: { include: { plan: true }, orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!business) { res.status(404).json({ success: false, error: 'Business not found' }); return; }
+    res.json({ success: true, data: business });
+  } catch (error) { next(error); }
+});
+
+router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const membership = await prisma.membership.findFirst({
+      where: { userId: req.user!.id, businessId: id, isActive: true, role: { in: ['OWNER', 'SUPER_ADMIN'] } },
+    });
+    if (!membership) { res.status(403).json({ success: false, error: 'Access denied' }); return; }
+
+    const { ownerId: _ownerId, planId: _planId, ...updateData } = req.body;
+    const business = await prisma.business.update({ where: { id }, data: updateData });
+    res.json({ success: true, data: business });
+  } catch (error) { next(error); }
+});
+
+export default router;
