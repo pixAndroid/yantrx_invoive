@@ -93,9 +93,9 @@ export default function PaymentsPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {[
-          { label: 'Total Received', value: `₹${totalReceived.toLocaleString('en-IN')}`, icon: CheckCircle, color: 'green' },
-          { label: 'Pending', value: `₹${pending.toLocaleString('en-IN')}`, icon: Clock, color: 'amber' },
-          { label: 'Transactions', value: String(filtered.filter(p => p.status === 'SUCCESS').length), icon: TrendingUp, color: 'indigo' },
+          { label: 'Total Received', value: `₹${totalReceived.toLocaleString('en-IN')}`, icon: CheckCircle, bg: 'bg-green-50', iconColor: 'text-green-600' },
+          { label: 'Pending', value: `₹${pending.toLocaleString('en-IN')}`, icon: Clock, bg: 'bg-amber-50', iconColor: 'text-amber-600' },
+          { label: 'Transactions', value: String(filtered.filter(p => p.status === 'SUCCESS').length), icon: TrendingUp, bg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
         ].map((card, idx) => (
           <motion.div
             key={card.label}
@@ -104,8 +104,8 @@ export default function PaymentsPage() {
             transition={{ delay: idx * 0.1 }}
             className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
           >
-            <div className={`h-10 w-10 rounded-xl bg-${card.color}-50 flex items-center justify-center mb-3`}>
-              <card.icon className={`h-5 w-5 text-${card.color}-600`} />
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${card.bg}`}>
+              <card.icon className={`h-5 w-5 ${card.iconColor}`} />
             </div>
             <p className="text-xl font-bold text-gray-900">{card.value}</p>
             <p className="text-xs text-gray-500 mt-1">{card.label}</p>

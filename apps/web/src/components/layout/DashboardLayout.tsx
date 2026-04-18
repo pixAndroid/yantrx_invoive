@@ -59,11 +59,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .then((res: any) => {
         if (res.data?.length > 0) {
           const sub = res.data[0];
-          setPlanInfo({
-            name: sub.plan?.name || 'Free',
-            invoicesUsed: 0,
-            invoiceLimit: sub.plan?.invoiceLimit || 5,
-          });
+          // Fetch this month's invoice count from business stats
+          apiFetch('/business/stats')
+            .then((statsRes: any) => {
+              setPlanInfo({
+                name: sub.plan?.name || 'Free',
+                invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
+                invoiceLimit: sub.plan?.invoiceLimit || 5,
+              });
+            })
+            .catch(() => {
+              setPlanInfo({
+                name: sub.plan?.name || 'Free',
+                invoicesUsed: 0,
+                invoiceLimit: sub.plan?.invoiceLimit || 5,
+              });
+            });
         }
       })
       .catch(() => {});

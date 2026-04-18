@@ -125,7 +125,7 @@ export default function TeamPage() {
               return (
                 <div key={member.id} className="flex items-center gap-4 px-6 py-4">
                   <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                    {member.user.name.charAt(0)}
+                    {(member.user.name || '?').charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900">{member.user.name}</p>
