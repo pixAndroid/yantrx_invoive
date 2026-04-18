@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Building2, CreditCard, Zap,
   Star, ScrollText, Settings, LogOut, Shield, Package
 } from 'lucide-react';
+import { isAdminAuthenticated, getAdminToken, API_URL } from '@/lib/api';
 
 const NAV = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -21,6 +23,34 @@ const NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [adminName, setAdminName] = useState('Super Admin');
+
+  useEffect(() => {
+    if (!isAdminAuthenticated()) {
+      router.replace('/login');
+      return;
+    }
+    // Decode name from token
+    const token = getAdminToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.sub) {
+          fetch(`${API_URL}/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then(r => r.json())
+            .then(data => {
+              if (data.data?.user?.name) setAdminName(data.data.user.name);
+            })
+            .catch(() => {});
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [router]);
 
   return (
     <div className="flex h-screen bg-gray-950 overflow-hidden">
@@ -56,8 +86,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-4 border-t border-gray-800">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">
+                {adminName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <p className="text-xs font-medium text-gray-300 truncate">{adminName}</p>
+          </div>
           <button
-            onClick={() => { localStorage.removeItem('adminToken'); window.location.href = '/admin/login'; }}
+            onClick={() => {
+              localStorage.removeItem('adminToken');
+              localStorage.removeItem('adminRefreshToken');
+              window.location.href = '/login';
+            }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-gray-200"
           >
             <LogOut className="h-4 w-4" />
@@ -74,7 +116,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-3">
             <span className="text-xs bg-red-900/50 text-red-400 px-2 py-1 rounded-full border border-red-800">SUPER ADMIN</span>
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">SA</span>
+              <span className="text-white text-xs font-bold">
+                {adminName.charAt(0).toUpperCase()}
+              </span>
             </div>
           </div>
         </header>
@@ -84,3 +128,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
+

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, FileText, CheckCircle } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,7 +25,7 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

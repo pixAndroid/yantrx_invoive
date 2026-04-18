@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
-  Settings, ChevronRight, LogOut, Bell, Menu, X,
-  IndianRupee, Zap, Building2
+  LogOut, Bell, Menu, X,
+  IndianRupee, Zap, Building2, ChevronRight
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { isAuthenticated, getUserData, apiFetch } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,8 +33,41 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
+  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number } | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.replace('/auth/login');
+      return;
+    }
+    const tokenData = getUserData();
+    setUserData(tokenData);
+
+    apiFetch('/auth/me')
+      .then((res: any) => {
+        if (res.data?.user) {
+          setUserData(prev => ({ ...prev, name: res.data.user.name, email: res.data.user.email }));
+        }
+      })
+      .catch(() => {});
+
+    apiFetch('/subscriptions')
+      .then((res: any) => {
+        if (res.data?.length > 0) {
+          const sub = res.data[0];
+          setPlanInfo({
+            name: sub.plan?.name || 'Free',
+            invoicesUsed: 0,
+            invoiceLimit: sub.plan?.invoiceLimit || 5,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
 
@@ -42,6 +76,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     localStorage.removeItem('refreshToken');
     window.location.href = '/auth/login';
   };
+
+  const displayName = userData.name || 'User';
+  const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
     <div className={`flex h-full flex-col ${mobile ? '' : 'w-64'}`}>
@@ -109,12 +146,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* User section */}
       <div className="border-t border-gray-100 p-4">
-        <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
-          <p className="text-xs font-medium text-amber-800">Free Plan</p>
-          <p className="text-xs text-amber-600 mt-0.5">3/5 invoices used</p>
-          <Link href="/settings/billing" className="mt-2 block text-center rounded-md bg-amber-600 py-1 text-xs font-semibold text-white hover:bg-amber-700">
-            Upgrade
-          </Link>
+        {planInfo && (
+          <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
+            <p className="text-xs font-medium text-amber-800">{planInfo.name} Plan</p>
+            <p className="text-xs text-amber-600 mt-0.5">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
+            <Link href="/settings/billing" className="mt-2 block text-center rounded-md bg-amber-600 py-1 text-xs font-semibold text-white hover:bg-amber-700">
+              Upgrade
+            </Link>
+          </div>
+        )}
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-bold">{initials}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-gray-900 truncate">{displayName}</p>
+            {userData.email && <p className="text-xs text-gray-400 truncate">{userData.email}</p>}
+          </div>
         </div>
         <button
           onClick={handleLogout}
@@ -191,7 +239,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
 
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">D</span>
+              <span className="text-white text-xs font-bold">{initials}</span>
             </div>
           </div>
         </header>
