@@ -16,6 +16,7 @@ const GST_LINK_COLORS: Record<string, { border: string; bg: string; title: strin
   green: { border: 'border-green-100', bg: 'bg-green-50', title: 'text-green-900', text: 'text-green-700', sub: 'text-green-600', btn: 'text-green-700 hover:text-green-900' },
   blue: { border: 'border-blue-100', bg: 'bg-blue-50', title: 'text-blue-900', text: 'text-blue-700', sub: 'text-blue-600', btn: 'text-blue-700 hover:text-blue-900' },
 };
+const GST_SUMMARY = {
   b2b: [
     { gstin: '07AABCA1234B1ZX', party: 'Acme Corporation', invoices: 4, taxable: 89655, igst: 0, cgst: 8069, sgst: 8069, total: 105793 },
     { gstin: '27AABCS5658K1ZQ', party: 'Sharma Enterprises', invoices: 2, taxable: 44915, igst: 0, cgst: 4042, sgst: 4042, total: 52999 },
