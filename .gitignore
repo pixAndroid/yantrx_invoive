@@ -45,3 +45,4 @@ coverage/
 *.pem
 .vercel
 .turbo
+tsconfig.tsbuildinfo
