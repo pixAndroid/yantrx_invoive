@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Search, Save, Send, ArrowLeft, Calculator, UserPlus, X, Check } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getUserData } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 
 interface Customer { id: string; name: string; email: string | null; phone: string | null; gstin: string | null; billingCity: string | null; billingState: string | null; }
@@ -177,8 +177,22 @@ export default function NewInvoicePage() {
   ]);
   const [formData, setFormData] = useState({
     type: 'INVOICE', issueDate: new Date().toISOString().split('T')[0],
-    dueDate: '', notes: '', terms: 'Payment due within 30 days.', placeOfSupply: '',
+    dueDate: '', notes: '', terms: '', placeOfSupply: '',
   });
+
+  useEffect(() => {
+    const tokenData = getUserData();
+    const businessId = tokenData?.businessId;
+    if (businessId) {
+      apiFetch<{ data: { termsAndConditions?: string | null } }>(`/business/${businessId}`)
+        .then(res => {
+          if (res.data?.termsAndConditions) {
+            setFormData(prev => ({ ...prev, terms: res.data.termsAndConditions! }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     const cid = searchParams.get('customerId');
