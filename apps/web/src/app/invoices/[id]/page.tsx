@@ -9,6 +9,7 @@ import {
   IndianRupee, Clock, AlertCircle, Share2, FileText, X, Check, Edit2
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { numberToWords } from '@/lib/numberToWords';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
@@ -396,8 +397,13 @@ export default function InvoiceDetailPage() {
           </div>
 
           {/* Totals */}
-          <div className="flex justify-end p-8 border-t border-gray-100">
-            <div className="w-full max-w-xs space-y-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between p-8 border-t border-gray-100 gap-6">
+            {/* Amount in Words */}
+            <div className="sm:max-w-xs flex-1">
+              <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Amount in Words</p>
+              <p className="text-sm font-medium text-gray-700 italic">{numberToWords(invoice.total ?? 0)}</p>
+            </div>
+            <div className="w-full sm:max-w-xs space-y-2">
               <div className="flex justify-between text-sm"><span className="text-gray-600">Taxable Amount</span><span>₹{(invoice.taxableAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               {!invoice.isInterState ? (
                 <>
