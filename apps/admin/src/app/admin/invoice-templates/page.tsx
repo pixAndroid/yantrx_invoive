@@ -19,6 +19,8 @@ interface InvoiceTemplate {
 
 // ─── Built-in Template ────────────────────────────────────────────────────────
 
+// Double-underscore prefix/suffix marks this as a system identifier that can
+// never collide with a database-generated cuid() value.
 const BUILTIN_TEMPLATE_ID = '__builtin_yantrx_classic__';
 
 const BUILTIN_TEMPLATE_HTML = `<!DOCTYPE html>

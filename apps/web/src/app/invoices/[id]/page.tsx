@@ -277,7 +277,7 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     apiFetch<{ data: PublicTemplate[] }>('/invoices/templates')
       .then(res => setTemplates(res.data))
-      .catch(() => {});
+      .catch((err: unknown) => { console.error('Failed to load invoice templates:', err); });
   }, []);
 
   const handleMarkSent = async () => {
@@ -326,8 +326,8 @@ export default function InvoiceDetailPage() {
     // Escape special HTML characters in text content to prevent injection
     const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 
-    // Pre-compiled patterns for item variables
-    const ITEM_PATTERNS: Array<[RegExp, (item: InvoiceItem, i: number) => string]> = [
+    // Pre-compiled patterns for item variables (use lowercase per data-structure convention)
+    const itemPatterns: Array<[RegExp, (item: InvoiceItem, i: number) => string]> = [
       [/{{index}}/g,       (_item, i) => esc(String(i + 1))],
       [/{{description}}/g, (item) => esc(item.description)],
       [/{{hsnSac}}/g,      (item) => esc(item.hsnSac)],
@@ -342,17 +342,17 @@ export default function InvoiceDetailPage() {
     let result = html.replace(/{{#items}}([\s\S]*?){{\/items}}/g, (_match, itemTpl: string) => {
       return inv.items.map((item, i) => {
         let row = itemTpl;
-        for (const [pattern, fn] of ITEM_PATTERNS) {
+        for (const [pattern, fn] of itemPatterns) {
           row = row.replace(pattern, fn(item, i));
         }
         return row;
       }).join('');
     });
 
-    // Use transparent 1×1 GIF as fallback so the img element renders cleanly
-    const TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    // Transparent 1×1 GIF data URI used as logo fallback so <img> renders cleanly without a broken-image icon
+    const transparentGif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     const safeLogoUrl = inv.business.logo && isSafeImageUrl(inv.business.logo)
-      ? inv.business.logo : TRANSPARENT_GIF;
+      ? inv.business.logo : transparentGif;
 
     const vars: Record<string, string> = {
       businessName: esc(inv.business.name),
@@ -403,14 +403,15 @@ export default function InvoiceDetailPage() {
     const rendered = renderTemplateHtml(templateHtml, inv);
     const blob = new Blob([rendered], { type: 'text/html; charset=utf-8' });
     const blobUrl = URL.createObjectURL(blob);
+    // Ensure blob URL is always revoked to prevent memory leaks
+    const revoke = () => URL.revokeObjectURL(blobUrl);
     const win = window.open(blobUrl, '_blank');
     if (win) {
-      win.addEventListener('load', () => {
-        win.print();
-        URL.revokeObjectURL(blobUrl);
-      }, { once: true });
+      win.addEventListener('load', () => { win.print(); revoke(); }, { once: true });
+      // Fallback revocation in case the load event does not fire (e.g. window closed early)
+      setTimeout(revoke, 30_000);
     } else {
-      URL.revokeObjectURL(blobUrl);
+      revoke();
     }
   };
 
