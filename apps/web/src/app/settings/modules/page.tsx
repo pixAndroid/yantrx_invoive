@@ -21,9 +21,12 @@ const MODULE_ICONS: Record<string, string> = {
   products: '📦',
   payments: '💳',
   reports: '📊',
+  'gst-reports': '📊',
   purchase_orders: '🛒',
   expenses: '💸',
   inventory: '🏭',
+  hrms: '👤',
+  crm: '🎯',
 };
 
 export default function ModulesSettingsPage() {

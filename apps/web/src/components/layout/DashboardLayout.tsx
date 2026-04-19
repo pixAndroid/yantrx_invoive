@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
   LogOut, Bell, Menu, X,
-  IndianRupee, Zap, Building2, ChevronRight, Lock
+  IndianRupee, Zap, Building2, ChevronRight, Lock,
+  Receipt, Boxes, UserCircle, Target
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
@@ -18,6 +19,10 @@ const NAV_ITEMS = [
   { href: '/products', label: 'Products', icon: Package },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/payments', label: 'Payments', icon: IndianRupee },
+  { href: '/expenses', label: 'Expenses', icon: Receipt },
+  { href: '/inventory', label: 'Inventory', icon: Boxes },
+  { href: '/hrm', label: 'HRM', icon: UserCircle },
+  { href: '/crm', label: 'CRM', icon: Target },
 ];
 
 // Keywords that must appear (case-insensitive) in plan.features to enable a nav item.
