@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Edit2, Save, Trash2, Mail, Phone, MapPin, Hash,
   FileText, ChevronRight, CheckCircle, Clock, AlertCircle, X,
-  IndianRupee, TrendingUp
+  IndianRupee, TrendingUp, User
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
@@ -57,6 +57,23 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; Icon: any }> =
   PARTIALLY_PAID: { label: 'Partial', cls: 'bg-amber-100 text-amber-700', Icon: Clock },
 };
 
+const GST_TYPES = [
+  { value: 'REGULAR', label: 'Regular' },
+  { value: 'COMPOSITION', label: 'Composition' },
+  { value: 'UNREGISTERED', label: 'Unregistered' },
+  { value: 'EXPORT', label: 'Export' },
+  { value: 'SEZ', label: 'SEZ' },
+];
+
+function EditField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 export default function CustomerDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -69,6 +86,7 @@ export default function CustomerDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [form, setForm] = useState<Partial<Customer>>({});
+  const [sameAsB, setSameAsB] = useState(false);
 
   const fetchCustomer = useCallback(async () => {
     setLoading(true);
@@ -76,6 +94,14 @@ export default function CustomerDetailPage() {
       const res = await apiFetch<{ data: Customer }>(`/customers/${id}`);
       setCustomer(res.data);
       setForm(res.data);
+      const d = res.data;
+      setSameAsB(
+        !!(d.shippingAddress || d.shippingCity) &&
+        d.shippingAddress === d.billingAddress &&
+        d.shippingCity === d.billingCity &&
+        d.shippingState === d.billingState &&
+        d.shippingPincode === d.billingPincode
+      );
     } catch (err: any) {
       toastError('Failed to load customer', err.message);
     } finally {
@@ -90,6 +116,12 @@ export default function CustomerDetailPage() {
     setSaving(true);
     try {
       const { invoices: _, ...updateData } = form as any;
+      if (sameAsB) {
+        updateData.shippingAddress = updateData.billingAddress;
+        updateData.shippingCity = updateData.billingCity;
+        updateData.shippingState = updateData.billingState;
+        updateData.shippingPincode = updateData.billingPincode;
+      }
       const res = await apiFetch<{ data: Customer }>(`/customers/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updateData),
@@ -213,123 +245,174 @@ export default function CustomerDetailPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-5">
-          {/* Details Card */}
+          {editing ? (
+            <>
+              {/* Basic Information */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="h-4 w-4 text-indigo-600" /> Basic Information
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <EditField label="Customer Name *">
+                      <input value={form.name || ''} onChange={e => set('name', e.target.value)} placeholder="Acme Corporation" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    </EditField>
+                  </div>
+                  <EditField label="Email Address">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} placeholder="billing@acme.com" className="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    </div>
+                  </EditField>
+                  <EditField label="Phone Number">
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type="tel" value={form.phone || ''} onChange={e => set('phone', e.target.value)} placeholder="+91 98765 43210" className="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    </div>
+                  </EditField>
+                </div>
+              </div>
+
+              {/* GST & Tax Details */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-indigo-600" /> GST & Tax Details
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <EditField label="GST Type">
+                    <select value={form.gstType || 'UNREGISTERED'} onChange={e => set('gstType', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                      {GST_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </EditField>
+                  <EditField label="GSTIN">
+                    <input value={form.gstin || ''} onChange={e => set('gstin', e.target.value.toUpperCase())} maxLength={15} placeholder="22AAAAA0000A1Z5" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono uppercase focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                  </EditField>
+                  <EditField label="PAN">
+                    <input value={form.pan || ''} onChange={e => set('pan', e.target.value.toUpperCase())} maxLength={10} placeholder="AAAAA0000A" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono uppercase focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                  </EditField>
+                  <EditField label="Credit Limit (₹)">
+                    <input type="number" value={form.creditLimit ?? 0} onChange={e => set('creditLimit', parseFloat(e.target.value) || 0)} placeholder="0" min="0" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                  </EditField>
+                  <EditField label="Credit Days">
+                    <input type="number" value={form.creditDays ?? 30} onChange={e => set('creditDays', parseInt(e.target.value) || 0)} min="0" max="365" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                  </EditField>
+                </div>
+              </div>
+
+              {/* Billing Address */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-indigo-600" /> Billing Address
+                </h2>
+                <div className="space-y-4">
+                  <EditField label="Street Address">
+                    <input value={form.billingAddress || ''} onChange={e => set('billingAddress', e.target.value)} placeholder="123, MG Road, Near Central Mall" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                  </EditField>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <EditField label="City">
+                      <input value={form.billingCity || ''} onChange={e => set('billingCity', e.target.value)} placeholder="Bengaluru" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    </EditField>
+                    <EditField label="State">
+                      <select value={form.billingState || ''} onChange={e => set('billingState', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </EditField>
+                    <EditField label="Pincode">
+                      <input value={form.billingPincode || ''} onChange={e => set('billingPincode', e.target.value)} placeholder="560001" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    </EditField>
+                  </div>
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-purple-600" /> Shipping Address
+                  </h2>
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sameAsB}
+                      onChange={e => setSameAsB(e.target.checked)}
+                      className="rounded border-gray-300 text-indigo-600"
+                    />
+                    Same as billing
+                  </label>
+                </div>
+                {sameAsB ? (
+                  <p className="text-sm text-gray-400 italic">Shipping address will be same as billing address.</p>
+                ) : (
+                  <div className="space-y-4">
+                    <EditField label="Street Address">
+                      <input value={form.shippingAddress || ''} onChange={e => set('shippingAddress', e.target.value)} placeholder="456, Outer Ring Road" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    </EditField>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <EditField label="City">
+                        <input value={form.shippingCity || ''} onChange={e => set('shippingCity', e.target.value)} placeholder="Bengaluru" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                      </EditField>
+                      <EditField label="State">
+                        <select value={form.shippingState || ''} onChange={e => set('shippingState', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                          <option value="">Select State</option>
+                          {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </EditField>
+                      <EditField label="Pincode">
+                        <input value={form.shippingPincode || ''} onChange={e => set('shippingPincode', e.target.value)} placeholder="560066" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                      </EditField>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+          <>
+          {/* Details Card (view mode) */}
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <h2 className="text-base font-semibold text-gray-900 mb-4">Customer Details</h2>
-            {editing ? (
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                  <input value={form.name || ''} onChange={e => set('name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            <div className="space-y-3">
+              {customer.email && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail className="h-4 w-4 text-gray-400" />{customer.email}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              )}
+              {customer.phone && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Phone className="h-4 w-4 text-gray-400" />{customer.phone}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <input type="tel" value={form.phone || ''} onChange={e => set('phone', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              )}
+              {customer.gstin && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Hash className="h-4 w-4 text-gray-400" />
+                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{customer.gstin}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
-                  <input value={form.gstin || ''} onChange={e => set('gstin', e.target.value.toUpperCase())} maxLength={15} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN</label>
-                  <input value={form.pan || ''} onChange={e => set('pan', e.target.value.toUpperCase())} maxLength={10} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing City</label>
-                  <input value={form.billingCity || ''} onChange={e => set('billingCity', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing State</label>
-                  <select value={form.billingState || ''} onChange={e => set('billingState', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
-                    <option value="">Select State</option>
-                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
-                  <input value={form.billingAddress || ''} onChange={e => set('billingAddress', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing Pincode</label>
-                  <input value={form.billingPincode || ''} onChange={e => set('billingPincode', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div className="sm:col-span-2 border-t border-gray-100 pt-3">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Shipping Address</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Address</label>
-                  <input value={form.shippingAddress || ''} onChange={e => set('shippingAddress', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping City</label>
-                  <input value={form.shippingCity || ''} onChange={e => set('shippingCity', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping State</label>
-                  <select value={form.shippingState || ''} onChange={e => set('shippingState', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
-                    <option value="">Select State</option>
-                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Pincode</label>
-                  <input value={form.shippingPincode || ''} onChange={e => set('shippingPincode', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Credit Limit (₹)</label>
-                  <input type="number" value={form.creditLimit || 0} onChange={e => set('creditLimit', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea value={form.notes || ''} onChange={e => set('notes', e.target.value)} rows={2} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none resize-none" />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {customer.email && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Mail className="h-4 w-4 text-gray-400" />{customer.email}
+              )}
+              {(customer.billingAddress || customer.billingCity) && (
+                <div className="flex items-start gap-2 text-sm text-gray-600">
+                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase mb-0.5">Billing</p>
+                    <span>{[customer.billingAddress, customer.billingCity, customer.billingState, customer.billingPincode].filter(Boolean).join(', ')}</span>
                   </div>
-                )}
-                {customer.phone && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Phone className="h-4 w-4 text-gray-400" />{customer.phone}
+                </div>
+              )}
+              {(customer.shippingAddress || customer.shippingCity) && (
+                <div className="flex items-start gap-2 text-sm text-gray-600">
+                  <MapPin className="h-4 w-4 text-purple-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase mb-0.5">Shipping</p>
+                    <span>{[customer.shippingAddress, customer.shippingCity, customer.shippingState, customer.shippingPincode].filter(Boolean).join(', ')}</span>
                   </div>
-                )}
-                {customer.gstin && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="h-4 w-4 text-gray-400" />
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{customer.gstin}</span>
-                  </div>
-                )}
-                {(customer.billingAddress || customer.billingCity) && (
-                  <div className="flex items-start gap-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase mb-0.5">Billing</p>
-                      <span>{[customer.billingAddress, customer.billingCity, customer.billingState, customer.billingPincode].filter(Boolean).join(', ')}</span>
-                    </div>
-                  </div>
-                )}
-                {(customer.shippingAddress || customer.shippingCity) && (
-                  <div className="flex items-start gap-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 text-purple-400 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase mb-0.5">Shipping</p>
-                      <span>{[customer.shippingAddress, customer.shippingCity, customer.shippingState, customer.shippingPincode].filter(Boolean).join(', ')}</span>
-                    </div>
-                  </div>
-                )}
-                {customer.notes && (
-                  <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">{customer.notes}</div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+              {customer.notes && (
+                <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">{customer.notes}</div>
+              )}
+            </div>
           </div>
+          </>
+          )}
 
           {/* Invoices */}
           <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
@@ -384,6 +467,27 @@ export default function CustomerDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
+          {editing ? (
+            <>
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-indigo-600" /> Notes
+                </h3>
+                <textarea
+                  value={form.notes || ''}
+                  onChange={e => set('notes', e.target.value)}
+                  rows={4}
+                  placeholder="Internal notes about this customer..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none resize-none"
+                />
+              </div>
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <p className="text-xs text-blue-700">
+                  <strong>GSTIN validation:</strong> Format: 2-digit state code + 10-char PAN + 1 entity number + Z + 1 check digit (e.g., 22AAAAA0000A1Z5)
+                </p>
+              </div>
+            </>
+          ) : (
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Account Info</h3>
             <div className="space-y-2 text-sm">
@@ -411,6 +515,7 @@ export default function CustomerDetailPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>
