@@ -9,7 +9,7 @@ import {
   IndianRupee, Zap, Building2, ChevronRight
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { isAuthenticated, getUserData, apiFetch } from '@/lib/api';
+import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,6 +38,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
   const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number } | null>(null);
+  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -52,6 +54,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         if (res.data?.user) {
           setUserData(prev => ({ ...prev, name: res.data.user.name, email: res.data.user.email }));
         }
+        const biz = res.data?.memberships?.[0]?.business;
+        if (biz?.logo && typeof biz.logo === 'string' && isSafeImageUrl(biz.logo)) {
+          setBusinessLogo(biz.logo);
+        }
+        if (biz?.name) setBusinessName(biz.name);
       })
       .catch(() => {});
 
@@ -96,10 +103,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-gray-100 px-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">Y</span>
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {businessLogo ? (
+              <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-white font-bold text-sm">{businessName ? businessName.charAt(0).toUpperCase() : 'Y'}</span>
+            )}
           </div>
-          <span className="text-lg font-bold text-gray-900">Yantrix</span>
+          <span className="text-lg font-bold text-gray-900">{businessName || 'Yantrix'}</span>
         </Link>
       </div>
 
@@ -249,8 +260,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
             </button>
 
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">{initials}</span>
+            <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              {businessLogo ? (
+                <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-white text-xs font-bold">{initials}</span>
+              )}
             </div>
           </div>
         </header>
