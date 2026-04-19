@@ -29,19 +29,44 @@ function calcItem(item: Partial<InvoiceItem>, interState: boolean): InvoiceItem 
   };
 }
 
+import { INDIAN_STATES as INDIAN_STATES_MODAL } from '@/lib/constants';
+
 function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Customer) => void }) {
   const { success, error: toastError } = useToast();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', gstin: '' });
+  const [form, setForm] = useState({
+    name: '', email: '', phone: '', gstin: '',
+    billingAddress: '', billingCity: '', billingState: '', billingPincode: '',
+    shippingAddress: '', shippingCity: '', shippingState: '', shippingPincode: '',
+  });
+  const [sameAsB, setSameAsB] = useState(true);
   const [loading, setLoading] = useState(false);
   const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
   const handleCreate = async () => {
     if (!form.name.trim()) { toastError('Name required'); return; }
     setLoading(true);
     try {
-      const res = await apiFetch<{ data: Customer }>('/customers', {
-        method: 'POST',
-        body: JSON.stringify({ name: form.name, email: form.email || undefined, phone: form.phone || undefined, gstin: form.gstin || undefined }),
-      });
+      const payload: Record<string, any> = {
+        name: form.name,
+        ...(form.email && { email: form.email }),
+        ...(form.phone && { phone: form.phone }),
+        ...(form.gstin && { gstin: form.gstin }),
+        ...(form.billingAddress && { billingAddress: form.billingAddress }),
+        ...(form.billingCity && { billingCity: form.billingCity }),
+        ...(form.billingState && { billingState: form.billingState }),
+        ...(form.billingPincode && { billingPincode: form.billingPincode }),
+      };
+      if (sameAsB) {
+        if (form.billingAddress) payload.shippingAddress = form.billingAddress;
+        if (form.billingCity) payload.shippingCity = form.billingCity;
+        if (form.billingState) payload.shippingState = form.billingState;
+        if (form.billingPincode) payload.shippingPincode = form.billingPincode;
+      } else {
+        if (form.shippingAddress) payload.shippingAddress = form.shippingAddress;
+        if (form.shippingCity) payload.shippingCity = form.shippingCity;
+        if (form.shippingState) payload.shippingState = form.shippingState;
+        if (form.shippingPincode) payload.shippingPincode = form.shippingPincode;
+      }
+      const res = await apiFetch<{ data: Customer }>('/customers', { method: 'POST', body: JSON.stringify(payload) });
       success('Customer created', form.name);
       onCreated(res.data);
     } catch (err: any) { toastError('Failed', err.message); }
@@ -51,7 +76,7 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-6 z-10">
+        className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 z-10 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-gray-900">Add New Customer</h3>
           <button onClick={onClose}><X className="h-4 w-4 text-gray-400" /></button>
@@ -69,6 +94,57 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
           ))}
+
+          {/* Billing Address */}
+          <div className="pt-1">
+            <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Billing Address</p>
+            <div className="space-y-2">
+              <input value={form.billingAddress} onChange={e => set('billingAddress', e.target.value)} placeholder="Street address"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              <div className="grid grid-cols-3 gap-2">
+                <input value={form.billingCity} onChange={e => set('billingCity', e.target.value)} placeholder="City"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                <select value={form.billingState} onChange={e => set('billingState', e.target.value)}
+                  className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                  <option value="">State</option>
+                  {INDIAN_STATES_MODAL.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <input value={form.billingPincode} onChange={e => set('billingPincode', e.target.value)} placeholder="Pincode"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping Address */}
+          <div className="pt-1">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Shipping Address</p>
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                <input type="checkbox" checked={sameAsB} onChange={e => setSameAsB(e.target.checked)}
+                  className="rounded border-gray-300 text-indigo-600" />
+                Same as billing
+              </label>
+            </div>
+            {sameAsB ? (
+              <p className="text-xs text-gray-400 italic">Shipping address will be same as billing address.</p>
+            ) : (
+              <div className="space-y-2">
+                <input value={form.shippingAddress} onChange={e => set('shippingAddress', e.target.value)} placeholder="Street address"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                <div className="grid grid-cols-3 gap-2">
+                  <input value={form.shippingCity} onChange={e => set('shippingCity', e.target.value)} placeholder="City"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                  <select value={form.shippingState} onChange={e => set('shippingState', e.target.value)}
+                    className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                    <option value="">State</option>
+                    {INDIAN_STATES_MODAL.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input value={form.shippingPincode} onChange={e => set('shippingPincode', e.target.value)} placeholder="Pincode"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="flex-1 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>

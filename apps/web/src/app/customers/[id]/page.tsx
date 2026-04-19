@@ -12,6 +12,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { INDIAN_STATES } from '@/lib/constants';
 
 interface Customer {
   id: string;
@@ -55,14 +56,6 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; Icon: any }> =
   DRAFT: { label: 'Draft', cls: 'bg-gray-100 text-gray-600', Icon: FileText },
   PARTIALLY_PAID: { label: 'Partial', cls: 'bg-amber-100 text-amber-700', Icon: Clock },
 };
-
-const INDIAN_STATES = [
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
-  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh',
-  'Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab',
-  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
-  'Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh','Puducherry',
-];
 
 export default function CustomerDetailPage() {
   const router = useRouter();
@@ -261,6 +254,32 @@ export default function CustomerDetailPage() {
                   <input value={form.billingAddress || ''} onChange={e => set('billingAddress', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing Pincode</label>
+                  <input value={form.billingPincode || ''} onChange={e => set('billingPincode', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <div className="sm:col-span-2 border-t border-gray-100 pt-3">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Shipping Address</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Address</label>
+                  <input value={form.shippingAddress || ''} onChange={e => set('shippingAddress', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping City</label>
+                  <input value={form.shippingCity || ''} onChange={e => set('shippingCity', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping State</label>
+                  <select value={form.shippingState || ''} onChange={e => set('shippingState', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                    <option value="">Select State</option>
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Pincode</label>
+                  <input value={form.shippingPincode || ''} onChange={e => set('shippingPincode', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Credit Limit (₹)</label>
                   <input type="number" value={form.creditLimit || 0} onChange={e => set('creditLimit', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
                 </div>
@@ -290,9 +309,19 @@ export default function CustomerDetailPage() {
                 {(customer.billingAddress || customer.billingCity) && (
                   <div className="flex items-start gap-2 text-sm text-gray-600">
                     <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                    <span>
-                      {[customer.billingAddress, customer.billingCity, customer.billingState, customer.billingPincode].filter(Boolean).join(', ')}
-                    </span>
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 uppercase mb-0.5">Billing</p>
+                      <span>{[customer.billingAddress, customer.billingCity, customer.billingState, customer.billingPincode].filter(Boolean).join(', ')}</span>
+                    </div>
+                  </div>
+                )}
+                {(customer.shippingAddress || customer.shippingCity) && (
+                  <div className="flex items-start gap-2 text-sm text-gray-600">
+                    <MapPin className="h-4 w-4 text-purple-400 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 uppercase mb-0.5">Shipping</p>
+                      <span>{[customer.shippingAddress, customer.shippingCity, customer.shippingState, customer.shippingPincode].filter(Boolean).join(', ')}</span>
+                    </div>
                   </div>
                 )}
                 {customer.notes && (
