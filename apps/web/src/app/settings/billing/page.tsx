@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CreditCard, CheckCircle, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { CreditCard, CheckCircle, ArrowRight, AlertCircle, Loader2, X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface Plan {
@@ -47,6 +47,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -207,7 +208,7 @@ export default function BillingPage() {
                     ))}
                   </ul>
                   <button
-                    onClick={() => !isCurrent && !upgrading && handleUpgrade(plan)}
+                    onClick={() => !isCurrent && !upgrading && setSelectedPlan(plan)}
                     disabled={isCurrent || !!upgrading}
                     className={`w-full rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 ${
                       isCurrent
@@ -233,6 +234,83 @@ export default function BillingPage() {
             </Link>
           </div>
         </>
+      )}
+
+      {/* Plan Confirmation Modal */}
+      {selectedPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-8">
+            <button
+              onClick={() => setSelectedPlan(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Confirm Upgrade</h2>
+            <p className="text-sm text-gray-500 mb-6">Review your plan details before payment</p>
+
+            {selectedPlan.isFeatured && (
+              <div className="inline-block text-xs font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full mb-3">
+                Most Popular
+              </div>
+            )}
+
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-5 mb-6">
+              <div className="flex items-baseline justify-between mb-4">
+                <span className="text-lg font-bold text-indigo-900">{selectedPlan.name} Plan</span>
+                <span className="text-2xl font-bold text-indigo-900">₹{selectedPlan.price}<span className="text-sm font-normal text-indigo-600">/mo</span></span>
+              </div>
+              <ul className="space-y-2">
+                <li className="text-sm text-gray-700 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  {selectedPlan.invoiceLimit >= 999999 ? 'Unlimited' : selectedPlan.invoiceLimit} invoices/month
+                </li>
+                <li className="text-sm text-gray-700 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  {selectedPlan.customerLimit >= 999999 ? 'Unlimited' : selectedPlan.customerLimit} customers
+                </li>
+                <li className="text-sm text-gray-700 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  {selectedPlan.userLimit} team members
+                </li>
+                {selectedPlan.features.map((f, i) => (
+                  <li key={i} className="text-sm text-gray-700 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {error && (
+              <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSelectedPlan(null)}
+                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleUpgrade(selectedPlan)}
+                disabled={!!upgrading}
+                className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {upgrading === selectedPlan.id ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
+                ) : (
+                  <>Confirm & Pay <ArrowRight className="h-4 w-4" /></>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
