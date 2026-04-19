@@ -21,6 +21,10 @@ import moduleRoutes from './routes/modules';
 import webhookRoutes from './routes/webhooks';
 import adminRoutes from './routes/admin';
 import planRoutes from './routes/plans';
+import expenseRoutes from './routes/expenses';
+import inventoryRoutes from './routes/inventory';
+import hrmRoutes from './routes/hrm';
+import crmRoutes from './routes/crm';
 
 const app = express();
 
@@ -92,6 +96,10 @@ app.use('/api/v1/modules', moduleRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/plans', planRoutes);
+app.use('/api/v1/expenses', expenseRoutes);
+app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/hrm', hrmRoutes);
+app.use('/api/v1/crm', crmRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────────────────────
 app.use((_req, res) => {

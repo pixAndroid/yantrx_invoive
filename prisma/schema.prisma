@@ -183,6 +183,14 @@ model Business {
   notifications Notification[]
   apiKeys      ApiKey[]
   reviews      Review[]
+  stockMovements StockMovement[]
+  employees    Employee[]
+  attendances  Attendance[]
+  leaves       Leave[]
+  payrollRecords PayrollRecord[]
+  leads        Lead[]
+  deals        Deal[]
+  crmActivities CRMActivity[]
 
   @@map("businesses")
 }
@@ -392,8 +400,9 @@ model Product {
   updatedAt     DateTime    @updatedAt
 
   // Relations
-  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  invoiceItems InvoiceItem[]
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoiceItems   InvoiceItem[]
+  stockMovements StockMovement[]
 
   @@map("products")
 }
@@ -647,6 +656,307 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
+}
+
+// ─── Inventory ────────────────────────────────────────────────────────────
+
+enum StockMovementType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  RETURN
+  DAMAGE
+  OPENING
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  businessId  String
+  productId   String
+  type        StockMovementType
+  quantity    Float
+  previousQty Float
+  newQty      Float
+  reference   String?
+  notes       String?
+  createdById String?
+  createdAt   DateTime          @default(now())
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("stock_movements")
+}
+
+// ─── HRM ──────────────────────────────────────────────────────────────────
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  EARNED
+  MATERNITY
+  PATERNITY
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LATE
+  ON_LEAVE
+  HOLIDAY
+}
+
+model Employee {
+  id             String         @id @default(cuid())
+  businessId     String
+  employeeCode   String?
+  name           String
+  email          String?
+  phone          String?
+  designation    String?
+  department     String?
+  employmentType EmploymentType @default(FULL_TIME)
+  status         EmployeeStatus @default(ACTIVE)
+  joiningDate    DateTime?
+  exitDate       DateTime?
+  salary         Float?
+  bankAccountNo  String?
+  ifscCode       String?
+  pan            String?
+  aadhaar        String?
+  address        String?
+  avatar         String?
+  notes          String?
+  managerId      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  business       Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  manager        Employee?        @relation("EmployeeManager", fields: [managerId], references: [id])
+  subordinates   Employee[]       @relation("EmployeeManager")
+  attendances    Attendance[]
+  leaves         Leave[]
+  approvedLeaves Leave[]          @relation("LeaveApprover")
+  payrollRecords PayrollRecord[]
+
+  @@map("employees")
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  businessId  String
+  employeeId  String
+  date        DateTime         @db.Date
+  checkIn     DateTime?
+  checkOut    DateTime?
+  status      AttendanceStatus @default(PRESENT)
+  hoursWorked Float?
+  overtime    Float?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@map("attendances")
+}
+
+model Leave {
+  id           String      @id @default(cuid())
+  businessId   String
+  employeeId   String
+  type         LeaveType   @default(CASUAL)
+  startDate    DateTime    @db.Date
+  endDate      DateTime    @db.Date
+  days         Float       @default(1)
+  reason       String?
+  status       LeaveStatus @default(PENDING)
+  approvedById String?
+  approvalNote String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  approvedBy Employee? @relation("LeaveApprover", fields: [approvedById], references: [id])
+
+  @@map("leaves")
+}
+
+enum PayrollStatus {
+  DRAFT
+  PROCESSED
+  PAID
+}
+
+model PayrollRecord {
+  id          String        @id @default(cuid())
+  businessId  String
+  employeeId  String
+  month       Int
+  year        Int
+  basic       Float         @default(0)
+  hra         Float         @default(0)
+  allowances  Float         @default(0)
+  deductions  Float         @default(0)
+  tax         Float         @default(0)
+  pfEmployee  Float         @default(0)
+  pfEmployer  Float         @default(0)
+  netPay      Float         @default(0)
+  status      PayrollStatus @default(DRAFT)
+  paidAt      DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+  @@map("payroll_records")
+}
+
+// ─── CRM ──────────────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  COLD_CALL
+  EMAIL
+  WALK_IN
+  OTHER
+}
+
+enum DealStage {
+  PROSPECTING
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum CRMActivityType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  NOTE
+  FOLLOW_UP
+}
+
+model Lead {
+  id                String     @id @default(cuid())
+  businessId        String
+  name              String
+  email             String?
+  phone             String?
+  company           String?
+  source            LeadSource @default(OTHER)
+  status            LeadStatus @default(NEW)
+  value             Float?
+  assignedToId      String?
+  notes             String?
+  tags              String[]
+  expectedCloseDate DateTime?
+  convertedAt       DateTime?
+  customerId        String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relations
+  business   Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  activities CRMActivity[]
+  deals      Deal[]
+
+  @@map("leads")
+}
+
+model Deal {
+  id                String     @id @default(cuid())
+  businessId        String
+  title             String
+  leadId            String?
+  customerId        String?
+  value             Float?
+  stage             DealStage  @default(PROSPECTING)
+  probability       Int        @default(0)
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  assignedToId      String?
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relations
+  business   Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  lead       Lead?         @relation(fields: [leadId], references: [id])
+  activities CRMActivity[]
+
+  @@map("deals")
+}
+
+model CRMActivity {
+  id          String          @id @default(cuid())
+  businessId  String
+  type        CRMActivityType @default(NOTE)
+  subject     String
+  description String?
+  leadId      String?
+  dealId      String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  userId      String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  lead     Lead?    @relation(fields: [leadId], references: [id])
+  deal     Deal?    @relation(fields: [dealId], references: [id])
+
+  @@map("crm_activities")
 }
 
 // ─── Invoice Templates ────────────────────────────────────────────────────

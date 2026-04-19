@@ -61,8 +61,8 @@ async function main() {
     { name: 'GST Reports', slug: 'gst-reports', isCore: true, sortOrder: 4 },
     { name: 'Expense Tracker', slug: 'expenses', isCore: false, sortOrder: 5, requiredPlan: 'starter' },
     { name: 'Inventory', slug: 'inventory', isCore: false, sortOrder: 6, requiredPlan: 'pro' },
-    { name: 'HRMS', slug: 'hrms', isCore: false, isActive: false, sortOrder: 10 },
-    { name: 'CRM', slug: 'crm', isCore: false, isActive: false, sortOrder: 11 },
+    { name: 'HRMS', slug: 'hrms', isCore: false, isActive: true, requiredPlan: 'pro', sortOrder: 10 },
+    { name: 'CRM', slug: 'crm', isCore: false, isActive: true, requiredPlan: 'pro', sortOrder: 11 },
   ];
 
   const moduleMap: Record<string, any> = {};
