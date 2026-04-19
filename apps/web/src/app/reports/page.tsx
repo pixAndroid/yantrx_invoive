@@ -31,6 +31,16 @@ function exportCSV(headers: string[], rows: string[][], filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function exportExcel(headers: string[], rows: string[][], filename: string) {
+  // Excel-compatible CSV with BOM for proper Unicode rendering
+  const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ReportsPage() {
   const [tab, setTab] = useState<TabKey>('sales');
   const [startDate, setStartDate] = useState(() => {
@@ -62,31 +72,40 @@ export default function ReportsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleExport = () => {
+  const handleExport = (format: 'csv' | 'excel' = 'csv') => {
     if (!data) return;
+    const exporter = format === 'excel' ? exportExcel : exportCSV;
+    const ext = format === 'excel' ? 'xls' : 'csv';
     if (tab === 'sales' && data.invoices) {
-      exportCSV(
+      exporter(
         ['Invoice No', 'Customer', 'Date', 'Total', 'Paid', 'Due', 'Status'],
         data.invoices.map((i: any) => [i.invoiceNumber, i.customer?.name, i.issueDate?.split('T')[0], i.total, i.amountPaid, i.amountDue, i.status]),
-        'sales-report.csv'
+        `sales-report.${ext}`
       );
     } else if (tab === 'pending' && data.invoices) {
-      exportCSV(
+      exporter(
         ['Invoice No', 'Customer', 'Due Date', 'Amount Due', 'Days Overdue'],
         data.invoices.map((i: any) => [i.invoiceNumber, i.customer?.name, i.dueDate?.split('T')[0] || 'N/A', i.amountDue, i.daysOverdue]),
-        'pending-payments.csv'
+        `pending-payments.${ext}`
       );
     } else if (tab === 'customers' && Array.isArray(data)) {
-      exportCSV(
+      exporter(
         ['Customer', 'Total Sales', 'Paid', 'Due', 'Invoices'],
         data.map((d: any) => [d.customer?.name, d.totalSales, d.totalPaid, d.totalDue, d.invoiceCount]),
-        'customer-sales.csv'
+        `customer-sales.${ext}`
       );
     } else if (tab === 'top' && Array.isArray(data)) {
-      exportCSV(
+      exporter(
         ['Rank', 'Customer', 'Revenue', 'Invoices'],
         data.map((d: any) => [d.rank, d.customer?.name, d.totalRevenue, d.invoiceCount]),
-        'top-customers.csv'
+        `top-customers.${ext}`
+      );
+    } else if (tab === 'gst') {
+      const gstData = Array.isArray(data) ? data : (data?.items || []);
+      exporter(
+        ['HSN/SAC', 'Description', 'Taxable Amount', 'CGST', 'SGST', 'IGST', 'Total Tax'],
+        gstData.map((d: any) => [d.hsnSac || '', d.description || '', d.taxableAmount, d.cgst, d.sgst, d.igst, (d.cgst || 0) + (d.sgst || 0) + (d.igst || 0)]),
+        `gst-summary.${ext}`
       );
     }
   };
@@ -102,8 +121,11 @@ export default function ReportsPage() {
           <button onClick={fetchData} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
-          <button onClick={handleExport} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={() => handleExport('csv')} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Download className="h-4 w-4" /> Export CSV
+          </button>
+          <button onClick={() => handleExport('excel')} className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
+            <BarChart3 className="h-4 w-4" /> Export Excel
           </button>
         </div>
       </div>
