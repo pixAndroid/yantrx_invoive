@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, User, Mail, Phone, MapPin, Hash, FileText } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
@@ -14,6 +14,35 @@ const GST_TYPES = [
   { value: 'EXPORT', label: 'Export' },
   { value: 'SEZ', label: 'SEZ' },
 ];
+
+// Defined at module level so React never unmounts/remounts these on re-render
+const Field = ({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+    {children}
+    {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+  </div>
+);
+
+const Input = ({
+  field, form, onSet, errors, type = 'text', placeholder = '', className = '',
+}: {
+  field: string;
+  form: Record<string, string>;
+  onSet: (key: string, val: string) => void;
+  errors: Record<string, string>;
+  type?: string;
+  placeholder?: string;
+  className?: string;
+}) => (
+  <input
+    type={type}
+    value={form[field] ?? ''}
+    onChange={e => onSet(field, e.target.value)}
+    placeholder={placeholder}
+    className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${errors[field] ? 'border-red-400' : 'border-gray-300'} ${className}`}
+  />
+);
 
 export default function NewCustomerPage() {
   const router = useRouter();
@@ -101,24 +130,6 @@ export default function NewCustomerPage() {
     }
   };
 
-  const Field = ({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      {children}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
-  );
-
-  const Input = ({ field, type = 'text', placeholder = '', className = '' }: { field: string; type?: string; placeholder?: string; className?: string }) => (
-    <input
-      type={type}
-      value={(form as any)[field]}
-      onChange={e => set(field, e.target.value)}
-      placeholder={placeholder}
-      className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${errors[field] ? 'border-red-400' : 'border-gray-300'} ${className}`}
-    />
-  );
-
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
@@ -151,7 +162,7 @@ export default function NewCustomerPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <Field label="Customer Name *" error={errors.name}>
-                  <Input field="name" placeholder="Acme Corporation" />
+                  <Input field="name" form={form} onSet={set} errors={errors} placeholder="Acme Corporation" />
                 </Field>
               </div>
               <Field label="Email Address" error={errors.email}>
@@ -246,11 +257,11 @@ export default function NewCustomerPage() {
             </h2>
             <div className="space-y-4">
               <Field label="Street Address">
-                <Input field="billingAddress" placeholder="123, MG Road, Near Central Mall" />
+                <Input field="billingAddress" form={form} onSet={set} errors={errors} placeholder="123, MG Road, Near Central Mall" />
               </Field>
               <div className="grid sm:grid-cols-3 gap-4">
                 <Field label="City">
-                  <Input field="billingCity" placeholder="Bengaluru" />
+                  <Input field="billingCity" form={form} onSet={set} errors={errors} placeholder="Bengaluru" />
                 </Field>
                 <Field label="State">
                   <select
@@ -263,7 +274,7 @@ export default function NewCustomerPage() {
                   </select>
                 </Field>
                 <Field label="Pincode">
-                  <Input field="billingPincode" placeholder="560001" />
+                  <Input field="billingPincode" form={form} onSet={set} errors={errors} placeholder="560001" />
                 </Field>
               </div>
             </div>
@@ -288,11 +299,11 @@ export default function NewCustomerPage() {
             {!sameAsB && (
               <div className="space-y-4">
                 <Field label="Street Address">
-                  <Input field="shippingAddress" placeholder="456, Outer Ring Road" />
+                  <Input field="shippingAddress" form={form} onSet={set} errors={errors} placeholder="456, Outer Ring Road" />
                 </Field>
                 <div className="grid sm:grid-cols-3 gap-4">
                   <Field label="City">
-                    <Input field="shippingCity" placeholder="Bengaluru" />
+                    <Input field="shippingCity" form={form} onSet={set} errors={errors} placeholder="Bengaluru" />
                   </Field>
                   <Field label="State">
                     <select
@@ -305,7 +316,7 @@ export default function NewCustomerPage() {
                     </select>
                   </Field>
                   <Field label="Pincode">
-                    <Input field="shippingPincode" placeholder="560066" />
+                    <Input field="shippingPincode" form={form} onSet={set} errors={errors} placeholder="560066" />
                   </Field>
                 </div>
               </div>
