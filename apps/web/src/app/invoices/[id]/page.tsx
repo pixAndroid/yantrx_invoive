@@ -57,6 +57,11 @@ interface Invoice {
     billingAddress: string | null;
     billingCity: string | null;
     billingState: string | null;
+    billingPincode: string | null;
+    shippingAddress: string | null;
+    shippingCity: string | null;
+    shippingState: string | null;
+    shippingPincode: string | null;
   };
   business: {
     name: string;
@@ -66,6 +71,7 @@ interface Invoice {
     state: string | null;
     phone: string | null;
     email: string | null;
+    logo: string | null;
   };
   items: InvoiceItem[];
   payments: { id: string; amount: number; method: string; paidAt: string; }[];
@@ -325,14 +331,23 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Invoice document */}
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden print:shadow-none print:border-0">
-          {/* Header */}
-          <div className="flex items-start justify-between p-8 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
-            <div>
-              <h1 className="text-2xl font-bold">{invoice.business.name}</h1>
-              {invoice.business.gstin && <p className="text-indigo-200 text-sm mt-0.5">GSTIN: {invoice.business.gstin}</p>}
-              {invoice.business.address && <p className="text-indigo-200 text-sm mt-0.5">{invoice.business.address}</p>}
-              {invoice.business.city && <p className="text-indigo-200 text-sm">{invoice.business.city}, {invoice.business.state}</p>}
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm print:shadow-none print:border-0 flex flex-col h-[calc(100vh-11rem)] print:h-auto overflow-hidden print:overflow-visible">
+          {/* Header - sticky at top */}
+          <div className="flex-shrink-0 flex items-start justify-between p-8 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+            <div className="flex items-start gap-4">
+              {invoice.business.logo && (
+                <img
+                  src={invoice.business.logo}
+                  alt="Business Logo"
+                  className="h-16 w-16 object-contain rounded-xl bg-white/20 p-1 flex-shrink-0"
+                />
+              )}
+              <div>
+                <h1 className="text-2xl font-bold">{invoice.business.name}</h1>
+                {invoice.business.gstin && <p className="text-indigo-200 text-sm mt-0.5">GSTIN: {invoice.business.gstin}</p>}
+                {invoice.business.address && <p className="text-indigo-200 text-sm mt-0.5">{invoice.business.address}</p>}
+                {invoice.business.city && <p className="text-indigo-200 text-sm">{invoice.business.city}, {invoice.business.state}</p>}
+              </div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-extrabold">{invoice.type}</div>
@@ -348,87 +363,102 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
 
-          {/* Bill To / Ship To */}
-          <div className="grid sm:grid-cols-2 gap-6 p-8 border-b border-gray-100">
-            <div>
-              <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Bill To</p>
-              <Link href={`/customers/${invoice.customer.id}`} className="text-base font-bold text-gray-900 hover:text-indigo-600">{invoice.customer.name}</Link>
-              {invoice.customer.gstin && <p className="text-sm font-mono text-gray-500 mt-0.5">GSTIN: {invoice.customer.gstin}</p>}
-              {invoice.customer.email && <p className="text-sm text-gray-500">{invoice.customer.email}</p>}
-              {invoice.customer.billingCity && <p className="text-sm text-gray-500">{invoice.customer.billingCity}, {invoice.customer.billingState}</p>}
-            </div>
-            <div className="text-right sm:text-left">
-              <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Place of Supply</p>
-              <p className="text-sm text-gray-700">{invoice.placeOfSupply || '—'}</p>
-              <p className="text-sm text-gray-500 mt-1">{invoice.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST+SGST)'}</p>
-            </div>
-          </div>
-
-          {/* Items table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">HSN/SAC</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">GST</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {invoice.items.map((item, i) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50">
-                    <td className="px-6 py-4 text-sm text-gray-400">{i + 1}</td>
-                    <td className="px-4 py-4">
-                      <p className="text-sm font-medium text-gray-900">{item.description}</p>
-                    </td>
-                    <td className="px-4 py-4 text-xs text-gray-500 font-mono">{item.hsnSac || '—'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-700 text-right">{item.quantity} {item.unit}</td>
-                    <td className="px-4 py-4 text-sm text-gray-700 text-right">₹{item.price.toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600 text-right">{item.gstRate}%</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{item.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Totals */}
-          <div className="flex flex-col sm:flex-row sm:justify-between p-8 border-t border-gray-100 gap-6">
-            {/* Amount in Words */}
-            <div className="sm:max-w-xs flex-1">
-              <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Amount in Words</p>
-              <p className="text-sm font-medium text-gray-700 italic">{numberToWords(invoice.total ?? 0)}</p>
-            </div>
-            <div className="w-full sm:max-w-xs space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Taxable Amount</span><span>₹{(invoice.taxableAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-              {!invoice.isInterState ? (
-                <>
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">CGST</span><span>₹{(invoice.cgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">SGST</span><span>₹{(invoice.sgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                </>
-              ) : (
-                <div className="flex justify-between text-sm"><span className="text-gray-600">IGST</span><span>₹{(invoice.igstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-              )}
-              <div className="border-t pt-2 flex justify-between font-bold text-base">
-                <span>Total</span>
-                <span className="text-indigo-600">₹{(invoice.total ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto min-h-0 print:overflow-visible">
+            {/* Bill To / Ship To / Place of Supply */}
+            <div className="grid sm:grid-cols-3 gap-6 p-8 border-b border-gray-100">
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Bill To</p>
+                <Link href={`/customers/${invoice.customer.id}`} className="text-base font-bold text-gray-900 hover:text-indigo-600">{invoice.customer.name}</Link>
+                {invoice.customer.gstin && <p className="text-sm font-mono text-gray-500 mt-0.5">GSTIN: {invoice.customer.gstin}</p>}
+                {invoice.customer.email && <p className="text-sm text-gray-500">{invoice.customer.email}</p>}
+                {invoice.customer.billingAddress && <p className="text-sm text-gray-500 mt-0.5">{invoice.customer.billingAddress}</p>}
+                {invoice.customer.billingCity && <p className="text-sm text-gray-500">{invoice.customer.billingCity}{invoice.customer.billingState ? `, ${invoice.customer.billingState}` : ''}{invoice.customer.billingPincode ? ` - ${invoice.customer.billingPincode}` : ''}</p>}
               </div>
-              {amtPaid > 0 && (
-                <div className="flex justify-between text-sm text-green-600"><span>Paid</span><span>₹{amtPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-              )}
-              {(invoice.amountDue ?? 0) > 0 && (
-                <div className="flex justify-between text-sm font-semibold text-red-600"><span>Balance Due</span><span>₹{(invoice.amountDue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-              )}
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Ship To</p>
+                {(invoice.customer.shippingAddress || invoice.customer.shippingCity) ? (
+                  <>
+                    {invoice.customer.shippingAddress && <p className="text-sm text-gray-700">{invoice.customer.shippingAddress}</p>}
+                    {invoice.customer.shippingCity && <p className="text-sm text-gray-500">{invoice.customer.shippingCity}{invoice.customer.shippingState ? `, ${invoice.customer.shippingState}` : ''}{invoice.customer.shippingPincode ? ` - ${invoice.customer.shippingPincode}` : ''}</p>}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">Same as billing address</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Place of Supply</p>
+                <p className="text-sm text-gray-700">{invoice.placeOfSupply || '—'}</p>
+                <p className="text-sm text-gray-500 mt-1">{invoice.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST+SGST)'}</p>
+              </div>
+            </div>
+
+            {/* Items table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">HSN/SAC</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">GST</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {invoice.items.map((item, i) => (
+                    <tr key={item.id} className="hover:bg-gray-50/50">
+                      <td className="px-6 py-4 text-sm text-gray-400">{i + 1}</td>
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-500 font-mono">{item.hsnSac || '—'}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700 text-right">{item.quantity} {item.unit}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700 text-right">₹{item.price.toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-4 text-sm text-gray-600 text-right">{item.gstRate}%</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{item.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals */}
+            <div className="flex flex-col sm:flex-row sm:justify-between p-8 border-t border-gray-100 gap-6">
+              {/* Amount in Words */}
+              <div className="sm:max-w-xs flex-1">
+                <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Amount in Words</p>
+                <p className="text-sm font-medium text-gray-700 italic">{numberToWords(invoice.total ?? 0)}</p>
+              </div>
+              <div className="w-full sm:max-w-xs space-y-2">
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Taxable Amount</span><span>₹{(invoice.taxableAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                {!invoice.isInterState ? (
+                  <>
+                    <div className="flex justify-between text-sm"><span className="text-gray-600">CGST</span><span>₹{(invoice.cgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-gray-600">SGST</span><span>₹{(invoice.sgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                  </>
+                ) : (
+                  <div className="flex justify-between text-sm"><span className="text-gray-600">IGST</span><span>₹{(invoice.igstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                )}
+                <div className="border-t pt-2 flex justify-between font-bold text-base">
+                  <span>Total</span>
+                  <span className="text-indigo-600">₹{(invoice.total ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                {amtPaid > 0 && (
+                  <div className="flex justify-between text-sm text-green-600"><span>Paid</span><span>₹{amtPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                )}
+                {(invoice.amountDue ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm font-semibold text-red-600"><span>Balance Due</span><span>₹{(invoice.amountDue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Notes */}
+          {/* Footer - sticky at bottom */}
           {(invoice.notes || invoice.terms) && (
-            <div className="grid sm:grid-cols-2 gap-4 px-8 pb-8 border-t border-gray-50 pt-6">
+            <div className="flex-shrink-0 grid sm:grid-cols-2 gap-4 px-8 py-6 border-t border-gray-100 bg-white">
               {invoice.notes && (
                 <div>
                   <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Notes</p>

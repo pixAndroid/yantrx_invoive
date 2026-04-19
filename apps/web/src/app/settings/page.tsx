@@ -27,6 +27,7 @@ interface BusinessSettings {
   upiId: string | null;
   invoicePrefix: string;
   termsAndConditions: string | null;
+  logo: string | null;
 }
 
 export default function SettingsPage() {
@@ -40,6 +41,7 @@ export default function SettingsPage() {
   const [pwLoading, setPwLoading] = useState(false);
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
     apiFetch<{ data: { business: BusinessSettings } }>('/auth/me')
@@ -77,6 +79,41 @@ export default function SettingsPage() {
 
   const update = (key: keyof BusinessSettings, value: string) => {
     setSettings(prev => prev ? { ...prev, [key]: value } : prev);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !settings) return;
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+    if (file.size > 2 * 1024 * 1024) { setError('Logo must be under 2MB'); return; }
+    setLogoUploading(true);
+    setError('');
+    try {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const token = getAccessToken();
+        const res = await fetch(`${API_URL}/business/${settings.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ logo: dataUrl }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setSettings(prev => prev ? { ...prev, logo: dataUrl } : prev);
+        } else {
+          setError(data.error || 'Failed to upload logo');
+        }
+        setLogoUploading(false);
+      };
+      reader.onerror = () => { setError('Failed to read file'); setLogoUploading(false); };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setError(err.message);
+      setLogoUploading(false);
+    }
+    // Reset the input so the same file can be re-selected
+    e.target.value = '';
   };
 
   const TABS = [
@@ -166,16 +203,44 @@ export default function SettingsPage() {
           >
             {activeTab === 'business' && (
               <div className="space-y-5">
-                {/* Logo placeholder */}
+                {/* Logo */}
                 <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white">
-                    {settings.name.charAt(0)}
+                  <div className="h-16 w-16 rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
+                    {settings.logo ? (
+                      <img src={settings.logo} alt="Business Logo" className="h-full w-full object-contain" />
+                    ) : (
+                      settings.name.charAt(0)
+                    )}
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">{settings.name}</h3>
-                    <button className="mt-1 inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700">
-                      <Camera className="h-3 w-3" /> Upload Logo
-                    </button>
+                    <label className="mt-1 inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer">
+                      <Camera className="h-3 w-3" />
+                      {logoUploading ? 'Uploading...' : settings.logo ? 'Change Logo' : 'Upload Logo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                        disabled={logoUploading}
+                      />
+                    </label>
+                    {settings.logo && !logoUploading && (
+                      <button
+                        onClick={() => {
+                          setSettings(prev => prev ? { ...prev, logo: null } : prev);
+                          const token = getAccessToken();
+                          fetch(`${API_URL}/business/${settings.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ logo: null }),
+                          });
+                        }}
+                        className="ml-3 text-xs text-red-500 hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 </div>
 
