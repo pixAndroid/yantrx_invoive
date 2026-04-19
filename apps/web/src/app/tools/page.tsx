@@ -127,7 +127,7 @@ export default function ToolsPage() {
         <div className="container-wide max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">GST Rate Reference</h2>
-            <p className="text-gray-600">Quick reference for GST slabs applicable in India (FY 2024-25)</p>
+            <p className="text-gray-600">Quick reference for GST slabs applicable in India (FY 2025-26)</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <table className="w-full">
