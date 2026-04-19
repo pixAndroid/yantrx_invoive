@@ -28,10 +28,12 @@ interface Meta {
 
 const STATUS_CONFIG = {
   PAID: { label: 'Paid', class: 'bg-green-100 text-green-700', icon: CheckCircle },
-  SENT: { label: '', class: 'bg-blue-100 text-blue-700', icon: Clock },
+  SENT: { label: 'Sent', class: 'bg-blue-100 text-blue-700', icon: Clock },
   OVERDUE: { label: 'Overdue', class: 'bg-red-100 text-red-700', icon: AlertCircle },
   DRAFT: { label: 'Draft', class: 'bg-gray-100 text-gray-600', icon: FileText },
   PARTIALLY_PAID: { label: 'Partial', class: 'bg-amber-100 text-amber-700', icon: Clock },
+  CANCELLED: { label: 'Cancelled', class: 'bg-red-100 text-red-600', icon: AlertCircle },
+  SAVED: { label: 'Saved', class: 'bg-purple-100 text-purple-700', icon: FileText },
 };
 
 const FILTERS = ['All', 'Draft', 'Sent', 'Paid', 'Overdue'];
