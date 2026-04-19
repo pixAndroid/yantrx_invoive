@@ -75,7 +75,7 @@ export default function SettingsPage() {
       .then(res => { if (res.data) setTemplates(res.data); })
       .catch(() => {})
       .finally(() => setTemplatesLoading(false));
-  }, [activeTab]);
+  }, [activeTab, templates.length]);
 
   const handleSave = async () => {
     if (!settings) return;
@@ -472,8 +472,8 @@ export default function SettingsPage() {
                     className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none resize-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Default Invoice Template</label>
+                <fieldset>
+                  <legend className="block text-sm font-semibold text-gray-700 mb-3">Default Invoice Template</legend>
                   {templatesLoading ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {[1, 2, 3].map(i => (
@@ -522,7 +522,7 @@ export default function SettingsPage() {
                     </div>
                   )}
                   <p className="mt-2 text-xs text-gray-400">This template will be used by default when creating new invoices.</p>
-                </div>
+                </fieldset>
               </div>
             )}
             {activeTab === 'notifications' && (
