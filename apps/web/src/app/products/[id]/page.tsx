@@ -149,6 +149,32 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+      {/* Stock summary cards (view mode only, for products) */}
+      {!editing && product.type !== 'service' && (
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-gray-500 font-medium">Current Stock</p>
+            <p className={`text-2xl font-bold mt-0.5 ${product.stockCount === 0 ? 'text-red-600' : (product.lowStockAlert !== null && product.stockCount !== null && product.stockCount <= product.lowStockAlert) ? 'text-amber-600' : 'text-green-700'}`}>
+              {product.stockCount !== null ? product.stockCount.toLocaleString('en-IN') : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{product.unit}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-gray-500 font-medium">Low Stock Alert</p>
+            <p className="text-2xl font-bold text-gray-700 mt-0.5">
+              {product.lowStockAlert !== null ? product.lowStockAlert.toLocaleString('en-IN') : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">threshold</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-gray-500 font-medium">Stock Status</p>
+            <p className={`text-sm font-semibold mt-1 ${product.stockCount === 0 ? 'text-red-600' : (product.lowStockAlert !== null && product.stockCount !== null && product.stockCount <= product.lowStockAlert) ? 'text-amber-600' : 'text-green-700'}`}>
+              {product.stockCount === 0 ? '⚠ Out of Stock' : (product.lowStockAlert !== null && product.stockCount !== null && product.stockCount <= product.lowStockAlert) ? '⚠ Low Stock' : '✓ In Stock'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         {editing ? (
           <div className="grid sm:grid-cols-2 gap-4">
@@ -187,14 +213,22 @@ export default function ProductDetailPage() {
               <input type="number" value={form.costPrice || 0} onChange={e => set('costPrice', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">MRP (₹)</label>
+              <input type="number" value={form.mrp || 0} onChange={e => set('mrp', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">GST Rate (%)</label>
               <select value={form.gstRate || 18} onChange={e => set('gstRate', parseFloat(e.target.value))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
                 {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Qty</label>
-              <input type="number" value={form.stockCount || 0} onChange={e => set('stockCount', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock Qty</label>
+              <input type="number" min="0" value={form.stockCount ?? ''} onChange={e => set('stockCount', e.target.value === '' ? null : parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Low Stock Alert at</label>
+              <input type="number" min="0" value={form.lowStockAlert ?? ''} onChange={e => set('lowStockAlert', e.target.value === '' ? null : parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
           </div>
         ) : (
@@ -211,7 +245,7 @@ export default function ProductDetailPage() {
               { label: 'Cost Price', value: product.costPrice ? `₹${product.costPrice.toLocaleString('en-IN')}` : '—' },
               { label: 'MRP', value: product.mrp ? `₹${product.mrp.toLocaleString('en-IN')}` : '—' },
               { label: 'GST Rate', value: `${product.gstRate}%` },
-              { label: 'Stock Qty', value: product.stockCount !== null ? String(product.stockCount) : '—' },
+              { label: 'Current Stock', value: product.stockCount !== null ? `${product.stockCount.toLocaleString('en-IN')} ${product.unit}` : '—' },
               { label: 'Low Stock Alert', value: product.lowStockAlert !== null ? String(product.lowStockAlert) : '—' },
             ].map(row => (
               <div key={row.label} className="flex justify-between border-b border-gray-50 pb-2">
