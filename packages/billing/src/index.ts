@@ -26,19 +26,57 @@ function getRazorpay(): Razorpay {
 // ─── Order Creation ────────────────────────────────────────────────────────
 
 export interface CreateOrderOptions {
-  amount: number; // in paise (INR * 100)
+  amount: number; // in rupees — converted to paise internally
   currency?: string;
   receipt?: string;
   notes?: Record<string, string>;
 }
 
+/** Shape of the plain-object rejection thrown by the Razorpay SDK (axios-based). */
+interface RazorpaySdkError {
+  statusCode?: number;
+  error?: {
+    code?: string;
+    description?: string;
+  };
+  message?: string;
+}
+
+/** Error class for failures originating from the Razorpay gateway. */
+export class RazorpayError extends Error {
+  statusCode: number;
+  razorpayCode?: string;
+
+  constructor(description: string, statusCode: number, razorpayCode?: string) {
+    super(description);
+    this.name = 'RazorpayError';
+    this.statusCode = statusCode;
+    this.razorpayCode = razorpayCode;
+  }
+}
+
+function normalizeRazorpayError(err: unknown): RazorpayError {
+  const sdkErr = err as RazorpaySdkError;
+  const description =
+    sdkErr?.error?.description ||
+    sdkErr?.message ||
+    'Failed to create Razorpay order';
+  return new RazorpayError(description, sdkErr?.statusCode || 502, sdkErr?.error?.code);
+}
+
 export async function createOrder(options: CreateOrderOptions) {
-  return getRazorpay().orders.create({
-    amount: Math.round(options.amount * 100),
-    currency: options.currency || 'INR',
-    receipt: options.receipt,
-    notes: options.notes,
-  });
+  try {
+    return await getRazorpay().orders.create({
+      amount: Math.round(options.amount * 100),
+      currency: options.currency || 'INR',
+      receipt: options.receipt,
+      notes: options.notes,
+    });
+  } catch (err) {
+    // Razorpay SDK (axios-based) rejects with a plain object, not an Error instance.
+    // Normalize it so the Express error handler always receives a proper Error.
+    throw normalizeRazorpayError(err);
+  }
 }
 
 // ─── Subscription Creation ─────────────────────────────────────────────────
