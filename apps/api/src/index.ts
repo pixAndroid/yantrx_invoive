@@ -74,8 +74,30 @@ async function bootstrap() {
     } catch {
       console.error('❌ Database schema is not initialized (tables missing).');
       console.error('   Run the following commands from the workspace root then restart:');
-      console.error('     pnpm db:push     # apply schema to database');
+      console.error('     pnpm db:deploy   # apply all migrations to database');
       console.error('     pnpm db:seed     # seed plans, modules and demo data\n');
+      await prisma.$disconnect();
+      process.exit(1);
+    }
+
+    // Verify the businesses table has the defaultTemplateId column.
+    // This column was added in migration 20240101000000_add_default_template_id.
+    // If the database was initially set up via `prisma db push` before this
+    // column was added, this column will be missing and every business query
+    // will fail with a cryptic Prisma error.
+    try {
+      await prisma.$queryRaw`SELECT "defaultTemplateId" FROM "businesses" LIMIT 0`;
+    } catch {
+      console.error('❌ Database schema is out of sync: column "businesses.defaultTemplateId" is missing.');
+      console.error('   The database was likely set up before this column was added.');
+      console.error('   Run ONE of the following from the workspace root then restart:');
+      console.error('');
+      console.error('   Option A — db:push (development):');
+      console.error('     pnpm db:push');
+      console.error('');
+      console.error('   Option B — migrate (production):');
+      console.error('     pnpm exec prisma migrate resolve --applied "20230101000000_init" --schema=./prisma/schema.prisma');
+      console.error('     pnpm db:deploy\n');
       await prisma.$disconnect();
       process.exit(1);
     }
