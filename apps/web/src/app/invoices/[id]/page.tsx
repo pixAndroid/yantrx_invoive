@@ -265,6 +265,9 @@ export default function InvoiceDetailPage() {
 
   const badge = STATUS_BADGE[invoice.status] || STATUS_BADGE.DRAFT;
   const amtPaid = (invoice.total ?? 0) - (invoice.amountDue ?? 0);
+  // Only render logos that are safe data URLs or absolute https URLs to prevent injection
+  const safeLogo = invoice.business.logo && /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,|https:\/\/)/.test(invoice.business.logo)
+    ? invoice.business.logo : null;
 
   return (
     <>
@@ -330,14 +333,16 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Invoice document */}
+        {/* Invoice document — fixed height so header/footer are always visible while items scroll.
+            11rem accounts for: top navigation (~4rem) + action bar (~3.5rem) + page padding (~3.5rem).
+            Print styles restore natural document flow. */}
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm print:shadow-none print:border-0 flex flex-col h-[calc(100vh-11rem)] print:h-auto overflow-hidden print:overflow-visible">
           {/* Header - sticky at top */}
           <div className="flex-shrink-0 flex items-start justify-between p-8 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
             <div className="flex items-start gap-4">
-              {invoice.business.logo && (
+              {safeLogo && (
                 <img
-                  src={invoice.business.logo}
+                  src={safeLogo}
                   alt="Business Logo"
                   className="h-16 w-16 object-contain rounded-xl bg-white/20 p-1 flex-shrink-0"
                 />

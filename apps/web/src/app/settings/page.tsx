@@ -227,14 +227,25 @@ export default function SettingsPage() {
                     </label>
                     {settings.logo && !logoUploading && (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
+                          const prevLogo = settings.logo;
                           setSettings(prev => prev ? { ...prev, logo: null } : prev);
-                          const token = getAccessToken();
-                          fetch(`${API_URL}/business/${settings.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ logo: null }),
-                          });
+                          try {
+                            const token = getAccessToken();
+                            const res = await fetch(`${API_URL}/business/${settings.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ logo: null }),
+                            });
+                            const data = await res.json();
+                            if (!data.success) {
+                              setSettings(prev => prev ? { ...prev, logo: prevLogo } : prev);
+                              setError(data.error || 'Failed to remove logo');
+                            }
+                          } catch (err: any) {
+                            setSettings(prev => prev ? { ...prev, logo: prevLogo } : prev);
+                            setError(err.message);
+                          }
                         }}
                         className="ml-3 text-xs text-red-500 hover:text-red-600"
                       >
