@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Package, Tag, TrendingUp, Hash } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
@@ -9,6 +9,16 @@ import { useToast } from '@/components/ui/Toast';
 const GST_RATES = [0, 5, 12, 18, 28];
 const UNITS = ['PCS','KG','GRAM','LITRE','METRE','BOX','DOZEN','SET','PAIR','BUNDLE','HOUR','DAY','MONTH','SERVICE'];
 const PRODUCT_TYPES = [{ value: 'product', label: 'Product' }, { value: 'service', label: 'Service' }];
+
+function F({ label, err, children }: { label: string; err?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      {children}
+      {err && <p className="mt-1 text-xs text-red-600">{err}</p>}
+    </div>
+  );
+}
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -84,14 +94,6 @@ export default function NewProductPage() {
       setLoading(false);
     }
   };
-
-  const F = ({ label, err, children }: { label: string; err?: string; children: React.ReactNode }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      {children}
-      {err && <p className="mt-1 text-xs text-red-600">{err}</p>}
-    </div>
-  );
 
   const inp = (field: string, type = 'text', ph = '') => (
     <input
