@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Package, Plus, Edit2, Check, X, AlertCircle, RefreshCw, Star, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Package, Plus, Edit2, Check, X, AlertCircle, RefreshCw, Star, Trash2, Zap } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Plan {
@@ -21,10 +21,18 @@ interface Plan {
   sortOrder: number;
 }
 
+interface Module {
+  id: string;
+  name: string;
+  slug: string;
+  isCore: boolean;
+  isActive: boolean;
+}
+
 const DEFAULT_FORM = {
   name: '', slug: '', description: '', price: '0', yearlyPrice: '',
   invoiceLimit: '100', customerLimit: '500', userLimit: '2', storageLimit: '500',
-  features: 'Invoicing\nCustomers\nGST Reports',
+  features: [] as string[],
   isActive: true, isFeatured: false, sortOrder: '0',
 };
 
@@ -34,13 +42,47 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
     price: String(plan.price), yearlyPrice: String(plan.yearlyPrice || ''),
     invoiceLimit: String(plan.invoiceLimit), customerLimit: String(plan.customerLimit),
     userLimit: String(plan.userLimit), storageLimit: String(plan.storageLimit),
-    features: (plan.features || []).join('\n'),
+    features: plan.features || [],
     isActive: plan.isActive, isFeatured: plan.isFeatured, sortOrder: String(plan.sortOrder),
-  } : DEFAULT_FORM);
+  } : { ...DEFAULT_FORM, features: [] as string[] });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const [modules, setModules] = useState<Module[]>([]);
+  const [featureInput, setFeatureInput] = useState('');
+  const featureInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    adminFetch<{ data: Module[] }>('/admin/modules')
+      .then(res => setModules(res.data))
+      .catch(() => {});
+  }, []);
 
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const addFeature = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setForm(p => ({
+      ...p,
+      features: p.features.includes(trimmed) ? p.features : [...p.features, trimmed],
+    }));
+    setFeatureInput('');
+    featureInputRef.current?.focus();
+  };
+
+  const removeFeature = (index: number) => {
+    setForm(p => ({ ...p, features: p.features.filter((_, i) => i !== index) }));
+  };
+
+  const toggleModuleFeature = (moduleName: string) => {
+    const label = moduleName;
+    setForm(p => ({
+      ...p,
+      features: p.features.includes(label)
+        ? p.features.filter(f => f !== label)
+        : [...p.features, label],
+    }));
+  };
 
   const handleSave = async () => {
     if (!form.name || !form.slug) { setErr('Name and slug are required'); return; }
@@ -55,7 +97,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
         customerLimit: parseInt(form.customerLimit) || 500,
         userLimit: parseInt(form.userLimit) || 2,
         storageLimit: parseInt(form.storageLimit) || 500,
-        features: form.features.split('\n').map(f => f.trim()).filter(Boolean),
+        features: form.features,
         isActive: form.isActive, isFeatured: form.isFeatured,
         sortOrder: parseInt(form.sortOrder) || 0,
       };
@@ -112,10 +154,99 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
               Featured
             </label>
           </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-400 mb-1">Features (one per line)</label>
-            <textarea value={form.features} onChange={e => set('features', e.target.value)} rows={4}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none resize-none" />
+
+          {/* ── Features Section ── */}
+          <div className="col-span-2 mt-1">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-400">
+                Features
+                <span className="ml-1.5 text-gray-600">({form.features.length} added)</span>
+              </label>
+              {form.features.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => set('features', [])}
+                  className="text-xs text-gray-600 hover:text-red-400"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            {/* Added features list */}
+            <div className="rounded-lg border border-gray-700 bg-gray-800 p-3 min-h-[64px]">
+              {form.features.length === 0 ? (
+                <p className="text-xs text-gray-600 italic">No features added yet. Use the input below or pick modules.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {form.features.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 group">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-300">
+                        <Check className="h-3 w-3 text-green-500 shrink-0" />
+                        {f}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeFeature(i)}
+                        className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        title="Remove feature"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Custom feature input */}
+            <div className="flex gap-2 mt-2">
+              <input
+                ref={featureInputRef}
+                type="text"
+                value={featureInput}
+                onChange={e => setFeatureInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFeature(featureInput); } }}
+                placeholder="Type a feature and press Enter or +"
+                className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => addFeature(featureInput)}
+                className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-700 flex items-center gap-1"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modules as quick-add pills */}
+            {modules.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-orange-400" /> Quick-add modules
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {modules.map(mod => {
+                    const active = form.features.includes(mod.name);
+                    return (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => toggleModuleFeature(mod.name)}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs border transition-colors ${
+                          active
+                            ? 'bg-orange-600/20 border-orange-500 text-orange-300'
+                            : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        {active ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                        {mod.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-2 mt-4">
