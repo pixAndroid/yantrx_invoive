@@ -6,6 +6,16 @@ export interface AppError extends Error {
   errors?: Record<string, string[]>;
 }
 
+/** Shape of the plain-object rejections emitted by third-party SDKs (e.g. Razorpay). */
+interface SdkErrorObject {
+  statusCode?: number;
+  error?: { description?: string };
+}
+
+function isSdkErrorObject(value: unknown): value is SdkErrorObject {
+  return typeof value === 'object' && value !== null && !('stack' in value);
+}
+
 const isDev = process.env.NODE_ENV !== 'production';
 
 export function errorHandler(
@@ -127,10 +137,8 @@ export function errorHandler(
   // Guard against plain-object errors (e.g. from Razorpay SDK) where
   // `statusCode` is set but `message` is undefined because the thrown value
   // is not an actual Error instance.
-  const rawMessage: string | undefined =
-    err.message ||
-    (err as any)?.error?.description ||
-    undefined;
+  const sdkDescription = isSdkErrorObject(err) ? err.error?.description : undefined;
+  const rawMessage: string | undefined = err.message || sdkDescription;
   const message = err.statusCode
     ? (rawMessage || 'An error occurred')
     : isDev
