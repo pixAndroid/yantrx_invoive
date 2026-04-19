@@ -105,7 +105,29 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
     });
     if (!membership) { res.status(403).json({ success: false, error: 'Access denied' }); return; }
 
-    const { ownerId: _ownerId, planId: _planId, ...updateData } = req.body;
+    const {
+      id: _id,
+      ownerId: _ownerId,
+      planId: _planId,
+      createdAt: _createdAt,
+      updatedAt: _updatedAt,
+      owner: _owner,
+      plan: _plan,
+      branches: _branches,
+      memberships: _memberships,
+      customers: _customers,
+      products: _products,
+      invoices: _invoices,
+      payments: _payments,
+      expenses: _expenses,
+      subscriptions: _subscriptions,
+      modules: _modules,
+      auditLogs: _auditLogs,
+      notifications: _notifications,
+      apiKeys: _apiKeys,
+      reviews: _reviews,
+      ...updateData
+    } = req.body;
     const business = await prisma.business.update({ where: { id }, data: updateData });
     res.json({ success: true, data: business });
   } catch (error) { next(error); }
