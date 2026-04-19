@@ -6,7 +6,7 @@ import {
   Building2, Mail, Phone, MapPin, FileText, CreditCard,
   Save, CheckCircle, Camera, Globe, Hash, Bell, Lock, Upload
 } from 'lucide-react';
-import { apiFetch, API_URL, getAccessToken } from '@/lib/api';
+import { apiFetch, API_URL, getAccessToken, getUserData } from '@/lib/api';
 
 interface BusinessSettings {
   id: string;
@@ -44,10 +44,15 @@ export default function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ data: { memberships: Array<{ business: BusinessSettings }> } }>('/auth/me')
+    const tokenData = getUserData();
+    const businessId = tokenData.businessId;
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+    apiFetch<{ data: BusinessSettings }>(`/business/${businessId}`)
       .then(res => {
-        const business = res.data?.memberships?.[0]?.business;
-        if (business) setSettings(business);
+        if (res.data) setSettings(res.data);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
