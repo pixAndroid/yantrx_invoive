@@ -5,8 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Printer, Download, Send, CheckCircle, XCircle, Copy,
-  IndianRupee, Clock, AlertCircle, Share2, FileText, X, Check, Edit2
+  ArrowLeft, Printer, Download, Send, XCircle, Copy,
+  IndianRupee, Share2, X, Check, Edit2,
+  Palette,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { numberToWords } from '@/lib/numberToWords';
@@ -38,9 +39,9 @@ interface Invoice {
   dueDate: string | null;
   subtotal: number;
   taxableAmount: number;
-  cgstAmount: number;
-  sgstAmount: number;
-  igstAmount: number;
+  cgstTotal: number;
+  sgstTotal: number;
+  igstTotal: number;
   total: number;
   amountDue: number;
   isInterState: boolean;
@@ -77,6 +78,60 @@ interface Invoice {
   payments: { id: string; amount: number; method: string; paidAt: string; }[];
 }
 
+// ─── Theme System ────────────────────────────────────────────────────────────
+
+const THEMES = {
+  'corporate-blue': {
+    name: 'Corporate Blue',
+    accent: '#1e40af',
+    accentMid: '#2563eb',
+    accentBg: '#eff6ff',
+    accentBorder: '#bfdbfe',
+    headerBg: '#1e3a8a',
+    headerText: '#ffffff',
+    headerSub: '#93c5fd',
+    tableBg: '#f0f9ff',
+    tableHeaderText: '#1e3a8a',
+    totalCardBg: '#f0f9ff',
+    grandTotalBg: '#1e3a8a',
+    grandTotalText: '#ffffff',
+  },
+  'classic-black': {
+    name: 'Classic Black',
+    accent: '#111827',
+    accentMid: '#374151',
+    accentBg: '#f9fafb',
+    accentBorder: '#d1d5db',
+    headerBg: '#111827',
+    headerText: '#ffffff',
+    headerSub: '#9ca3af',
+    tableBg: '#f9fafb',
+    tableHeaderText: '#111827',
+    totalCardBg: '#f9fafb',
+    grandTotalBg: '#111827',
+    grandTotalText: '#ffffff',
+  },
+  'elegant-gray': {
+    name: 'Elegant Gray',
+    accent: '#475569',
+    accentMid: '#64748b',
+    accentBg: '#f8fafc',
+    accentBorder: '#e2e8f0',
+    headerBg: '#1e293b',
+    headerText: '#ffffff',
+    headerSub: '#94a3b8',
+    tableBg: '#f8fafc',
+    tableHeaderText: '#1e293b',
+    totalCardBg: '#f8fafc',
+    grandTotalBg: '#1e293b',
+    grandTotalText: '#ffffff',
+  },
+} as const;
+
+type ThemeKey = keyof typeof THEMES;
+
+// ─── Status config ────────────────────────────────────────────────────────────
+
 const STATUS_BADGE: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-600',
   SENT: 'bg-blue-100 text-blue-700',
@@ -84,6 +139,15 @@ const STATUS_BADGE: Record<string, string> = {
   OVERDUE: 'bg-red-100 text-red-700',
   PARTIALLY_PAID: 'bg-amber-100 text-amber-700',
   CANCELLED: 'bg-red-100 text-red-500',
+};
+
+const STATUS_DOC_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  DRAFT:          { bg: '#f3f4f6', text: '#6b7280', label: 'Draft' },
+  SENT:           { bg: '#dbeafe', text: '#1d4ed8', label: 'Sent' },
+  PAID:           { bg: '#dcfce7', text: '#15803d', label: '✓ Paid' },
+  OVERDUE:        { bg: '#fee2e2', text: '#b91c1c', label: 'Overdue' },
+  PARTIALLY_PAID: { bg: '#fef3c7', text: '#b45309', label: 'Partial' },
+  CANCELLED:      { bg: '#fee2e2', text: '#dc2626', label: 'Cancelled' },
 };
 
 function RecordPaymentModal({ invoice, onClose, onPaid }: { invoice: Invoice; onClose: () => void; onPaid: () => void }) {
@@ -183,6 +247,8 @@ export default function InvoiceDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [actionLoading, setActionLoading] = useState('');
+  const [theme, setTheme] = useState<ThemeKey>('corporate-blue');
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   const fetchInvoice = useCallback(async () => {
     setLoading(true);
@@ -263,11 +329,16 @@ export default function InvoiceDetailPage() {
     return <div className="p-6 text-center text-gray-500">Invoice not found.</div>;
   }
 
-  const badge = STATUS_BADGE[invoice.status] || STATUS_BADGE.DRAFT;
+  const t = THEMES[theme];
+  const docBadge = STATUS_DOC_BADGE[invoice.status] ?? STATUS_DOC_BADGE.DRAFT;
+  const actionBadge = STATUS_BADGE[invoice.status] || STATUS_BADGE.DRAFT;
   const amtPaid = (invoice.total ?? 0) - (invoice.amountDue ?? 0);
   // Only render logos that are safe data URLs or absolute https URLs to prevent injection
   const safeLogo = invoice.business.logo && /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,|https:\/\/)/.test(invoice.business.logo)
     ? invoice.business.logo : null;
+
+  const fmt = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <>
@@ -284,19 +355,50 @@ export default function InvoiceDetailPage() {
         onCancel={() => setConfirmCancel(false)}
       />
 
-      <div className="p-4 lg:p-8 max-w-5xl mx-auto print:p-0">
-        {/* Action bar - hidden on print */}
-        <div className="flex items-center gap-3 mb-6 print:hidden">
-          <button onClick={() => router.push('/invoices')} className="rounded-lg p-2 hover:bg-gray-100">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto print:p-0 print:max-w-none">
+
+        {/* ── Action Bar (hidden on print) ─────────────────────────── */}
+        <div className="flex items-center gap-3 mb-5 print:hidden flex-wrap">
+          <button onClick={() => router.push('/invoices')}
+            className="rounded-lg p-2 hover:bg-gray-100 text-gray-600">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-gray-900">{invoice.invoiceNumber}</span>
-            <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${badge}`}>{invoice.status}</span>
+            <span className="text-base font-bold text-gray-900">{invoice.invoiceNumber}</span>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${actionBadge}`}>
+              {invoice.status.replace('_', ' ')}
+            </span>
           </div>
+
+          {/* Theme Picker */}
+          <div className="relative ml-1">
+            <button
+              onClick={() => setShowThemePicker(p => !p)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              title="Change theme"
+            >
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">{t.name}</span>
+            </button>
+            {showThemePicker && (
+              <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-44">
+                {(Object.keys(THEMES) as ThemeKey[]).map(k => (
+                  <button key={k} onClick={() => { setTheme(k); setShowThemePicker(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${theme === k ? 'font-semibold' : ''}`}>
+                    <span className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                      style={{ background: THEMES[k].accent }} />
+                    {THEMES[k].name}
+                    {theme === k && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             {(invoice.status === 'DRAFT' || invoice.status === 'SENT' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'OVERDUE') && (
-              <button onClick={() => setShowPayment(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">
+              <button onClick={() => setShowPayment(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">
                 <IndianRupee className="h-4 w-4" /> Record Payment
               </button>
             )}
@@ -312,181 +414,333 @@ export default function InvoiceDetailPage() {
                 <Edit2 className="h-4 w-4" /> Edit
               </button>
             )}
-            <button onClick={handleWhatsApp} className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
+            <button onClick={handleWhatsApp}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
               <Share2 className="h-4 w-4" /> WhatsApp
             </button>
-            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               <Printer className="h-4 w-4" /> Print
             </button>
-            <button onClick={handleDownloadPdf} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <Download className="h-4 w-4" /> Download PDF
+            <button onClick={handleDownloadPdf}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <Download className="h-4 w-4" /> PDF
             </button>
             <button onClick={handleDuplicate} disabled={actionLoading === 'dup'}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
               <Copy className="h-4 w-4" /> Duplicate
             </button>
             {invoice.status !== 'CANCELLED' && invoice.status !== 'PAID' && (
-              <button onClick={() => setConfirmCancel(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+              <button onClick={() => setConfirmCancel(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
                 <XCircle className="h-4 w-4" /> Cancel
               </button>
             )}
           </div>
         </div>
 
-        {/* Invoice document — fixed height so header/footer are always visible while items scroll.
-            11rem accounts for: top navigation (~4rem) + action bar (~3.5rem) + page padding (~3.5rem).
-            Print styles restore natural document flow. */}
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm print:shadow-none print:border-0 flex flex-col h-[calc(100vh-11rem)] print:h-auto overflow-hidden print:overflow-visible">
-          {/* Header - sticky at top */}
-          <div className="flex-shrink-0 flex items-start justify-between p-8 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
-            <div className="flex items-start gap-4">
-              {safeLogo && (
+        {/* ── Invoice Document ─────────────────────────────────────── */}
+        <div
+          id="invoice-document"
+          className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col h-[calc(100vh-10.5rem)] print:h-auto overflow-x-hidden print:overflow-visible"
+        >
+          {/* Top accent bar */}
+          <div className="h-1.5 flex-shrink-0 print:h-1" style={{ background: t.accent }} />
+
+          {/* ── Header ── */}
+          <div className="flex-shrink-0 flex items-start justify-between gap-6 px-8 pt-7 pb-7 bg-white border-b border-gray-100">
+            {/* Left: company */}
+            <div className="flex items-start gap-4 min-w-0">
+              {safeLogo ? (
                 <img
                   src={safeLogo}
-                  alt="Business Logo"
-                  className="h-16 w-16 object-contain rounded-xl bg-white/20 p-1 flex-shrink-0"
+                  alt="Logo"
+                  className="h-14 w-14 object-contain rounded-lg border border-gray-100 flex-shrink-0"
                 />
-              )}
-              <div>
-                <h1 className="text-2xl font-bold">{invoice.business.name}</h1>
-                {invoice.business.gstin && <p className="text-indigo-200 text-sm mt-0.5">GSTIN: {invoice.business.gstin}</p>}
-                {invoice.business.address && <p className="text-indigo-200 text-sm mt-0.5">{invoice.business.address}</p>}
-                {invoice.business.city && <p className="text-indigo-200 text-sm">{invoice.business.city}, {invoice.business.state}</p>}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-extrabold">{invoice.type}</div>
-              <div className="text-indigo-200 mt-1 font-medium">{invoice.invoiceNumber}</div>
-              <div className="mt-1 text-sm text-indigo-200">
-                Date: {new Date(invoice.issueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </div>
-              {invoice.dueDate && (
-                <div className="text-sm text-indigo-200">
-                  Due: {new Date(invoice.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+              ) : (
+                <div className="h-14 w-14 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-xl font-bold"
+                  style={{ background: t.accent }}>
+                  {invoice.business.name.charAt(0).toUpperCase()}
                 </div>
               )}
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-gray-900 leading-tight">{invoice.business.name}</h1>
+                {invoice.business.gstin && (
+                  <p className="text-xs font-mono text-gray-500 mt-0.5">GSTIN: {invoice.business.gstin}</p>
+                )}
+                {invoice.business.address && (
+                  <p className="text-xs text-gray-500 mt-0.5">{invoice.business.address}</p>
+                )}
+                {(invoice.business.city || invoice.business.state) && (
+                  <p className="text-xs text-gray-500">
+                    {[invoice.business.city, invoice.business.state].filter(Boolean).join(', ')}
+                  </p>
+                )}
+                {(invoice.business.phone || invoice.business.email) && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {[invoice.business.phone, invoice.business.email].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Right: invoice meta card */}
+            <div className="flex-shrink-0 text-right">
+              <p className="text-3xl font-extrabold tracking-tight" style={{ color: t.accent }}>
+                INVOICE
+              </p>
+              <p className="text-base font-semibold text-gray-700 mt-1">{invoice.invoiceNumber}</p>
+              <div className="mt-3 space-y-1 text-xs text-gray-500">
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-gray-400">Issue Date</span>
+                  <span className="font-medium text-gray-700">{fmtDate(invoice.issueDate)}</span>
+                </div>
+                {invoice.dueDate && (
+                  <div className="flex items-center justify-end gap-2">
+                    <span className="text-gray-400">Due Date</span>
+                    <span className="font-medium text-gray-700">{fmtDate(invoice.dueDate)}</span>
+                  </div>
+                )}
+              </div>
+              {/* Status badge */}
+              <div className="mt-3 flex justify-end">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide border"
+                  style={{ background: docBadge.bg, color: docBadge.text, borderColor: docBadge.bg }}>
+                  {docBadge.label}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Scrollable content area */}
+          {/* ── Scrollable body ── */}
           <div className="flex-1 overflow-y-auto min-h-0 print:overflow-visible">
-            {/* Bill To / Ship To / Place of Supply */}
-            <div className="grid sm:grid-cols-3 gap-6 p-8 border-b border-gray-100">
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Bill To</p>
-                <Link href={`/customers/${invoice.customer.id}`} className="text-base font-bold text-gray-900 hover:text-indigo-600">{invoice.customer.name}</Link>
-                {invoice.customer.gstin && <p className="text-sm font-mono text-gray-500 mt-0.5">GSTIN: {invoice.customer.gstin}</p>}
-                {invoice.customer.email && <p className="text-sm text-gray-500">{invoice.customer.email}</p>}
-                {invoice.customer.billingAddress && <p className="text-sm text-gray-500 mt-0.5">{invoice.customer.billingAddress}</p>}
-                {invoice.customer.billingCity && <p className="text-sm text-gray-500">{invoice.customer.billingCity}{invoice.customer.billingState ? `, ${invoice.customer.billingState}` : ''}{invoice.customer.billingPincode ? ` - ${invoice.customer.billingPincode}` : ''}</p>}
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Ship To</p>
-                {(invoice.customer.shippingAddress || invoice.customer.shippingCity) ? (
-                  <>
-                    {invoice.customer.shippingAddress && <p className="text-sm text-gray-700">{invoice.customer.shippingAddress}</p>}
-                    {invoice.customer.shippingCity && <p className="text-sm text-gray-500">{invoice.customer.shippingCity}{invoice.customer.shippingState ? `, ${invoice.customer.shippingState}` : ''}{invoice.customer.shippingPincode ? ` - ${invoice.customer.shippingPincode}` : ''}</p>}
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-400 italic">Same as billing address</p>
+
+            {/* Bill To / Ship To / Supply Details */}
+            <div className="grid grid-cols-3 gap-px bg-gray-100 border-b border-gray-100">
+              {/* Bill To */}
+              <div className="bg-white px-6 py-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: t.accent }}>
+                  Bill To
+                </p>
+                <Link href={`/customers/${invoice.customer.id}`}
+                  className="text-sm font-bold text-gray-900 hover:underline leading-snug block">
+                  {invoice.customer.name}
+                </Link>
+                {invoice.customer.gstin && (
+                  <p className="text-xs font-mono text-gray-500 mt-0.5">GSTIN: {invoice.customer.gstin}</p>
+                )}
+                {invoice.customer.email && (
+                  <p className="text-xs text-gray-500 mt-0.5">{invoice.customer.email}</p>
+                )}
+                {invoice.customer.phone && (
+                  <p className="text-xs text-gray-500">{invoice.customer.phone}</p>
+                )}
+                {invoice.customer.billingAddress && (
+                  <p className="text-xs text-gray-500 mt-1">{invoice.customer.billingAddress}</p>
+                )}
+                {invoice.customer.billingCity && (
+                  <p className="text-xs text-gray-500">
+                    {invoice.customer.billingCity}
+                    {invoice.customer.billingState ? `, ${invoice.customer.billingState}` : ''}
+                    {invoice.customer.billingPincode ? ` – ${invoice.customer.billingPincode}` : ''}
+                  </p>
                 )}
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Place of Supply</p>
-                <p className="text-sm text-gray-700">{invoice.placeOfSupply || '—'}</p>
-                <p className="text-sm text-gray-500 mt-1">{invoice.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST+SGST)'}</p>
+
+              {/* Ship To */}
+              <div className="bg-white px-6 py-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: t.accent }}>
+                  Ship To
+                </p>
+                {(invoice.customer.shippingAddress || invoice.customer.shippingCity) ? (
+                  <>
+                    {invoice.customer.shippingAddress && (
+                      <p className="text-xs text-gray-700">{invoice.customer.shippingAddress}</p>
+                    )}
+                    {invoice.customer.shippingCity && (
+                      <p className="text-xs text-gray-500">
+                        {invoice.customer.shippingCity}
+                        {invoice.customer.shippingState ? `, ${invoice.customer.shippingState}` : ''}
+                        {invoice.customer.shippingPincode ? ` – ${invoice.customer.shippingPincode}` : ''}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">Same as billing</p>
+                )}
+              </div>
+
+              {/* Supply Details */}
+              <div className="bg-white px-6 py-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: t.accent }}>
+                  Supply Details
+                </p>
+                <p className="text-xs font-medium text-gray-700">{invoice.placeOfSupply || '—'}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {invoice.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST + SGST)'}
+                </p>
               </div>
             </div>
 
-            {/* Items table */}
+            {/* ── Items Table ── */}
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">HSN/SAC</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">GST</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: t.accentBg }}>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider w-10"
+                      style={{ color: t.tableHeaderText }}>#</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider"
+                      style={{ color: t.tableHeaderText }}>Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider"
+                      style={{ color: t.tableHeaderText }}>HSN/SAC</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider"
+                      style={{ color: t.tableHeaderText }}>Qty</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider"
+                      style={{ color: t.tableHeaderText }}>Rate</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider"
+                      style={{ color: t.tableHeaderText }}>GST%</th>
+                    <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider"
+                      style={{ color: t.tableHeaderText }}>Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
                   {invoice.items.map((item, i) => (
-                    <tr key={item.id} className="hover:bg-gray-50/50">
-                      <td className="px-6 py-4 text-sm text-gray-400">{i + 1}</td>
+                    <tr key={item.id}
+                      className="border-b border-gray-50 transition-colors"
+                      style={{ background: i % 2 === 1 ? t.tableBg : '#ffffff' }}>
+                      <td className="px-5 py-4 text-gray-400 font-medium">{i + 1}</td>
                       <td className="px-4 py-4">
-                        <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                        <p className="font-medium text-gray-900 leading-snug">{item.description}</p>
+                        {item.discount > 0 && (
+                          <p className="text-xs text-gray-400 mt-0.5">Discount: ₹{item.discount.toLocaleString('en-IN')}</p>
+                        )}
                       </td>
-                      <td className="px-4 py-4 text-xs text-gray-500 font-mono">{item.hsnSac || '—'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 text-right">{item.quantity} {item.unit}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 text-right">₹{item.price.toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-4 text-sm text-gray-600 text-right">{item.gstRate}%</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{item.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-4 text-xs font-mono text-gray-500">{item.hsnSac || '—'}</td>
+                      <td className="px-4 py-4 text-gray-700 text-right tabular-nums">
+                        {item.quantity}{item.unit ? ` ${item.unit}` : ''}
+                      </td>
+                      <td className="px-4 py-4 text-gray-700 text-right tabular-nums">
+                        ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-4 text-gray-600 text-right tabular-nums">{item.gstRate}%</td>
+                      <td className="px-5 py-4 font-semibold text-gray-900 text-right tabular-nums">
+                        {fmt(item.total)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Totals */}
-            <div className="flex flex-col sm:flex-row sm:justify-between p-8 border-t border-gray-100 gap-6">
+            {/* ── Totals Section ── */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 px-8 py-7 border-t border-gray-100">
               {/* Amount in Words */}
-              <div className="sm:max-w-xs flex-1">
-                <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Amount in Words</p>
-                <p className="text-sm font-medium text-gray-700 italic">{numberToWords(invoice.total ?? 0)}</p>
+              <div className="flex-1 sm:max-w-sm">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  Amount in Words
+                </p>
+                <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                  {numberToWords(invoice.total ?? 0)}
+                </p>
               </div>
-              <div className="w-full sm:max-w-xs space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Taxable Amount</span><span>₹{(invoice.taxableAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                {!invoice.isInterState ? (
-                  <>
-                    <div className="flex justify-between text-sm"><span className="text-gray-600">CGST</span><span>₹{(invoice.cgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                    <div className="flex justify-between text-sm"><span className="text-gray-600">SGST</span><span>₹{(invoice.sgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">IGST</span><span>₹{(invoice.igstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                )}
-                <div className="border-t pt-2 flex justify-between font-bold text-base">
-                  <span>Total</span>
-                  <span className="text-indigo-600">₹{(invoice.total ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+
+              {/* Totals card */}
+              <div className="w-full sm:w-72 rounded-xl overflow-hidden border border-gray-200 shadow-sm print:shadow-none inv-totals-card">
+                <div className="divide-y divide-gray-100">
+                  <div className="flex justify-between items-center px-5 py-3">
+                    <span className="text-sm text-gray-500">Taxable Amount</span>
+                    <span className="text-sm font-medium text-gray-800 tabular-nums">{fmt(invoice.taxableAmount)}</span>
+                  </div>
+                  {!invoice.isInterState ? (
+                    <>
+                      <div className="flex justify-between items-center px-5 py-3">
+                        <span className="text-sm text-gray-500">CGST</span>
+                        <span className="text-sm text-gray-700 tabular-nums">{fmt(invoice.cgstTotal)}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-5 py-3">
+                        <span className="text-sm text-gray-500">SGST</span>
+                        <span className="text-sm text-gray-700 tabular-nums">{fmt(invoice.sgstTotal)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center px-5 py-3">
+                      <span className="text-sm text-gray-500">IGST</span>
+                      <span className="text-sm text-gray-700 tabular-nums">{fmt(invoice.igstTotal)}</span>
+                    </div>
+                  )}
+                  {amtPaid > 0 && (
+                    <div className="flex justify-between items-center px-5 py-3">
+                      <span className="text-sm text-green-600">Amount Paid</span>
+                      <span className="text-sm font-medium text-green-600 tabular-nums">− {fmt(amtPaid)}</span>
+                    </div>
+                  )}
                 </div>
-                {amtPaid > 0 && (
-                  <div className="flex justify-between text-sm text-green-600"><span>Paid</span><span>₹{amtPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                {/* Grand Total highlight */}
+                <div className="flex justify-between items-center px-5 py-4"
+                  style={{ background: t.grandTotalBg }}>
+                  <span className="text-sm font-bold" style={{ color: t.grandTotalText }}>Grand Total</span>
+                  <span className="text-xl font-extrabold tabular-nums" style={{ color: t.grandTotalText }}>
+                    {fmt(invoice.total)}
+                  </span>
+                </div>
+                {(invoice.amountDue ?? 0) > 0 && amtPaid > 0 && (
+                  <div className="flex justify-between items-center px-5 py-3 bg-red-50 border-t border-red-100">
+                    <span className="text-sm font-semibold text-red-600">Balance Due</span>
+                    <span className="text-sm font-bold text-red-700 tabular-nums">{fmt(invoice.amountDue)}</span>
+                  </div>
                 )}
-                {(invoice.amountDue ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm font-semibold text-red-600"><span>Balance Due</span><span>₹{(invoice.amountDue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+              </div>
+            </div>
+
+            {/* ── Notes & Terms ── */}
+            {(invoice.notes || invoice.terms) && (
+              <div className="grid sm:grid-cols-2 gap-6 px-8 py-6 border-t border-gray-100">
+                {invoice.notes && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: t.accent }}>
+                      Notes
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{invoice.notes}</p>
+                  </div>
                 )}
+                {invoice.terms && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: t.accent }}>
+                      Terms &amp; Conditions
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{invoice.terms}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Footer: Thank You + Authorized Signatory ── */}
+            <div className="flex items-end justify-between px-8 py-6 border-t border-gray-100 gap-6">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Thank you for your business!</p>
+                {invoice.business.email && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Questions? Contact us at {invoice.business.email}
+                  </p>
+                )}
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="inline-block border-t-2 pt-3 text-center" style={{ borderColor: t.accent, minWidth: '9rem' }}>
+                  <p className="text-xs font-semibold text-gray-700">{invoice.business.name}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Authorized Signatory</p>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Footer - sticky at bottom */}
-          {(invoice.notes || invoice.terms) && (
-            <div className="flex-shrink-0 grid sm:grid-cols-2 gap-4 px-8 py-6 border-t border-gray-100 bg-white">
-              {invoice.notes && (
-                <div>
-                  <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Notes</p>
-                  <p className="text-sm text-gray-600">{invoice.notes}</p>
-                </div>
-              )}
-              {invoice.terms && (
-                <div>
-                  <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Terms &amp; Conditions</p>
-                  <p className="text-sm text-gray-600">{invoice.terms}</p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Payment History */}
+        {/* ── Payment History (screen only) ───────────────────────── */}
         {invoice.payments && invoice.payments.length > 0 && (
           <div className="mt-6 rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden print:hidden">
             <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Payment History</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Payment History</h2>
             </div>
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
@@ -497,9 +751,11 @@ export default function InvoiceDetailPage() {
               <tbody className="divide-y divide-gray-50">
                 {invoice.payments.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-700">{new Date(p.paidAt).toLocaleDateString('en-IN')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.method.replace('_', ' ')}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-green-600 text-right">₹{p.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-3 text-gray-700">{new Date(p.paidAt).toLocaleDateString('en-IN')}</td>
+                    <td className="px-4 py-3 text-gray-600">{p.method.replace('_', ' ')}</td>
+                    <td className="px-4 py-3 font-semibold text-green-600 text-right tabular-nums">
+                      {fmt(p.amount)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
