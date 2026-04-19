@@ -32,6 +32,18 @@ interface Product {
 const GST_RATES = [0, 5, 12, 18, 28];
 const UNITS = ['PCS','KG','GRAM','LITRE','METRE','BOX','DOZEN','SET','PAIR','BUNDLE','HOUR','DAY','MONTH','SERVICE'];
 
+function getStockStatusColor(stockCount: number | null, lowStockAlert: number | null): string {
+  if (stockCount === 0) return 'text-red-600';
+  if (lowStockAlert !== null && stockCount !== null && stockCount <= lowStockAlert) return 'text-amber-600';
+  return 'text-green-700';
+}
+
+function getStockStatusLabel(stockCount: number | null, lowStockAlert: number | null): string {
+  if (stockCount === 0) return '⚠ Out of Stock';
+  if (lowStockAlert !== null && stockCount !== null && stockCount <= lowStockAlert) return '⚠ Low Stock';
+  return '✓ In Stock';
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -154,7 +166,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
             <p className="text-xs text-gray-500 font-medium">Current Stock</p>
-            <p className={`text-2xl font-bold mt-0.5 ${product.stockCount === 0 ? 'text-red-600' : (product.lowStockAlert !== null && product.stockCount !== null && product.stockCount <= product.lowStockAlert) ? 'text-amber-600' : 'text-green-700'}`}>
+            <p className={`text-2xl font-bold mt-0.5 ${getStockStatusColor(product.stockCount, product.lowStockAlert)}`}>
               {product.stockCount !== null ? product.stockCount.toLocaleString('en-IN') : '—'}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">{product.unit}</p>
@@ -168,8 +180,8 @@ export default function ProductDetailPage() {
           </div>
           <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
             <p className="text-xs text-gray-500 font-medium">Stock Status</p>
-            <p className={`text-sm font-semibold mt-1 ${product.stockCount === 0 ? 'text-red-600' : (product.lowStockAlert !== null && product.stockCount !== null && product.stockCount <= product.lowStockAlert) ? 'text-amber-600' : 'text-green-700'}`}>
-              {product.stockCount === 0 ? '⚠ Out of Stock' : (product.lowStockAlert !== null && product.stockCount !== null && product.stockCount <= product.lowStockAlert) ? '⚠ Low Stock' : '✓ In Stock'}
+            <p className={`text-sm font-semibold mt-1 ${getStockStatusColor(product.stockCount, product.lowStockAlert)}`}>
+              {getStockStatusLabel(product.stockCount, product.lowStockAlert)}
             </p>
           </div>
         </div>
@@ -224,11 +236,11 @@ export default function ProductDetailPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock Qty</label>
-              <input type="number" min="0" value={form.stockCount ?? ''} onChange={e => set('stockCount', e.target.value === '' ? null : parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              <input type="number" min="0" value={form.stockCount ?? ''} onChange={e => set('stockCount', e.target.value === '' ? null : (parseFloat(e.target.value) || null))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Low Stock Alert at</label>
-              <input type="number" min="0" value={form.lowStockAlert ?? ''} onChange={e => set('lowStockAlert', e.target.value === '' ? null : parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              <input type="number" min="0" value={form.lowStockAlert ?? ''} onChange={e => set('lowStockAlert', e.target.value === '' ? null : (parseFloat(e.target.value) || null))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
           </div>
         ) : (
