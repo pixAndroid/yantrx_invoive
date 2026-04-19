@@ -403,7 +403,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: Next
       prisma.employee.count({ where: { businessId, status: 'ACTIVE' } }),
       prisma.leave.count({ where: { businessId, status: 'PENDING' } }),
       prisma.attendance.count({ where: { businessId, date: { gte: today, lt: tomorrow }, status: { in: ['PRESENT', 'HALF_DAY', 'LATE'] } } }),
-      prisma.payrollRecord.aggregate({ where: { businessId, status: 'PAID', year: today.getFullYear(), month: today.getMonth() + 1 }, _sum: { netPay: true } }),
+      prisma.payrollRecord.aggregate({ where: { businessId, status: { in: ['PAID', 'PROCESSED'] }, year: today.getFullYear(), month: today.getMonth() + 1 }, _sum: { netPay: true } }),
     ]);
 
     const departments = await prisma.employee.groupBy({
