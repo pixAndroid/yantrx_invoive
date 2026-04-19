@@ -187,16 +187,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-gray-200 bg-white">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-gray-200 bg-white print:hidden">
         <Sidebar />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {sidebarOpen && (
-          <>
+          <div className="print:hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -218,14 +218,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <Sidebar mobile />
             </motion.aside>
-          </>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
         {/* Top bar */}
-        <header className="flex h-16 items-center border-b border-gray-200 bg-white px-4 lg:px-6 gap-4">
+        <header className="flex h-16 items-center border-b border-gray-200 bg-white px-4 lg:px-6 gap-4 print:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden rounded-lg p-2 hover:bg-gray-100"
