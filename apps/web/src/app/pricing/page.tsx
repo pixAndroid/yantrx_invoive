@@ -7,7 +7,7 @@ import {
   CheckCircle, ArrowRight, X, Loader2, AlertCircle,
   Shield, LayoutDashboard, Menu
 } from 'lucide-react';
-import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
+import { isAuthenticated, getUserData, apiFetch } from '@/lib/api';
 
 interface Plan {
   id: string;
@@ -52,8 +52,6 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [initials, setInitials] = useState('U');
-  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
-  const [businessName, setBusinessName] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Payment modal state
@@ -69,26 +67,12 @@ export default function PricingPage() {
       .catch(() => setPlans([]))
       .finally(() => setLoading(false));
 
-    // Check auth
+    // Check auth — use only JWT token data to avoid hitting the rate-limited /auth/me
     if (!isAuthenticated()) return;
     setLoggedIn(true);
     const tokenData = getUserData();
     const displayName = tokenData.name || 'User';
     setInitials(displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
-
-    apiFetch('/auth/me')
-      .then((res: any) => {
-        if (res.data?.user?.name) {
-          const name = res.data.user.name;
-          setInitials(name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
-        }
-        const biz = res.data?.memberships?.[0]?.business;
-        if (biz?.logo && typeof biz.logo === 'string' && isSafeImageUrl(biz.logo)) {
-          setBusinessLogo(biz.logo);
-        }
-        if (biz?.name) setBusinessName(biz.name);
-      })
-      .catch(() => {});
   }, []);
 
   const handlePlanClick = (plan: Plan) => {
@@ -203,11 +187,7 @@ export default function PricingPage() {
                   </Link>
                   <Link href="/dashboard" className="flex-shrink-0">
                     <div className="h-9 w-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center ring-2 ring-indigo-200 hover:ring-indigo-400 transition-all">
-                      {businessLogo ? (
-                        <img src={businessLogo} alt={businessName || 'Business'} className="h-full w-full object-contain" />
-                      ) : (
-                        <span className="text-white text-xs font-bold">{initials}</span>
-                      )}
+                      <span className="text-white text-xs font-bold">{initials}</span>
                     </div>
                   </Link>
                 </>
@@ -237,12 +217,8 @@ export default function PricingPage() {
             <div className="pt-2 space-y-2">
               {loggedIn ? (
                 <Link href="/dashboard" className="flex items-center gap-2 py-2 text-sm font-medium text-gray-700" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="h-7 w-7 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    {businessLogo ? (
-                      <img src={businessLogo} alt={businessName || 'Business'} className="h-full w-full object-contain" />
-                    ) : (
-                      <span className="text-white text-xs font-bold">{initials}</span>
-                    )}
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-bold">{initials}</span>
                   </div>
                   Go to Dashboard
                 </Link>

@@ -28,6 +28,12 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
 
+    // Cancel any existing active/trial subscriptions before creating the new one
+    await prisma.subscription.updateMany({
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+      data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Changed plan' },
+    });
+
     const sub = await prisma.subscription.create({
       data: {
         businessId,
@@ -55,6 +61,12 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
     const { planId } = req.body;
     if (!planId) { res.status(400).json({ success: false, error: 'planId is required' }); return; }
 
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    if (!keyId) {
+      res.status(500).json({ success: false, error: 'Payment gateway is not configured. Please contact support.' });
+      return;
+    }
+
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
     if (plan.price <= 0) { res.status(400).json({ success: false, error: 'Cannot create payment order for free plan' }); return; }
@@ -72,7 +84,7 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        keyId: process.env.RAZORPAY_KEY_ID || '',
+        keyId,
       },
     });
   } catch (error) { next(error); }
@@ -98,6 +110,12 @@ router.post('/verify-payment', async (req: AuthenticatedRequest, res: Response, 
 
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
+
+    // Cancel any existing active/trial subscriptions before creating the new one
+    await prisma.subscription.updateMany({
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+      data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Upgraded to new plan' },
+    });
 
     const sub = await prisma.subscription.create({
       data: {
