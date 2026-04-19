@@ -91,7 +91,7 @@ const BUILTIN_TEMPLATE_HTML = `<!DOCTYPE html>
   <div class="inv-header">
     <div class="logo-area">
       <div class="logo-box">
-        <img src="{{businessLogo}}" alt="" onerror="this.style.display='none';this.parentElement.textContent='{{businessInitial}}'" />
+        <img src="{{businessLogo}}" alt="{{businessInitial}}" />
       </div>
       <div class="biz-name">{{businessName}}</div>
     </div>
@@ -198,8 +198,8 @@ const BUILTIN_TEMPLATE: InvoiceTemplate = {
   css: null,
   thumbnail: null,
   sortOrder: -1,
-  createdAt: '',
-  updatedAt: '',
+  createdAt: 'built-in',
+  updatedAt: 'built-in',
 };
 
 const DEFAULT_HTML = `<!DOCTYPE html>

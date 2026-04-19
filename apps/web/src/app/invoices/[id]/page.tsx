@@ -323,62 +323,67 @@ export default function InvoiceDetailPage() {
   const renderTemplateHtml = (html: string, inv: Invoice): string => {
     const fmtN = (n: number) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    // Escape special HTML characters in text content to prevent injection
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 
     // Resolve items block
     let result = html.replace(/{{#items}}([\s\S]*?){{\/items}}/g, (_match, itemTpl: string) => {
       return inv.items.map((item, i) =>
         itemTpl
-          .replace(/{{index}}/g, String(i + 1))
-          .replace(/{{description}}/g, item.description || '')
-          .replace(/{{hsnSac}}/g, item.hsnSac || '')
-          .replace(/{{quantity}}/g, String(item.quantity))
-          .replace(/{{unit}}/g, item.unit || '')
-          .replace(/{{price}}/g, fmtN(item.price))
-          .replace(/{{gstRate}}/g, String(item.gstRate))
-          .replace(/{{total}}/g, fmtN(item.total))
+          .replace(/{{index}}/g, esc(String(i + 1)))
+          .replace(/{{description}}/g, esc(item.description || ''))
+          .replace(/{{hsnSac}}/g, esc(item.hsnSac || ''))
+          .replace(/{{quantity}}/g, esc(String(item.quantity)))
+          .replace(/{{unit}}/g, esc(item.unit || ''))
+          .replace(/{{price}}/g, esc(fmtN(item.price)))
+          .replace(/{{gstRate}}/g, esc(String(item.gstRate)))
+          .replace(/{{total}}/g, esc(fmtN(item.total)))
       ).join('');
     });
 
-    const safeLogoUrl = inv.business.logo && isSafeImageUrl(inv.business.logo) ? inv.business.logo : '';
+    // Use transparent 1×1 GIF as fallback so the img element renders cleanly
+    const TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    const safeLogoUrl = inv.business.logo && isSafeImageUrl(inv.business.logo)
+      ? inv.business.logo : TRANSPARENT_GIF;
 
     const vars: Record<string, string> = {
-      businessName: inv.business.name || '',
-      businessGstin: inv.business.gstin || '',
-      businessAddress: inv.business.address || '',
-      businessCity: inv.business.city || '',
-      businessState: inv.business.state || '',
-      businessPhone: inv.business.phone || '',
-      businessEmail: inv.business.email || '',
-      businessInitial: inv.business.name?.charAt(0)?.toUpperCase() || '',
+      businessName: esc(inv.business.name || ''),
+      businessGstin: esc(inv.business.gstin || ''),
+      businessAddress: esc(inv.business.address || ''),
+      businessCity: esc(inv.business.city || ''),
+      businessState: esc(inv.business.state || ''),
+      businessPhone: esc(inv.business.phone || ''),
+      businessEmail: esc(inv.business.email || ''),
+      businessInitial: esc(inv.business.name?.charAt(0)?.toUpperCase() || ''),
       businessLogo: safeLogoUrl,
-      invoiceNumber: inv.invoiceNumber || '',
-      invoiceType: inv.type || 'INVOICE',
-      issueDate: fmtDate(inv.issueDate),
-      dueDate: inv.dueDate ? fmtDate(inv.dueDate) : '',
-      customerName: inv.customer.name || '',
-      customerGstin: inv.customer.gstin || '',
+      invoiceNumber: esc(inv.invoiceNumber || ''),
+      invoiceType: esc(inv.type || 'INVOICE'),
+      issueDate: esc(fmtDate(inv.issueDate)),
+      dueDate: inv.dueDate ? esc(fmtDate(inv.dueDate)) : '',
+      customerName: esc(inv.customer.name || ''),
+      customerGstin: esc(inv.customer.gstin || ''),
       customerPan: '',
-      customerAddress: inv.customer.billingAddress || '',
-      customerCity: inv.customer.billingCity || '',
-      customerState: inv.customer.billingState || '',
-      customerPincode: inv.customer.billingPincode || '',
-      customerEmail: inv.customer.email || '',
-      customerPhone: inv.customer.phone || '',
-      shipAddress: inv.customer.shippingAddress || inv.customer.billingAddress || '',
-      shipCity: inv.customer.shippingCity || inv.customer.billingCity || '',
-      shipState: inv.customer.shippingState || inv.customer.billingState || '',
-      shipPincode: inv.customer.shippingPincode || inv.customer.billingPincode || '',
-      placeOfSupply: inv.placeOfSupply || '',
+      customerAddress: esc(inv.customer.billingAddress || ''),
+      customerCity: esc(inv.customer.billingCity || ''),
+      customerState: esc(inv.customer.billingState || ''),
+      customerPincode: esc(inv.customer.billingPincode || ''),
+      customerEmail: esc(inv.customer.email || ''),
+      customerPhone: esc(inv.customer.phone || ''),
+      shipAddress: esc(inv.customer.shippingAddress || inv.customer.billingAddress || ''),
+      shipCity: esc(inv.customer.shippingCity || inv.customer.billingCity || ''),
+      shipState: esc(inv.customer.shippingState || inv.customer.billingState || ''),
+      shipPincode: esc(inv.customer.shippingPincode || inv.customer.billingPincode || ''),
+      placeOfSupply: esc(inv.placeOfSupply || ''),
       taxType: inv.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST + SGST)',
-      taxableAmount: fmtN(inv.taxableAmount),
-      cgst: fmtN(inv.cgstTotal),
-      sgst: fmtN(inv.sgstTotal),
-      igst: fmtN(inv.igstTotal),
-      total: fmtN(inv.total),
-      amountDue: fmtN(inv.amountDue),
-      amountInWords: numberToWords(inv.total ?? 0),
-      notes: inv.notes || '',
-      terms: inv.terms || '',
+      taxableAmount: esc(fmtN(inv.taxableAmount)),
+      cgst: esc(fmtN(inv.cgstTotal)),
+      sgst: esc(fmtN(inv.sgstTotal)),
+      igst: esc(fmtN(inv.igstTotal)),
+      total: esc(fmtN(inv.total)),
+      amountDue: esc(fmtN(inv.amountDue)),
+      amountInWords: esc(numberToWords(inv.total ?? 0)),
+      notes: esc(inv.notes || ''),
+      terms: esc(inv.terms || ''),
     };
 
     for (const [key, value] of Object.entries(vars)) {
@@ -389,12 +394,16 @@ export default function InvoiceDetailPage() {
 
   const openTemplatePrint = (templateHtml: string, inv: Invoice) => {
     const rendered = renderTemplateHtml(templateHtml, inv);
-    const win = window.open('', '_blank');
+    const blob = new Blob([rendered], { type: 'text/html; charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const win = window.open(blobUrl, '_blank');
     if (win) {
-      win.document.write(rendered);
-      win.document.close();
-      win.focus();
-      setTimeout(() => win.print(), 300);
+      win.addEventListener('load', () => {
+        win.print();
+        URL.revokeObjectURL(blobUrl);
+      }, { once: true });
+    } else {
+      URL.revokeObjectURL(blobUrl);
     }
   };
 
@@ -590,13 +599,13 @@ export default function InvoiceDetailPage() {
               className="w-full border-0"
               style={{ minHeight: '900px', height: '100%' }}
               title="Invoice Preview"
-              sandbox="allow-same-origin"
+              sandbox=""
               onLoad={(e) => {
                 const iframe = e.currentTarget;
-                const body = iframe.contentDocument?.body;
-                if (body) {
-                  iframe.style.height = `${body.scrollHeight + 32}px`;
-                }
+                try {
+                  const body = iframe.contentDocument?.body;
+                  if (body) iframe.style.height = `${body.scrollHeight + 32}px`;
+                } catch { /* cross-origin sandbox prevents access */ }
               }}
             />
           </div>
