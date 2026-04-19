@@ -320,7 +320,8 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  const renderTemplateHtml = (html: string, inv: Invoice): string => {
+  const renderTemplateHtml = (html: string | undefined, inv: Invoice): string => {
+    if (!html) return '<p style="padding:2rem;color:red">Template HTML is unavailable.</p>';
     const fmtN = (n: number) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
     // Escape special HTML characters in text content to prevent injection
