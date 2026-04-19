@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
   LogOut, Bell, Menu, X,
-  IndianRupee, Zap, Building2, ChevronRight
+  IndianRupee, Zap, Building2, ChevronRight, Lock
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
@@ -19,6 +19,16 @@ const NAV_ITEMS = [
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/payments', label: 'Payments', icon: IndianRupee },
 ];
+
+// Keywords that must appear (case-insensitive) in plan.features to enable a nav item.
+// Items with no entry here are always enabled.
+// Multiple keywords per route use OR logic — the item is enabled if ANY keyword matches.
+const NAV_FEATURE_REQUIREMENTS: Record<string, string[]> = {
+  '/customers': ['customer'],
+  '/products': ['product'],
+  '/reports': ['report', 'gst'],
+  '/payments': ['payment'],
+};
 
 const SETTINGS_ITEMS = [
   { href: '/settings', label: 'Business Settings', icon: Building2 },
@@ -37,7 +47,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
-  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number } | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; features: string[] } | null>(null);
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
 
@@ -73,6 +83,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 name: sub.plan?.name || 'Free',
                 invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
                 invoiceLimit: sub.plan?.invoiceLimit || 5,
+                features: sub.plan?.features || [],
               });
             })
             .catch(() => {
@@ -80,6 +91,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 name: sub.plan?.name || 'Free',
                 invoicesUsed: 0,
                 invoiceLimit: sub.plan?.invoiceLimit || 5,
+                features: sub.plan?.features || [],
               });
             });
         }
@@ -88,6 +100,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [router]);
 
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+
+  const isNavEnabled = (href: string): boolean => {
+    const requiredKeywords = NAV_FEATURE_REQUIREMENTS[href];
+    if (!requiredKeywords) return true; // No requirement — always accessible
+    if (!planInfo) return true; // Still loading — show as enabled to avoid flicker
+    return requiredKeywords.some(keyword =>
+      planInfo.features.some(f => f.toLowerCase().includes(keyword.toLowerCase()))
+    );
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -117,22 +138,40 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
-          {NAV_ITEMS.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => mobile && setSidebarOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive(item.href)
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <item.icon className={`h-4 w-4 ${isActive(item.href) ? 'text-indigo-600' : 'text-gray-400'}`} />
-              {item.label}
-              {isActive(item.href) && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-600" />}
-            </Link>
-          ))}
+          {NAV_ITEMS.map(item => {
+            const enabled = isNavEnabled(item.href);
+            if (!enabled) {
+              return (
+                <Link
+                  key={item.href}
+                  href="/settings/billing"
+                  onClick={() => mobile && setSidebarOpen(false)}
+                  title={`Upgrade your plan to unlock ${item.label}`}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-50 hover:text-gray-400 transition-colors"
+                >
+                  <item.icon className="h-4 w-4 text-gray-300" />
+                  <span>{item.label}</span>
+                  <Lock className="ml-auto h-3.5 w-3.5 text-gray-300" />
+                </Link>
+              );
+            }
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => mobile && setSidebarOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <item.icon className={`h-4 w-4 ${isActive(item.href) ? 'text-indigo-600' : 'text-gray-400'}`} />
+                {item.label}
+                {isActive(item.href) && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-600" />}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Settings section */}
