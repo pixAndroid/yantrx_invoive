@@ -96,7 +96,6 @@ export default function CustomerDetailPage() {
       setForm(res.data);
       const d = res.data;
       setSameAsB(
-        !!(d.shippingAddress || d.shippingCity) &&
         d.shippingAddress === d.billingAddress &&
         d.shippingCity === d.billingCity &&
         d.shippingState === d.billingState &&
@@ -291,10 +290,10 @@ export default function CustomerDetailPage() {
                     <input value={form.pan || ''} onChange={e => set('pan', e.target.value.toUpperCase())} maxLength={10} placeholder="AAAAA0000A" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-mono uppercase focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
                   </EditField>
                   <EditField label="Credit Limit (₹)">
-                    <input type="number" value={form.creditLimit ?? 0} onChange={e => set('creditLimit', parseFloat(e.target.value) || 0)} placeholder="0" min="0" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    <input type="number" value={form.creditLimit ?? ''} onChange={e => set('creditLimit', e.target.value === '' ? 0 : parseFloat(e.target.value))} placeholder="0" min="0" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
                   </EditField>
                   <EditField label="Credit Days">
-                    <input type="number" value={form.creditDays ?? 30} onChange={e => set('creditDays', parseInt(e.target.value) || 0)} min="0" max="365" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                    <input type="number" value={form.creditDays ?? 30} onChange={e => set('creditDays', e.target.value === '' ? 30 : parseInt(e.target.value))} min="0" max="365" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
                   </EditField>
                 </div>
               </div>
