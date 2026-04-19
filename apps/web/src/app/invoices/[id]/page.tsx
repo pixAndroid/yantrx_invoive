@@ -7,12 +7,19 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, Printer, Download, Send, XCircle, Copy,
   IndianRupee, Share2, X, Check, Edit2,
-  Palette,
+  Palette, LayoutTemplate,
 } from 'lucide-react';
 import { apiFetch, isSafeImageUrl } from '@/lib/api';
 import { numberToWords } from '@/lib/numberToWords';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+
+interface PublicTemplate {
+  id: string;
+  name: string;
+  html: string;
+  isDefault: boolean;
+}
 
 interface InvoiceItem {
   id: string;
@@ -249,6 +256,9 @@ export default function InvoiceDetailPage() {
   const [actionLoading, setActionLoading] = useState('');
   const [theme, setTheme] = useState<ThemeKey>('corporate-blue');
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [templates, setTemplates] = useState<PublicTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   const fetchInvoice = useCallback(async () => {
     setLoading(true);
@@ -263,6 +273,12 @@ export default function InvoiceDetailPage() {
   }, [id]);
 
   useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
+
+  useEffect(() => {
+    apiFetch<{ data: PublicTemplate[] }>('/invoices/templates')
+      .then(res => setTemplates(res.data))
+      .catch(() => {});
+  }, []);
 
   const handleMarkSent = async () => {
     setActionLoading('sent');
@@ -304,11 +320,97 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const renderTemplateHtml = (html: string, inv: Invoice): string => {
+    const fmtN = (n: number) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Resolve items block
+    let result = html.replace(/{{#items}}([\s\S]*?){{\/items}}/g, (_match, itemTpl: string) => {
+      return inv.items.map((item, i) =>
+        itemTpl
+          .replace(/{{index}}/g, String(i + 1))
+          .replace(/{{description}}/g, item.description || '')
+          .replace(/{{hsnSac}}/g, item.hsnSac || '')
+          .replace(/{{quantity}}/g, String(item.quantity))
+          .replace(/{{unit}}/g, item.unit || '')
+          .replace(/{{price}}/g, fmtN(item.price))
+          .replace(/{{gstRate}}/g, String(item.gstRate))
+          .replace(/{{total}}/g, fmtN(item.total))
+      ).join('');
+    });
+
+    const safeLogoUrl = inv.business.logo && isSafeImageUrl(inv.business.logo) ? inv.business.logo : '';
+
+    const vars: Record<string, string> = {
+      businessName: inv.business.name || '',
+      businessGstin: inv.business.gstin || '',
+      businessAddress: inv.business.address || '',
+      businessCity: inv.business.city || '',
+      businessState: inv.business.state || '',
+      businessPhone: inv.business.phone || '',
+      businessEmail: inv.business.email || '',
+      businessInitial: inv.business.name?.charAt(0)?.toUpperCase() || '',
+      businessLogo: safeLogoUrl,
+      invoiceNumber: inv.invoiceNumber || '',
+      invoiceType: inv.type || 'INVOICE',
+      issueDate: fmtDate(inv.issueDate),
+      dueDate: inv.dueDate ? fmtDate(inv.dueDate) : '',
+      customerName: inv.customer.name || '',
+      customerGstin: inv.customer.gstin || '',
+      customerPan: '',
+      customerAddress: inv.customer.billingAddress || '',
+      customerCity: inv.customer.billingCity || '',
+      customerState: inv.customer.billingState || '',
+      customerPincode: inv.customer.billingPincode || '',
+      customerEmail: inv.customer.email || '',
+      customerPhone: inv.customer.phone || '',
+      shipAddress: inv.customer.shippingAddress || inv.customer.billingAddress || '',
+      shipCity: inv.customer.shippingCity || inv.customer.billingCity || '',
+      shipState: inv.customer.shippingState || inv.customer.billingState || '',
+      shipPincode: inv.customer.shippingPincode || inv.customer.billingPincode || '',
+      placeOfSupply: inv.placeOfSupply || '',
+      taxType: inv.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST + SGST)',
+      taxableAmount: fmtN(inv.taxableAmount),
+      cgst: fmtN(inv.cgstTotal),
+      sgst: fmtN(inv.sgstTotal),
+      igst: fmtN(inv.igstTotal),
+      total: fmtN(inv.total),
+      amountDue: fmtN(inv.amountDue),
+      amountInWords: numberToWords(inv.total ?? 0),
+      notes: inv.notes || '',
+      terms: inv.terms || '',
+    };
+
+    for (const [key, value] of Object.entries(vars)) {
+      result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    }
+    return result;
+  };
+
+  const openTemplatePrint = (templateHtml: string, inv: Invoice) => {
+    const rendered = renderTemplateHtml(templateHtml, inv);
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(rendered);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 300);
+    }
+  };
+
   const handlePrint = () => {
+    if (selectedTemplateId && invoice) {
+      const tmpl = templates.find(t => t.id === selectedTemplateId);
+      if (tmpl) { openTemplatePrint(tmpl.html, invoice); return; }
+    }
     window.print();
   };
 
   const handleDownloadPdf = () => {
+    if (selectedTemplateId && invoice) {
+      const tmpl = templates.find(t => t.id === selectedTemplateId);
+      if (tmpl) { openTemplatePrint(tmpl.html, invoice); return; }
+    }
     const prevTitle = document.title;
     if (invoice) document.title = `Invoice-${invoice.invoiceNumber}`;
     window.print();
@@ -328,6 +430,8 @@ export default function InvoiceDetailPage() {
   if (!invoice) {
     return <div className="p-6 text-center text-gray-500">Invoice not found.</div>;
   }
+
+  const selectedTemplate = selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) : null;
 
   const t = THEMES[theme];
   const docBadge = STATUS_DOC_BADGE[invoice.status] ?? STATUS_DOC_BADGE.DRAFT;
@@ -370,30 +474,68 @@ export default function InvoiceDetailPage() {
             </span>
           </div>
 
-          {/* Theme Picker */}
-          <div className="relative ml-1">
-            <button
-              onClick={() => setShowThemePicker(p => !p)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-              title="Change theme"
-            >
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.name}</span>
-            </button>
-            {showThemePicker && (
-              <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-44">
-                {(Object.keys(THEMES) as ThemeKey[]).map(k => (
-                  <button key={k} onClick={() => { setTheme(k); setShowThemePicker(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${theme === k ? 'font-semibold' : ''}`}>
-                    <span className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                      style={{ background: THEMES[k].accent }} />
-                    {THEMES[k].name}
-                    {theme === k && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+          {/* Theme Picker — hidden when a custom template is active */}
+          {!selectedTemplateId && (
+            <div className="relative ml-1">
+              <button
+                onClick={() => setShowThemePicker(p => !p)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                title="Change theme"
+              >
+                <Palette className="h-4 w-4" />
+                <span className="hidden sm:inline">{t.name}</span>
+              </button>
+              {showThemePicker && (
+                <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-44">
+                  {(Object.keys(THEMES) as ThemeKey[]).map(k => (
+                    <button key={k} onClick={() => { setTheme(k); setShowThemePicker(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${theme === k ? 'font-semibold' : ''}`}>
+                      <span className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                        style={{ background: THEMES[k].accent }} />
+                      {THEMES[k].name}
+                      {theme === k && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Template Picker */}
+          {templates.length > 0 && (
+            <div className="relative ml-1">
+              <button
+                onClick={() => { setShowTemplatePicker(p => !p); setShowThemePicker(false); }}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50 ${selectedTemplateId ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
+                title="Change invoice template"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {selectedTemplateId ? (templates.find(t => t.id === selectedTemplateId)?.name ?? 'Template') : 'Template'}
+                </span>
+              </button>
+              {showTemplatePicker && (
+                <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-52">
+                  <button
+                    onClick={() => { setSelectedTemplateId(null); setShowTemplatePicker(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${!selectedTemplateId ? 'font-semibold' : ''}`}>
+                    <span className="inline-block h-3 w-3 rounded-full bg-gray-400 flex-shrink-0" />
+                    Default (Themed)
+                    {!selectedTemplateId && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
+                  {templates.map(tmpl => (
+                    <button key={tmpl.id} onClick={() => { setSelectedTemplateId(tmpl.id); setShowTemplatePicker(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${selectedTemplateId === tmpl.id ? 'font-semibold' : ''}`}>
+                      <span className="inline-block h-3 w-3 rounded-full bg-indigo-500 flex-shrink-0" />
+                      {tmpl.name}
+                      {tmpl.isDefault && <span className="text-[10px] text-indigo-400 ml-1">(default)</span>}
+                      {selectedTemplateId === tmpl.id && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             {(invoice.status === 'DRAFT' || invoice.status === 'SENT' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'OVERDUE') && (
@@ -440,10 +582,29 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* ── Invoice Document ─────────────────────────────────────── */}
-        <div
-          id="invoice-document"
-          className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col overflow-x-hidden print:overflow-visible"
-        >
+        {selectedTemplate ? (
+          /* Template-rendered view */
+          <div className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none">
+            <iframe
+              srcDoc={renderTemplateHtml(selectedTemplate.html, invoice)}
+              className="w-full border-0"
+              style={{ minHeight: '900px', height: '100%' }}
+              title="Invoice Preview"
+              sandbox="allow-same-origin"
+              onLoad={(e) => {
+                const iframe = e.currentTarget;
+                const body = iframe.contentDocument?.body;
+                if (body) {
+                  iframe.style.height = `${body.scrollHeight + 32}px`;
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            id="invoice-document"
+            className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col overflow-x-hidden print:overflow-visible"
+          >
           {/* Top accent bar */}
           <div className="h-1.5 flex-shrink-0 print:h-1" style={{ background: t.accent }} />
 
@@ -734,7 +895,8 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* ── Payment History (screen only) ───────────────────────── */}
         {invoice.payments && invoice.payments.length > 0 && (
