@@ -511,13 +511,19 @@ export default function HomePage() {
                 </div>
 
                 <Link
-                  href={plan.name === 'Business' ? '/contact' : '/auth/register'}
+                  href={
+                    plan.name === 'Business'
+                      ? '/contact'
+                      : loggedIn
+                        ? '/settings/billing'
+                        : '/auth/register'
+                  }
                   className={`block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition-all mb-6 ${plan.highlighted
                     ? 'bg-white text-indigo-600 hover:bg-indigo-50'
                     : 'bg-indigo-600 text-white hover:bg-indigo-700'
                   }`}
                 >
-                  {plan.cta}
+                  {loggedIn && plan.name !== 'Business' && plan.name !== 'Free' ? 'Upgrade Now' : plan.cta}
                 </Link>
 
                 <ul className="space-y-3">

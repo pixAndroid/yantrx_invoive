@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import { createOrder, verifyPaymentSignature } from '@yantrix/billing';
 import prisma from '../utils/prisma';
 
 const router = Router();
@@ -27,7 +28,12 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
 
-    // TODO: Create Razorpay order and return payment link
+    // Cancel any existing active/trial subscriptions before creating the new one
+    await prisma.subscription.updateMany({
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+      data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Changed plan' },
+    });
+
     const sub = await prisma.subscription.create({
       data: {
         businessId,
@@ -36,6 +42,91 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         amount: plan.price,
+      },
+      include: { plan: true },
+    });
+
+    await prisma.business.update({ where: { id: businessId }, data: { planId } });
+
+    res.status(201).json({ success: true, data: sub });
+  } catch (error) { next(error); }
+});
+
+// Create a Razorpay order for a plan subscription
+router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.user!.businessId;
+    if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    const { planId } = req.body;
+    if (!planId) { res.status(400).json({ success: false, error: 'planId is required' }); return; }
+
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    if (!keyId) {
+      res.status(500).json({ success: false, error: 'Payment gateway is not configured. Please contact support.' });
+      return;
+    }
+
+    const plan = await prisma.plan.findUnique({ where: { id: planId } });
+    if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
+    if (plan.price <= 0) { res.status(400).json({ success: false, error: 'Cannot create payment order for free plan' }); return; }
+
+    const order = await createOrder({
+      amount: plan.price,
+      currency: 'INR',
+      receipt: `sub_${businessId}_${Date.now()}`,
+      notes: { businessId, planId, planName: plan.name },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId,
+      },
+    });
+  } catch (error) { next(error); }
+});
+
+// Verify Razorpay payment and activate subscription
+router.post('/verify-payment', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.user!.businessId;
+    if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    const { planId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if (!planId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      res.status(400).json({ success: false, error: 'Missing required payment fields' });
+      return;
+    }
+
+    const isValid = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+    if (!isValid) {
+      res.status(400).json({ success: false, error: 'Invalid payment signature' });
+      return;
+    }
+
+    const plan = await prisma.plan.findUnique({ where: { id: planId } });
+    if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
+
+    // Cancel any existing active/trial subscriptions before creating the new one
+    await prisma.subscription.updateMany({
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+      data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Upgraded to new plan' },
+    });
+
+    const sub = await prisma.subscription.create({
+      data: {
+        businessId,
+        planId,
+        status: 'ACTIVE',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        razorpayOrderId: razorpay_order_id,
+        amount: plan.price,
+        metadata: { razorpay_payment_id, razorpay_signature },
       },
       include: { plan: true },
     });

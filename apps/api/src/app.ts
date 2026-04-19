@@ -20,6 +20,7 @@ import subscriptionRoutes from './routes/subscriptions';
 import moduleRoutes from './routes/modules';
 import webhookRoutes from './routes/webhooks';
 import adminRoutes from './routes/admin';
+import planRoutes from './routes/plans';
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use('/api/v1/subscriptions', subscriptionRoutes);
 app.use('/api/v1/modules', moduleRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/plans', planRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────────────────────
 app.use((_req, res) => {
