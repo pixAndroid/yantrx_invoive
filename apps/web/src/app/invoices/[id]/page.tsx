@@ -9,7 +9,7 @@ import {
   IndianRupee, Share2, X, Check, Edit2,
   Palette,
 } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, isSafeImageUrl } from '@/lib/api';
 import { numberToWords } from '@/lib/numberToWords';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -334,7 +334,7 @@ export default function InvoiceDetailPage() {
   const actionBadge = STATUS_BADGE[invoice.status] || STATUS_BADGE.DRAFT;
   const amtPaid = (invoice.total ?? 0) - (invoice.amountDue ?? 0);
   // Only render logos that are safe data URLs or absolute https URLs to prevent injection
-  const safeLogo = invoice.business.logo && /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,|https:\/\/)/.test(invoice.business.logo)
+  const safeLogo = invoice.business.logo && isSafeImageUrl(invoice.business.logo)
     ? invoice.business.logo : null;
 
   const fmt = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;

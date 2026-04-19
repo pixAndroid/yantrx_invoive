@@ -1,6 +1,14 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
+/**
+ * Returns true if the given string is a safe image URL (data URI or HTTPS).
+ * Used to prevent XSS from arbitrary logo/image values stored in the database.
+ */
+export function isSafeImageUrl(url: string): boolean {
+  return /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,|https:\/\/)/.test(url);
+}
+
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');

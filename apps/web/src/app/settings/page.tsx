@@ -44,9 +44,10 @@ export default function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ data: { business: BusinessSettings } }>('/auth/me')
+    apiFetch<{ data: { memberships: Array<{ business: BusinessSettings }> } }>('/auth/me')
       .then(res => {
-        if (res.data?.business) setSettings(res.data.business);
+        const business = res.data?.memberships?.[0]?.business;
+        if (business) setSettings(business);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
