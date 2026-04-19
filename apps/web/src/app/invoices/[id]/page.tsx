@@ -7,12 +7,19 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, Printer, Download, Send, XCircle, Copy,
   IndianRupee, Share2, X, Check, Edit2,
-  Palette,
+  Palette, LayoutTemplate,
 } from 'lucide-react';
 import { apiFetch, isSafeImageUrl } from '@/lib/api';
 import { numberToWords } from '@/lib/numberToWords';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+
+interface PublicTemplate {
+  id: string;
+  name: string;
+  html: string;
+  isDefault: boolean;
+}
 
 interface InvoiceItem {
   id: string;
@@ -249,6 +256,9 @@ export default function InvoiceDetailPage() {
   const [actionLoading, setActionLoading] = useState('');
   const [theme, setTheme] = useState<ThemeKey>('corporate-blue');
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [templates, setTemplates] = useState<PublicTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   const fetchInvoice = useCallback(async () => {
     setLoading(true);
@@ -263,6 +273,12 @@ export default function InvoiceDetailPage() {
   }, [id]);
 
   useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
+
+  useEffect(() => {
+    apiFetch<{ data: PublicTemplate[] }>('/invoices/templates')
+      .then(res => setTemplates(res.data))
+      .catch((err: unknown) => { console.error('Failed to load invoice templates:', err); });
+  }, []);
 
   const handleMarkSent = async () => {
     setActionLoading('sent');
@@ -304,11 +320,114 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const renderTemplateHtml = (html: string, inv: Invoice): string => {
+    const fmtN = (n: number) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    // Escape special HTML characters in text content to prevent injection
+    const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+
+    // Pre-compiled patterns for item variables (use lowercase per data-structure convention)
+    const itemPatterns: Array<[RegExp, (item: InvoiceItem, i: number) => string]> = [
+      [/{{index}}/g,       (_item, i) => esc(String(i + 1))],
+      [/{{description}}/g, (item) => esc(item.description)],
+      [/{{hsnSac}}/g,      (item) => esc(item.hsnSac)],
+      [/{{quantity}}/g,    (item) => esc(String(item.quantity))],
+      [/{{unit}}/g,        (item) => esc(item.unit)],
+      [/{{price}}/g,       (item) => esc(fmtN(item.price))],
+      [/{{gstRate}}/g,     (item) => esc(String(item.gstRate))],
+      [/{{total}}/g,       (item) => esc(fmtN(item.total))],
+    ];
+
+    // Resolve items block
+    let result = html.replace(/{{#items}}([\s\S]*?){{\/items}}/g, (_match, itemTpl: string) => {
+      return inv.items.map((item, i) => {
+        let row = itemTpl;
+        for (const [pattern, fn] of itemPatterns) {
+          row = row.replace(pattern, fn(item, i));
+        }
+        return row;
+      }).join('');
+    });
+
+    // Transparent 1×1 GIF data URI used as logo fallback so <img> renders cleanly without a broken-image icon
+    const transparentGif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    const safeLogoUrl = inv.business.logo && isSafeImageUrl(inv.business.logo)
+      ? inv.business.logo : transparentGif;
+
+    const vars: Record<string, string> = {
+      businessName: esc(inv.business.name),
+      businessGstin: esc(inv.business.gstin),
+      businessAddress: esc(inv.business.address),
+      businessCity: esc(inv.business.city),
+      businessState: esc(inv.business.state),
+      businessPhone: esc(inv.business.phone),
+      businessEmail: esc(inv.business.email),
+      businessInitial: esc(inv.business.name?.charAt(0)?.toUpperCase()),
+      businessLogo: safeLogoUrl,
+      invoiceNumber: esc(inv.invoiceNumber),
+      invoiceType: esc(inv.type || 'INVOICE'),
+      issueDate: esc(fmtDate(inv.issueDate)),
+      dueDate: inv.dueDate ? esc(fmtDate(inv.dueDate)) : '',
+      customerName: esc(inv.customer.name),
+      customerGstin: esc(inv.customer.gstin),
+      customerPan: '',
+      customerAddress: esc(inv.customer.billingAddress),
+      customerCity: esc(inv.customer.billingCity),
+      customerState: esc(inv.customer.billingState),
+      customerPincode: esc(inv.customer.billingPincode),
+      customerEmail: esc(inv.customer.email),
+      customerPhone: esc(inv.customer.phone),
+      shipAddress: esc(inv.customer.shippingAddress || inv.customer.billingAddress),
+      shipCity: esc(inv.customer.shippingCity || inv.customer.billingCity),
+      shipState: esc(inv.customer.shippingState || inv.customer.billingState),
+      shipPincode: esc(inv.customer.shippingPincode || inv.customer.billingPincode),
+      placeOfSupply: esc(inv.placeOfSupply),
+      taxType: inv.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST + SGST)',
+      taxableAmount: esc(fmtN(inv.taxableAmount)),
+      cgst: esc(fmtN(inv.cgstTotal)),
+      sgst: esc(fmtN(inv.sgstTotal)),
+      igst: esc(fmtN(inv.igstTotal)),
+      total: esc(fmtN(inv.total)),
+      amountDue: esc(fmtN(inv.amountDue)),
+      amountInWords: esc(numberToWords(inv.total ?? 0)),
+      notes: esc(inv.notes),
+      terms: esc(inv.terms),
+    };
+
+    // Single-pass replacement using a callback for efficiency
+    result = result.replace(/{{(\w+)}}/g, (_match, key) => vars[key] ?? '');
+    return result;
+  };
+
+  const openTemplatePrint = (templateHtml: string, inv: Invoice) => {
+    const rendered = renderTemplateHtml(templateHtml, inv);
+    const blob = new Blob([rendered], { type: 'text/html; charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    // Ensure blob URL is always revoked to prevent memory leaks
+    const revoke = () => URL.revokeObjectURL(blobUrl);
+    const win = window.open(blobUrl, '_blank');
+    if (win) {
+      win.addEventListener('load', () => { win.print(); revoke(); }, { once: true });
+      // Fallback revocation in case the load event does not fire (e.g. window closed early)
+      setTimeout(revoke, 30_000);
+    } else {
+      revoke();
+    }
+  };
+
   const handlePrint = () => {
+    if (selectedTemplateId && invoice) {
+      const tmpl = templates.find(t => t.id === selectedTemplateId);
+      if (tmpl) { openTemplatePrint(tmpl.html, invoice); return; }
+    }
     window.print();
   };
 
   const handleDownloadPdf = () => {
+    if (selectedTemplateId && invoice) {
+      const tmpl = templates.find(t => t.id === selectedTemplateId);
+      if (tmpl) { openTemplatePrint(tmpl.html, invoice); return; }
+    }
     const prevTitle = document.title;
     if (invoice) document.title = `Invoice-${invoice.invoiceNumber}`;
     window.print();
@@ -328,6 +447,8 @@ export default function InvoiceDetailPage() {
   if (!invoice) {
     return <div className="p-6 text-center text-gray-500">Invoice not found.</div>;
   }
+
+  const selectedTemplate = selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) : null;
 
   const t = THEMES[theme];
   const docBadge = STATUS_DOC_BADGE[invoice.status] ?? STATUS_DOC_BADGE.DRAFT;
@@ -370,30 +491,68 @@ export default function InvoiceDetailPage() {
             </span>
           </div>
 
-          {/* Theme Picker */}
-          <div className="relative ml-1">
-            <button
-              onClick={() => setShowThemePicker(p => !p)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-              title="Change theme"
-            >
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.name}</span>
-            </button>
-            {showThemePicker && (
-              <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-44">
-                {(Object.keys(THEMES) as ThemeKey[]).map(k => (
-                  <button key={k} onClick={() => { setTheme(k); setShowThemePicker(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${theme === k ? 'font-semibold' : ''}`}>
-                    <span className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                      style={{ background: THEMES[k].accent }} />
-                    {THEMES[k].name}
-                    {theme === k && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+          {/* Theme Picker — hidden when a custom template is active */}
+          {!selectedTemplateId && (
+            <div className="relative ml-1">
+              <button
+                onClick={() => setShowThemePicker(p => !p)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                title="Change theme"
+              >
+                <Palette className="h-4 w-4" />
+                <span className="hidden sm:inline">{t.name}</span>
+              </button>
+              {showThemePicker && (
+                <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-44">
+                  {(Object.keys(THEMES) as ThemeKey[]).map(k => (
+                    <button key={k} onClick={() => { setTheme(k); setShowThemePicker(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${theme === k ? 'font-semibold' : ''}`}>
+                      <span className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                        style={{ background: THEMES[k].accent }} />
+                      {THEMES[k].name}
+                      {theme === k && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Template Picker */}
+          {templates.length > 0 && (
+            <div className="relative ml-1">
+              <button
+                onClick={() => { setShowTemplatePicker(p => !p); setShowThemePicker(false); }}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50 ${selectedTemplateId ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
+                title="Change invoice template"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {selectedTemplateId ? (templates.find(t => t.id === selectedTemplateId)?.name ?? 'Template') : 'Template'}
+                </span>
+              </button>
+              {showTemplatePicker && (
+                <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-52">
+                  <button
+                    onClick={() => { setSelectedTemplateId(null); setShowTemplatePicker(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${!selectedTemplateId ? 'font-semibold' : ''}`}>
+                    <span className="inline-block h-3 w-3 rounded-full bg-gray-400 flex-shrink-0" />
+                    Default (Themed)
+                    {!selectedTemplateId && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
+                  {templates.map(tmpl => (
+                    <button key={tmpl.id} onClick={() => { setSelectedTemplateId(tmpl.id); setShowTemplatePicker(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${selectedTemplateId === tmpl.id ? 'font-semibold' : ''}`}>
+                      <span className="inline-block h-3 w-3 rounded-full bg-indigo-500 flex-shrink-0" />
+                      {tmpl.name}
+                      {tmpl.isDefault && <span className="text-[10px] text-indigo-400 ml-1">(default)</span>}
+                      {selectedTemplateId === tmpl.id && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             {(invoice.status === 'DRAFT' || invoice.status === 'SENT' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'OVERDUE') && (
@@ -440,10 +599,22 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* ── Invoice Document ─────────────────────────────────────── */}
-        <div
-          id="invoice-document"
-          className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col overflow-x-hidden print:overflow-visible"
-        >
+        {selectedTemplate ? (
+          /* Template-rendered view */
+          <div className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none">
+            <iframe
+              srcDoc={renderTemplateHtml(selectedTemplate.html, invoice)}
+              className="w-full border-0"
+              style={{ minHeight: '900px' }}
+              title="Invoice Preview"
+              sandbox=""
+            />
+          </div>
+        ) : (
+          <div
+            id="invoice-document"
+            className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col overflow-x-hidden print:overflow-visible"
+          >
           {/* Top accent bar */}
           <div className="h-1.5 flex-shrink-0 print:h-1" style={{ background: t.accent }} />
 
@@ -734,7 +905,8 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* ── Payment History (screen only) ───────────────────────── */}
         {invoice.payments && invoice.payments.length > 0 && (

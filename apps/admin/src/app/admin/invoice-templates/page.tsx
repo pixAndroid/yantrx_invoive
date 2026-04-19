@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Save, X, Check, FileCode2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, X, Check, FileCode2, RefreshCw, AlertCircle, Lock } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface InvoiceTemplate {
@@ -16,6 +16,193 @@ interface InvoiceTemplate {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Built-in Template ────────────────────────────────────────────────────────
+
+// Double-underscore prefix/suffix marks this as a system identifier that can
+// never collide with a database-generated cuid() value.
+const BUILTIN_TEMPLATE_ID = '__builtin_yantrx_classic__';
+
+const BUILTIN_TEMPLATE_HTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice {{invoiceNumber}}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, 'Helvetica Neue', sans-serif; color: #1f2937; background: #fff; font-size: 13px; line-height: 1.5; }
+
+    .inv-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 28px 36px 20px; }
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-box { width: 52px; height: 52px; border-radius: 8px; border: 1.5px solid #e0e7ef; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 20px; font-weight: 700; color: #1e3a8a; }
+    .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+    .biz-name { font-size: 20px; font-weight: 700; color: #111827; }
+    .inv-right { text-align: right; }
+    .inv-title { font-size: 32px; font-weight: 800; color: #1e3a8a; letter-spacing: 2px; line-height: 1; }
+    .inv-number { font-size: 14px; font-weight: 600; color: #374151; margin-top: 6px; }
+    .inv-date { font-size: 12px; color: #6b7280; margin-top: 8px; }
+    .inv-date strong { color: #374151; }
+
+    hr { border: none; border-top: 1.5px solid #e8eef5; margin: 0 36px; }
+
+    .addr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid #e5e7eb; border-radius: 8px; margin: 20px 36px; overflow: hidden; }
+    .addr-cell { padding: 14px 18px; background: #f9fafb; border-right: 1px solid #e5e7eb; }
+    .addr-cell:last-child { border-right: none; }
+    .addr-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #1e3a8a; margin-bottom: 8px; }
+    .addr-name { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+    .addr-line { font-size: 12px; color: #4b5563; }
+
+    table { width: 100%; border-collapse: collapse; }
+    .tbl-wrap { margin: 0 36px; }
+    thead tr { background: #dbeafe; }
+    th { padding: 9px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #1e3a8a; text-align: left; }
+    th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) { text-align: right; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; color: #374151; text-align: left; }
+    td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7) { text-align: right; }
+    td:first-child { color: #9ca3af; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    .amt-col { font-weight: 600; color: #111827; }
+
+    .totals-section { display: flex; justify-content: space-between; align-items: flex-start; padding: 20px 36px; gap: 24px; border-top: 1px solid #f3f4f6; margin-top: 4px; }
+    .words-side { flex: 1; }
+    .words-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin-bottom: 6px; }
+    .words-val { font-size: 13px; font-weight: 700; color: #1e3a8a; line-height: 1.6; }
+    .totals-card { width: 260px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .t-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid #f3f4f6; }
+    .t-lbl { font-size: 12px; color: #6b7280; }
+    .t-val { font-size: 12px; font-weight: 500; color: #374151; }
+    .gt-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; background: #1e3a8a; }
+    .gt-lbl { font-size: 13px; font-weight: 700; color: #fff; }
+    .gt-val { font-size: 18px; font-weight: 800; color: #fff; }
+
+    .footer-notes { display: flex; gap: 36px; padding: 16px 36px 12px; border-top: 1px solid #f3f4f6; }
+    .fn-col { flex: 1; }
+    .fn-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #1e3a8a; margin-bottom: 5px; }
+    .fn-text { font-size: 12px; color: #4b5563; line-height: 1.6; }
+
+    .final-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 18px 36px 28px; border-top: 1.5px solid #e5e7eb; margin-top: 8px; }
+    .ty-text { font-size: 13px; font-weight: 700; color: #1e3a8a; }
+    .sig-area { text-align: right; }
+    .sig-line { width: 130px; border-top: 1.5px solid #1e3a8a; margin: 0 0 8px auto; }
+    .sig-name { font-size: 12px; font-weight: 700; color: #374151; }
+    .sig-role { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="inv-header">
+    <div class="logo-area">
+      <div class="logo-box">
+        <img src="{{businessLogo}}" alt="{{businessInitial}}" />
+      </div>
+      <div class="biz-name">{{businessName}}</div>
+    </div>
+    <div class="inv-right">
+      <div class="inv-title">INVOICE</div>
+      <div class="inv-number">{{invoiceNumber}}</div>
+      <div class="inv-date">Issue Date &nbsp;<strong>{{issueDate}}</strong></div>
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="addr-grid">
+    <div class="addr-cell">
+      <div class="addr-lbl">Bill To</div>
+      <div class="addr-name">{{customerName}}</div>
+      <div class="addr-line">{{customerEmail}}</div>
+      <div class="addr-line">{{customerPhone}}</div>
+      <div class="addr-line">{{customerAddress}}</div>
+      <div class="addr-line">{{customerCity}}, {{customerState}} – {{customerPincode}}</div>
+    </div>
+    <div class="addr-cell">
+      <div class="addr-lbl">Ship To</div>
+      <div class="addr-line">{{shipAddress}}</div>
+      <div class="addr-line">{{shipCity}}, {{shipState}} – {{shipPincode}}</div>
+    </div>
+    <div class="addr-cell">
+      <div class="addr-lbl">Supply Details</div>
+      <div class="addr-line">{{placeOfSupply}}</div>
+      <div class="addr-line">{{taxType}}</div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px">#</th>
+          <th>Description</th>
+          <th>HSN/SAC</th>
+          <th>QTY</th>
+          <th>Rate</th>
+          <th>GST%</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>{{#items}}
+        <tr>
+          <td>{{index}}</td>
+          <td>{{description}}</td>
+          <td>{{hsnSac}}</td>
+          <td>{{quantity}} {{unit}}</td>
+          <td>₹{{price}}</td>
+          <td>{{gstRate}}%</td>
+          <td class="amt-col">₹{{total}}</td>
+        </tr>
+      {{/items}}</tbody>
+    </table>
+  </div>
+
+  <div class="totals-section">
+    <div class="words-side">
+      <div class="words-lbl">Amount in Words</div>
+      <div class="words-val">{{amountInWords}}</div>
+    </div>
+    <div class="totals-card">
+      <div class="t-row"><span class="t-lbl">Taxable Amount</span><span class="t-val">₹{{taxableAmount}}</span></div>
+      <div class="t-row"><span class="t-lbl">CGST</span><span class="t-val">₹{{cgst}}</span></div>
+      <div class="t-row"><span class="t-lbl">SGST</span><span class="t-val">₹{{sgst}}</span></div>
+      <div class="t-row"><span class="t-lbl">IGST</span><span class="t-val">₹{{igst}}</span></div>
+      <div class="gt-row"><span class="gt-lbl">Grand Total</span><span class="gt-val">₹{{total}}</span></div>
+    </div>
+  </div>
+
+  <div class="footer-notes">
+    <div class="fn-col">
+      <div class="fn-lbl">Notes</div>
+      <div class="fn-text">{{notes}}</div>
+    </div>
+    <div class="fn-col">
+      <div class="fn-lbl">Terms &amp; Conditions</div>
+      <div class="fn-text">{{terms}}</div>
+    </div>
+  </div>
+
+  <div class="final-row">
+    <div class="ty-text">Thank you for your business!</div>
+    <div class="sig-area">
+      <div class="sig-line"></div>
+      <div class="sig-name">{{businessName}}</div>
+      <div class="sig-role">Authorized Signatory</div>
+    </div>
+  </div>
+
+</body>
+</html>`;
+
+const BUILTIN_TEMPLATE: InvoiceTemplate = {
+  id: BUILTIN_TEMPLATE_ID,
+  name: 'Yantrx Classic',
+  isDefault: true,
+  isActive: true,
+  html: BUILTIN_TEMPLATE_HTML,
+  css: null,
+  thumbnail: null,
+  sortOrder: -1,
+  createdAt: 'built-in',
+  updatedAt: 'built-in',
+};
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html>
@@ -410,7 +597,7 @@ function TemplateModal({
                   srcDoc={form.html}
                   className="w-full h-full"
                   title="Template Preview"
-                  sandbox="allow-same-origin"
+                  sandbox=""
                 />
               </div>
             </div>
@@ -504,7 +691,7 @@ export default function InvoiceTemplatesPage() {
               <span className="text-sm font-medium text-gray-700">{previewTemplate.name} — Preview</span>
               <button onClick={() => setPreviewTemplate(null)}><X className="h-4 w-4 text-gray-500" /></button>
             </div>
-            <iframe srcDoc={previewTemplate.html} className="w-full h-full" title="Preview" sandbox="allow-same-origin" />
+            <iframe srcDoc={previewTemplate.html} className="w-full h-full" title="Preview" sandbox="" />
           </div>
         </div>
       )}
@@ -535,23 +722,46 @@ export default function InvoiceTemplatesPage() {
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-48 rounded-2xl bg-gray-800 animate-pulse" />)}
           </div>
-        ) : templates.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-700 bg-gray-900 p-12 text-center">
-            <FileCode2 className="h-12 w-12 text-gray-700 mx-auto mb-4" />
-            <p className="text-gray-400 font-medium mb-2">No templates yet</p>
-            <p className="text-gray-600 text-sm mb-4">Create your first invoice template to get started</p>
-            <button onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600">
-              <Plus className="h-4 w-4" /> Create Template
-            </button>
-          </div>
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {/* Built-in template — always shown first, non-removable */}
+            <div className="rounded-2xl border border-blue-700/50 bg-gray-900 p-5 ring-1 ring-blue-600/20">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-semibold text-white">{BUILTIN_TEMPLATE.name}</h3>
+                    <span className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" /> Built-in
+                    </span>
+                    <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full">Default</span>
+                    <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full">Published</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">Clean white design · Cannot be removed</p>
+                </div>
+              </div>
+              <div className="rounded-lg overflow-hidden border border-gray-700 bg-white mb-3" style={{ height: '120px' }}>
+                <iframe srcDoc={BUILTIN_TEMPLATE.html} className="w-full h-full" title={BUILTIN_TEMPLATE.name} sandbox="" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPreviewTemplate(BUILTIN_TEMPLATE)}
+                  className="flex-1 rounded-lg border border-gray-700 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 flex items-center justify-center gap-1">
+                  <Eye className="h-3.5 w-3.5" /> Preview
+                </button>
+                <span className="rounded-lg border border-gray-800 p-1.5 text-gray-600 cursor-not-allowed" title="Built-in template cannot be edited">
+                  <Edit2 className="h-3.5 w-3.5" />
+                </span>
+                <span className="rounded-lg border border-gray-800 p-1.5 text-gray-600 cursor-not-allowed" title="Built-in template cannot be deleted">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </span>
+              </div>
+            </div>
+
+            {/* Database templates */}
             {templates.map(tmpl => (
               <div key={tmpl.id} className="rounded-2xl border border-gray-700 bg-gray-900 p-5 hover:border-gray-600 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-semibold text-white">{tmpl.name}</h3>
                       {tmpl.isDefault && (
                         <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full">Default</span>
@@ -566,7 +776,7 @@ export default function InvoiceTemplatesPage() {
                   </div>
                 </div>
                 <div className="rounded-lg overflow-hidden border border-gray-700 bg-white mb-3" style={{ height: '120px' }}>
-                  <iframe srcDoc={tmpl.html} className="w-full h-full" title={tmpl.name} sandbox="allow-same-origin" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
+                  <iframe srcDoc={tmpl.html} className="w-full h-full" title={tmpl.name} sandbox="" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setPreviewTemplate(tmpl)}

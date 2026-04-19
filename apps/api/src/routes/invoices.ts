@@ -8,6 +8,17 @@ import { calculateTax } from '@yantrix/billing';
 const router = Router();
 router.use(authenticate);
 
+router.get('/templates', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const templates = await prisma.invoiceTemplate.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true, html: true, isDefault: true },
+    });
+    res.json({ success: true, data: templates });
+  } catch (error) { next(error); }
+});
+
 router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const businessId = req.user!.businessId;
