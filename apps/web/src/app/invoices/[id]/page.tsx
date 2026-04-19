@@ -143,11 +143,11 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_DOC_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   DRAFT:          { bg: '#f3f4f6', text: '#6b7280', label: 'Draft' },
-  SENT:           { bg: '#dbeafe', text: '#1d4ed8', label: 'Sent' },
+  SENT:           { bg: '#dbeafe', text: '#1d4ed8', label: '' },
   PAID:           { bg: '#dcfce7', text: '#15803d', label: '✓ Paid' },
   OVERDUE:        { bg: '#fee2e2', text: '#b91c1c', label: 'Overdue' },
   PARTIALLY_PAID: { bg: '#fef3c7', text: '#b45309', label: 'Partial' },
-  CANCELLED:      { bg: '#fee2e2', text: '#dc2626', label: 'Cancelled' },
+  CANCELLED:      { bg: '#fee2e2', text: '#dc2626', label: '' },
 };
 
 function RecordPaymentModal({ invoice, onClose, onPaid }: { invoice: Invoice; onClose: () => void; onPaid: () => void }) {
@@ -366,7 +366,7 @@ export default function InvoiceDetailPage() {
           <div className="flex items-center gap-2">
             <span className="text-base font-bold text-gray-900">{invoice.invoiceNumber}</span>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${actionBadge}`}>
-              {invoice.status.replace('_', ' ')}
+              {invoice.status !== 'SENT' && invoice.status !== 'CANCELLED' && invoice.status.replace('_', ' ')}
             </span>
           </div>
 
