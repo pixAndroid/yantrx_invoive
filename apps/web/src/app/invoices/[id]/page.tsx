@@ -355,7 +355,7 @@ export default function InvoiceDetailPage() {
         onCancel={() => setConfirmCancel(false)}
       />
 
-      <div className="p-4 lg:p-8 max-w-4xl mx-auto print:p-0 print:max-w-none">
+      <div className="p-2 lg:p-3 max-w-4xl mx-auto print:p-0 print:max-w-none">
 
         {/* ── Action Bar (hidden on print) ─────────────────────────── */}
         <div className="flex items-center gap-3 mb-5 print:hidden flex-wrap">
@@ -442,7 +442,7 @@ export default function InvoiceDetailPage() {
         {/* ── Invoice Document ─────────────────────────────────────── */}
         <div
           id="invoice-document"
-          className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col h-[calc(100vh-10.5rem)] print:h-auto overflow-x-hidden print:overflow-visible"
+          className="invoice-document bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:border-0 print:rounded-none flex flex-col overflow-x-hidden print:overflow-visible"
         >
           {/* Top accent bar */}
           <div className="h-1.5 flex-shrink-0 print:h-1" style={{ background: t.accent }} />
@@ -513,7 +513,7 @@ export default function InvoiceDetailPage() {
           </div>
 
           {/* ── Scrollable body ── */}
-          <div className="flex-1 overflow-y-auto min-h-0 print:overflow-visible">
+          <div className="print:overflow-visible">
 
             {/* Bill To / Ship To / Supply Details */}
             <div className="grid grid-cols-3 gap-px bg-gray-100 border-b border-gray-100">
