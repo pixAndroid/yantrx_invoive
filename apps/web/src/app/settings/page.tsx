@@ -28,6 +28,14 @@ interface BusinessSettings {
   invoicePrefix: string;
   termsAndConditions: string | null;
   logo: string | null;
+  defaultTemplateId: string | null;
+}
+
+interface InvoiceTemplate {
+  id: string;
+  name: string;
+  thumbnail: string | null;
+  isDefault: boolean;
 }
 
 export default function SettingsPage() {
@@ -42,6 +50,8 @@ export default function SettingsPage() {
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [templates, setTemplates] = useState<InvoiceTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
 
   useEffect(() => {
     const tokenData = getUserData();
@@ -57,6 +67,15 @@ export default function SettingsPage() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'invoice' || templates.length > 0) return;
+    setTemplatesLoading(true);
+    apiFetch<{ data: InvoiceTemplate[] }>('/invoices/templates')
+      .then(res => { if (res.data) setTemplates(res.data); })
+      .catch(() => {})
+      .finally(() => setTemplatesLoading(false));
+  }, [activeTab, templates.length]);
 
   const handleSave = async () => {
     if (!settings) return;
@@ -429,7 +448,7 @@ export default function SettingsPage() {
             )}
 
             {activeTab === 'invoice' && (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Invoice Prefix</label>
@@ -453,6 +472,57 @@ export default function SettingsPage() {
                     className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none resize-none"
                   />
                 </div>
+                <fieldset>
+                  <legend className="block text-sm font-semibold text-gray-700 mb-3">Default Invoice Template</legend>
+                  {templatesLoading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="animate-pulse rounded-xl border border-gray-100 bg-gray-50 h-40" />
+                      ))}
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <p className="text-sm text-gray-400">No published templates available.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {templates.map(tpl => {
+                        const isSelected = settings.defaultTemplateId
+                          ? settings.defaultTemplateId === tpl.id
+                          : tpl.isDefault;
+                        return (
+                          <button
+                            key={tpl.id}
+                            type="button"
+                            onClick={() => update('defaultTemplateId', tpl.id)}
+                            className={`relative rounded-xl border-2 p-3 text-left transition-all focus:outline-none ${
+                              isSelected
+                                ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                                : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {tpl.thumbnail ? (
+                              <img
+                                src={tpl.thumbnail}
+                                alt={tpl.name}
+                                className="w-full h-28 object-cover rounded-lg mb-2 bg-gray-100"
+                              />
+                            ) : (
+                              <div className="w-full h-28 rounded-lg mb-2 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                <FileText className="h-8 w-8 text-gray-400" />
+                              </div>
+                            )}
+                            <p className="text-sm font-medium text-gray-800 truncate">{tpl.name}</p>
+                            {isSelected && (
+                              <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600">
+                                <CheckCircle className="h-3.5 w-3.5 text-white" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-gray-400">This template will be used by default when creating new invoices.</p>
+                </fieldset>
               </div>
             )}
             {activeTab === 'notifications' && (

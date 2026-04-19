@@ -158,6 +158,7 @@ model Business {
   invoicePrefix String  @default("INV")
   invoiceSeq  Int     @default(1)
   currency    String  @default("INR")
+  defaultTemplateId String?
   timezone    String  @default("Asia/Kolkata")
   termsAndConditions String?
   notes       String?

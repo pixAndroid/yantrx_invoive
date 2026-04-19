@@ -13,7 +13,7 @@ router.get('/templates', async (_req: AuthenticatedRequest, res: Response, next:
     const templates = await prisma.invoiceTemplate.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, name: true, html: true, isDefault: true },
+      select: { id: true, name: true, thumbnail: true, isDefault: true },
     });
     res.json({ success: true, data: templates });
   } catch (error) { next(error); }
