@@ -183,6 +183,428 @@ async function main() {
 
   console.log('  ✓ 1 invoice with payment created\n');
 
+  // Invoice Templates
+  console.log('Creating invoice templates...');
+
+  const classicHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice {{invoiceNumber}}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Georgia, serif; color: #1a1a1a; background: #ffffff; font-size: 13px; }
+
+    /* ── HEADER ── */
+    .header { padding: 36px 48px 24px; border-bottom: 3px double #1a1a1a; display: flex; justify-content: space-between; align-items: flex-start; }
+    .logo-area { display: flex; align-items: center; gap: 16px; }
+    .logo-box { width: 60px; height: 60px; border: 2px solid #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; overflow: hidden; }
+    .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+    .biz-name { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .biz-gstin { font-size: 11px; color: #555; margin-top: 2px; font-family: 'Courier New', monospace; }
+    .biz-address { font-size: 11px; color: #555; margin-top: 2px; line-height: 1.6; }
+    .invoice-title-area { text-align: right; }
+    .invoice-title { font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; color: #1a1a1a; }
+    .invoice-sub { font-size: 12px; color: #555; margin-top: 6px; line-height: 1.8; }
+    .invoice-sub strong { color: #1a1a1a; }
+
+    /* ── PARTIES ── */
+    .parties { display: flex; gap: 0; margin: 24px 48px 0; border: 1px solid #1a1a1a; }
+    .party { flex: 1; padding: 16px 20px; }
+    .party + .party { border-left: 1px solid #1a1a1a; }
+    .party-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #777; margin-bottom: 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+    .party-name { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+    .party-detail { font-size: 11px; color: #555; line-height: 1.7; }
+    .gstin-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 10px; border: 1px solid #999; padding: 1px 5px; margin-top: 3px; }
+
+    /* ── SUPPLY INFO ── */
+    .supply-bar { margin: 0 48px; border: 1px solid #1a1a1a; border-top: none; padding: 8px 20px; display: flex; gap: 40px; font-size: 11px; background: #f8f8f8; }
+    .supply-bar span { font-weight: 700; color: #1a1a1a; }
+
+    /* ── ITEMS TABLE ── */
+    .table-wrap { margin: 24px 48px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #1a1a1a; color: #fff; }
+    th { padding: 9px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+    th:nth-child(n+4), td:nth-child(n+4) { text-align: right; }
+    tbody tr { border-bottom: 1px solid #ddd; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    td { padding: 10px 12px; font-size: 12px; color: #333; }
+    td:first-child { color: #999; text-align: center; }
+    .item-name { font-weight: 600; color: #1a1a1a; }
+    .item-hsn { font-size: 10px; color: #999; font-family: 'Courier New', monospace; }
+    .amount-cell { font-weight: 600; }
+    tfoot tr { border-top: 2px solid #1a1a1a; }
+    tfoot td { padding: 8px 12px; font-size: 12px; }
+
+    /* ── TOTALS ── */
+    .totals-section { display: flex; justify-content: space-between; align-items: flex-start; margin: 20px 48px 0; gap: 20px; }
+    .words-box { flex: 1; border: 1px solid #ddd; padding: 14px 16px; background: #fafafa; }
+    .words-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 5px; }
+    .words-text { font-size: 12px; font-style: italic; color: #1a1a1a; font-weight: 600; line-height: 1.5; }
+    .totals-box { min-width: 260px; border: 1px solid #1a1a1a; }
+    .totals-row { display: flex; justify-content: space-between; padding: 7px 16px; font-size: 12px; border-bottom: 1px solid #e5e5e5; }
+    .totals-row .lbl { color: #555; }
+    .totals-row .val { font-weight: 500; color: #1a1a1a; }
+    .totals-grand { display: flex; justify-content: space-between; padding: 10px 16px; font-size: 15px; font-weight: 700; background: #1a1a1a; color: #fff; }
+    .totals-due { display: flex; justify-content: space-between; padding: 7px 16px; font-size: 13px; font-weight: 700; background: #f0f0f0; }
+    .totals-due .lbl { color: #333; }
+    .totals-due .val { color: #c0392b; }
+
+    /* ── FOOTER ── */
+    .footer { margin: 28px 48px 0; display: flex; gap: 24px; border-top: 2px double #1a1a1a; padding-top: 20px; }
+    .footer-col { flex: 1; }
+    .footer-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 5px; }
+    .footer-text { font-size: 11px; color: #555; line-height: 1.7; }
+    .seal-box { border: 1px dashed #999; min-height: 64px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px; margin-top: 6px; }
+    .footer-bottom { margin: 20px 48px 32px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-box"><img src="{{businessLogo}}" alt="{{businessName}}" onerror="this.parentElement.innerHTML='{{businessInitial}}'" /></div>
+      <div>
+        <div class="biz-name">{{businessName}}</div>
+        <div class="biz-gstin">GSTIN: {{businessGstin}}</div>
+        <div class="biz-address">{{businessAddress}}, {{businessCity}}, {{businessState}}</div>
+        <div class="biz-address">Ph: {{businessPhone}} | {{businessEmail}}</div>
+      </div>
+    </div>
+    <div class="invoice-title-area">
+      <div class="invoice-title">{{invoiceType}}</div>
+      <div class="invoice-sub"><strong>#</strong> {{invoiceNumber}}</div>
+      <div class="invoice-sub"><strong>Issue Date:</strong> {{issueDate}}</div>
+      <div class="invoice-sub"><strong>Due Date:</strong> {{dueDate}}</div>
+    </div>
+  </div>
+
+  <!-- PARTIES -->
+  <div class="parties">
+    <div class="party">
+      <div class="party-label">Bill To</div>
+      <div class="party-name">{{customerName}}</div>
+      <div class="party-detail">{{customerAddress}}</div>
+      <div class="party-detail">{{customerCity}}, {{customerState}}</div>
+      <div class="party-detail">{{customerEmail}} | {{customerPhone}}</div>
+      {{#customerGstin}}<div class="gstin-tag">GSTIN: {{customerGstin}}</div>{{/customerGstin}}
+      {{#customerPan}}<div class="party-detail">PAN: {{customerPan}}</div>{{/customerPan}}
+    </div>
+    <div class="party">
+      <div class="party-label">Invoice Details</div>
+      <div class="party-detail" style="line-height:2.1;">
+        <strong>Invoice No:</strong> {{invoiceNumber}}<br>
+        <strong>Issue Date:</strong> {{issueDate}}<br>
+        <strong>Due Date:</strong> {{dueDate}}<br>
+        <strong>Type:</strong> {{invoiceType}}
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLY INFO -->
+  <div class="supply-bar">
+    <div>Place of Supply: <span>{{placeOfSupply}}</span></div>
+    <div>Tax Type: <span>{{taxType}}</span></div>
+  </div>
+
+  <!-- ITEMS TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px;text-align:center;">#</th>
+          <th>Description</th>
+          <th>HSN/SAC</th>
+          <th>Qty</th>
+          <th>Rate (₹)</th>
+          <th>GST %</th>
+          <th>Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>{{#items}}
+        <tr>
+          <td>{{index}}</td>
+          <td><div class="item-name">{{description}}</div><div class="item-hsn">{{hsnSac}}</div></td>
+          <td><span class="item-hsn">{{hsnSac}}</span></td>
+          <td>{{quantity}} {{unit}}</td>
+          <td>{{price}}</td>
+          <td>{{gstRate}}%</td>
+          <td class="amount-cell">{{total}}</td>
+        </tr>
+      {{/items}}</tbody>
+    </table>
+  </div>
+
+  <!-- TOTALS -->
+  <div class="totals-section">
+    <div class="words-box">
+      <div class="words-label">Amount in Words</div>
+      <div class="words-text">{{amountInWords}}</div>
+    </div>
+    <div class="totals-box">
+      <div class="totals-row"><span class="lbl">Taxable Amount</span><span class="val">₹{{taxableAmount}}</span></div>
+      <div class="totals-row"><span class="lbl">CGST</span><span class="val">₹{{cgst}}</span></div>
+      <div class="totals-row"><span class="lbl">SGST</span><span class="val">₹{{sgst}}</span></div>
+      <div class="totals-row"><span class="lbl">IGST</span><span class="val">₹{{igst}}</span></div>
+      <div class="totals-grand"><span>Grand Total</span><span>₹{{total}}</span></div>
+      <div class="totals-due"><span class="lbl">Balance Due</span><span class="val">₹{{amountDue}}</span></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-col">
+      <div class="footer-label">Notes</div>
+      <div class="footer-text">{{notes}}</div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-label">Terms &amp; Conditions</div>
+      <div class="footer-text">{{terms}}</div>
+    </div>
+    <div class="footer-col" style="max-width:150px;text-align:center;">
+      <div class="footer-label">Authorised Signatory</div>
+      <div class="seal-box">Seal &amp; Signature</div>
+      <div class="footer-text" style="margin-top:6px;text-align:center;">{{businessName}}</div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    This is a computer-generated invoice and does not require a physical signature. &nbsp;|&nbsp; {{businessName}} &nbsp;|&nbsp; GSTIN: {{businessGstin}}
+  </div>
+
+</body>
+</html>`;
+
+  const professionalHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice {{invoiceNumber}}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', 'Inter', Arial, sans-serif; color: #1e293b; background: #ffffff; font-size: 13px; }
+
+    /* ── ACCENT BAR ── */
+    .accent-bar { height: 6px; background: linear-gradient(90deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%); }
+
+    /* ── HEADER ── */
+    .header { padding: 32px 48px 28px; display: flex; justify-content: space-between; align-items: flex-start; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-circle { width: 58px; height: 58px; border-radius: 14px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff; overflow: hidden; flex-shrink: 0; }
+    .logo-circle img { width: 100%; height: 100%; object-fit: contain; border-radius: 14px; }
+    .biz-name { font-size: 19px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }
+    .biz-gstin { font-size: 11px; color: #64748b; margin-top: 2px; font-family: 'Courier New', monospace; }
+    .biz-contact { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.7; }
+    .invoice-badge { text-align: right; }
+    .badge-pill { display: inline-block; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 5px 16px; border-radius: 20px; margin-bottom: 10px; }
+    .invoice-num { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+    .invoice-dates { font-size: 12px; color: #64748b; margin-top: 6px; line-height: 1.9; }
+    .invoice-dates strong { color: #334155; }
+
+    /* ── PARTIES SECTION ── */
+    .parties-section { display: flex; gap: 0; margin: 24px 48px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .party-card { flex: 1; padding: 18px 22px; background: #fff; }
+    .party-card + .party-card { border-left: 1px solid #e2e8f0; }
+    .party-card.highlight { background: #f0f9ff; }
+    .party-heading { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #0ea5e9; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+    .party-heading::before { content: ''; display: inline-block; width: 3px; height: 12px; background: #0ea5e9; border-radius: 2px; }
+    .party-name { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .party-detail { font-size: 11px; color: #64748b; line-height: 1.8; }
+    .gstin-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: 'Courier New', monospace; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 5px; padding: 2px 7px; margin-top: 4px; }
+
+    /* ── SUPPLY STRIP ── */
+    .supply-strip { margin: 0 48px 24px; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); border-radius: 8px; padding: 10px 20px; display: flex; gap: 40px; color: #fff; font-size: 12px; }
+    .supply-strip strong { font-weight: 700; }
+
+    /* ── TABLE ── */
+    .table-wrap { margin: 0 48px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); color: #fff; }
+    th { padding: 11px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; text-align: left; }
+    th:nth-child(n+4), td:nth-child(n+4) { text-align: right; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    td { padding: 12px 14px; font-size: 12px; color: #334155; }
+    td:first-child { color: #94a3b8; font-size: 11px; text-align: center; }
+    .item-name { font-weight: 600; color: #0f172a; }
+    .item-hsn { font-size: 10px; color: #94a3b8; font-family: 'Courier New', monospace; margin-top: 2px; }
+    .amount-cell { font-weight: 700; color: #0f172a; }
+
+    /* ── TOTALS ── */
+    .bottom-section { display: flex; justify-content: space-between; align-items: flex-start; margin: 24px 48px 0; gap: 24px; }
+    .words-card { flex: 1; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px 18px; }
+    .words-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #3b82f6; margin-bottom: 6px; }
+    .words-text { font-size: 13px; font-weight: 600; color: #1e3a8a; font-style: italic; line-height: 1.6; }
+    .totals-card { min-width: 280px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .totals-row { display: flex; justify-content: space-between; padding: 8px 18px; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
+    .totals-row .lbl { color: #64748b; }
+    .totals-row .val { font-weight: 500; color: #1e293b; }
+    .totals-grand { display: flex; justify-content: space-between; padding: 12px 18px; font-size: 16px; font-weight: 800; background: linear-gradient(90deg, #0ea5e9, #6366f1); color: #fff; }
+    .totals-due { display: flex; justify-content: space-between; padding: 9px 18px; font-size: 13px; font-weight: 700; background: #fef2f2; }
+    .totals-due .lbl { color: #b91c1c; }
+    .totals-due .val { color: #b91c1c; }
+
+    /* ── FOOTER ── */
+    .footer-section { margin: 28px 48px 0; padding-top: 22px; border-top: 2px solid #e2e8f0; display: flex; gap: 24px; }
+    .footer-col { flex: 1; }
+    .footer-heading { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #0ea5e9; margin-bottom: 7px; }
+    .footer-text { font-size: 11px; color: #64748b; line-height: 1.8; }
+    .sign-box { border: 1.5px dashed #cbd5e1; border-radius: 8px; min-height: 68px; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 10px; margin-top: 8px; }
+    .sign-name { font-size: 11px; font-weight: 600; color: #334155; text-align: center; margin-top: 7px; }
+
+    /* ── BOTTOM BAR ── */
+    .bottom-bar { margin: 24px 48px 36px; background: #f8fafc; border-radius: 8px; padding: 12px 20px; text-align: center; font-size: 10.5px; color: #94a3b8; border: 1px solid #e2e8f0; }
+    .bottom-bar strong { color: #475569; }
+  </style>
+</head>
+<body>
+
+  <div class="accent-bar"></div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-circle"><img src="{{businessLogo}}" alt="{{businessName}}" onerror="this.parentElement.innerHTML='{{businessInitial}}'" /></div>
+      <div>
+        <div class="biz-name">{{businessName}}</div>
+        <div class="biz-gstin">GSTIN: {{businessGstin}}</div>
+        <div class="biz-contact">{{businessAddress}}, {{businessCity}}, {{businessState}}</div>
+        <div class="biz-contact">{{businessPhone}} &nbsp;|&nbsp; {{businessEmail}}</div>
+      </div>
+    </div>
+    <div class="invoice-badge">
+      <div class="badge-pill">{{invoiceType}}</div>
+      <div class="invoice-num"># {{invoiceNumber}}</div>
+      <div class="invoice-dates"><strong>Issue Date:</strong> {{issueDate}}<br><strong>Due Date:</strong> {{dueDate}}</div>
+    </div>
+  </div>
+
+  <!-- PARTIES -->
+  <div class="parties-section">
+    <div class="party-card highlight">
+      <div class="party-heading">Bill To</div>
+      <div class="party-name">{{customerName}}</div>
+      <div class="party-detail">{{customerAddress}}</div>
+      <div class="party-detail">{{customerCity}}, {{customerState}}</div>
+      <div class="party-detail">{{customerEmail}} &nbsp;|&nbsp; {{customerPhone}}</div>
+      {{#customerGstin}}<div class="gstin-chip">GSTIN: {{customerGstin}}</div>{{/customerGstin}}
+      {{#customerPan}}<div class="party-detail" style="margin-top:4px;">PAN: {{customerPan}}</div>{{/customerPan}}
+    </div>
+    <div class="party-card">
+      <div class="party-heading">Invoice Info</div>
+      <div class="party-detail" style="line-height:2.2;">
+        <strong style="color:#334155;">Invoice No:</strong> {{invoiceNumber}}<br>
+        <strong style="color:#334155;">Type:</strong> {{invoiceType}}<br>
+        <strong style="color:#334155;">Issue Date:</strong> {{issueDate}}<br>
+        <strong style="color:#334155;">Due Date:</strong> {{dueDate}}
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLY STRIP -->
+  <div class="supply-strip">
+    <div>Place of Supply: <strong>{{placeOfSupply}}</strong></div>
+    <div>Tax Type: <strong>{{taxType}}</strong></div>
+  </div>
+
+  <!-- ITEMS TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px;text-align:center;">#</th>
+          <th>Description</th>
+          <th>HSN/SAC</th>
+          <th>Qty</th>
+          <th>Rate (₹)</th>
+          <th>GST %</th>
+          <th>Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>{{#items}}
+        <tr>
+          <td>{{index}}</td>
+          <td><div class="item-name">{{description}}</div><div class="item-hsn">{{hsnSac}}</div></td>
+          <td><span class="item-hsn">{{hsnSac}}</span></td>
+          <td>{{quantity}} {{unit}}</td>
+          <td>{{price}}</td>
+          <td>{{gstRate}}%</td>
+          <td class="amount-cell">{{total}}</td>
+        </tr>
+      {{/items}}</tbody>
+    </table>
+  </div>
+
+  <!-- TOTALS + WORDS -->
+  <div class="bottom-section">
+    <div class="words-card">
+      <div class="words-label">Amount in Words</div>
+      <div class="words-text">{{amountInWords}}</div>
+    </div>
+    <div class="totals-card">
+      <div class="totals-row"><span class="lbl">Taxable Amount</span><span class="val">₹{{taxableAmount}}</span></div>
+      <div class="totals-row"><span class="lbl">CGST</span><span class="val">₹{{cgst}}</span></div>
+      <div class="totals-row"><span class="lbl">SGST</span><span class="val">₹{{sgst}}</span></div>
+      <div class="totals-row"><span class="lbl">IGST</span><span class="val">₹{{igst}}</span></div>
+      <div class="totals-grand"><span>Grand Total</span><span>₹{{total}}</span></div>
+      <div class="totals-due"><span class="lbl">Balance Due</span><span class="val">₹{{amountDue}}</span></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-section">
+    <div class="footer-col">
+      <div class="footer-heading">Notes</div>
+      <div class="footer-text">{{notes}}</div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Terms &amp; Conditions</div>
+      <div class="footer-text">{{terms}}</div>
+    </div>
+    <div class="footer-col" style="max-width:155px;text-align:center;">
+      <div class="footer-heading" style="text-align:center;">Authorised Signatory</div>
+      <div class="sign-box">Seal &amp; Signature</div>
+      <div class="sign-name">{{businessName}}</div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    This is a computer-generated invoice. &nbsp;|&nbsp; <strong>{{businessName}}</strong> &nbsp;|&nbsp; GSTIN: {{businessGstin}}
+  </div>
+
+</body>
+</html>`;
+
+  await prisma.invoiceTemplate.upsert({
+    where: { id: 'tpl_classic' },
+    update: {},
+    create: {
+      id: 'tpl_classic',
+      name: 'Classic',
+      html: classicHtml,
+      isActive: true,
+      isDefault: true,
+      sortOrder: 0,
+    },
+  });
+
+  await prisma.invoiceTemplate.upsert({
+    where: { id: 'tpl_professional' },
+    update: {},
+    create: {
+      id: 'tpl_professional',
+      name: 'Professional',
+      html: professionalHtml,
+      isActive: true,
+      isDefault: false,
+      sortOrder: 1,
+    },
+  });
+
+  console.log('  ✓ 2 invoice templates created (Classic, Professional)\n');
+
   console.log('✅ Seed complete!\n');
   console.log('🔑 Credentials:');
   console.log('   admin@yantrix.in / Admin@123 (Super Admin)');
