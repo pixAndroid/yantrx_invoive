@@ -74,7 +74,7 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
     const order = await createOrder({
       amount: plan.price,
       currency: 'INR',
-      receipt: `sub_${businessId}_${Date.now()}`,
+      receipt: `sub_${businessId.slice(0, 8)}_${Date.now()}`,
       notes: { businessId, planId, planName: plan.name },
     });
 
