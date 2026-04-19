@@ -36,10 +36,14 @@ const DEFAULT_HTML = `<!DOCTYPE html>
       align-items: flex-start;
     }
     .business-logo {
-      width: 44px; height: 44px; border-radius: 10px;
+      width: 56px; height: 56px; border-radius: 10px;
       background: rgba(255,255,255,0.2);
       display: flex; align-items: center; justify-content: center;
       font-size: 20px; font-weight: 700; margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .business-logo img {
+      width: 100%; height: 100%; object-fit: contain; border-radius: 10px;
     }
     .business-name { font-size: 22px; font-weight: 700; }
     .business-meta { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
@@ -161,7 +165,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
   <!-- ════ HEADER ════ -->
   <div class="invoice-header">
     <div>
-      <div class="business-logo">{{businessInitial}}</div>
+      <div class="business-logo"><img src="{{businessLogo}}" alt="{{businessName}}" onerror="this.parentElement.innerHTML='{{businessInitial}}'" /></div>
       <div class="business-name">{{businessName}}</div>
       <div class="business-meta">GSTIN: {{businessGstin}}</div>
       <div class="business-meta">{{businessAddress}}</div>
@@ -364,6 +368,7 @@ function TemplateModal({
                   {[
                     '{{businessName}}','{{businessGstin}}','{{businessAddress}}','{{businessCity}}',
                     '{{businessState}}','{{businessPhone}}','{{businessEmail}}','{{businessInitial}}',
+                    '{{businessLogo}}',
                     '{{invoiceNumber}}','{{invoiceType}}','{{issueDate}}','{{dueDate}}',
                     '{{customerName}}','{{customerGstin}}','{{customerPan}}','{{customerAddress}}',
                     '{{customerCity}}','{{customerState}}','{{customerEmail}}','{{customerPhone}}',
