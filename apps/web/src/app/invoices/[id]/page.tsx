@@ -612,7 +612,7 @@ export default function InvoiceDetailPage() {
                       <td className="px-4 py-4">
                         <p className="font-medium text-gray-900 leading-snug">{item.description}</p>
                         {item.discount > 0 && (
-                          <p className="text-xs text-gray-400 mt-0.5">Discount: ₹{item.discount.toLocaleString('en-IN')}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">Discount: {fmt(item.discount)}</p>
                         )}
                       </td>
                       <td className="px-4 py-4 text-xs font-mono text-gray-500">{item.hsnSac || '—'}</td>
@@ -620,7 +620,7 @@ export default function InvoiceDetailPage() {
                         {item.quantity}{item.unit ? ` ${item.unit}` : ''}
                       </td>
                       <td className="px-4 py-4 text-gray-700 text-right tabular-nums">
-                        ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {fmt(item.price)}
                       </td>
                       <td className="px-4 py-4 text-gray-600 text-right tabular-nums">{item.gstRate}%</td>
                       <td className="px-5 py-4 font-semibold text-gray-900 text-right tabular-nums">
