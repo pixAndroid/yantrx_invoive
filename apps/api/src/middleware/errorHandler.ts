@@ -123,10 +123,18 @@ export function errorHandler(
   // In development expose the real error message so the cause is visible in
   // the browser console / UI.  In production always return a safe generic
   // message so internal details are never leaked.
+  //
+  // Guard against plain-object errors (e.g. from Razorpay SDK) where
+  // `statusCode` is set but `message` is undefined because the thrown value
+  // is not an actual Error instance.
+  const rawMessage: string | undefined =
+    err.message ||
+    (err as any)?.error?.description ||
+    undefined;
   const message = err.statusCode
-    ? err.message
+    ? (rawMessage || 'An error occurred')
     : isDev
-      ? (err.message || 'Internal server error')
+      ? (rawMessage || 'Internal server error')
       : 'Internal server error';
 
   res.status(statusCode).json({

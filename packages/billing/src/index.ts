@@ -33,12 +33,25 @@ export interface CreateOrderOptions {
 }
 
 export async function createOrder(options: CreateOrderOptions) {
-  return getRazorpay().orders.create({
-    amount: Math.round(options.amount * 100),
-    currency: options.currency || 'INR',
-    receipt: options.receipt,
-    notes: options.notes,
-  });
+  try {
+    return await getRazorpay().orders.create({
+      amount: Math.round(options.amount * 100),
+      currency: options.currency || 'INR',
+      receipt: options.receipt,
+      notes: options.notes,
+    });
+  } catch (err: any) {
+    // Razorpay SDK (axios-based) rejects with a plain object, not an Error instance.
+    // Normalize it so the Express error handler always receives a proper Error.
+    const description: string =
+      err?.error?.description ||
+      err?.message ||
+      'Failed to create Razorpay order';
+    const normalized = new Error(description) as Error & { statusCode?: number; razorpayCode?: string };
+    normalized.statusCode = err?.statusCode || 502;
+    normalized.razorpayCode = err?.error?.code;
+    throw normalized;
+  }
 }
 
 // ─── Subscription Creation ─────────────────────────────────────────────────
