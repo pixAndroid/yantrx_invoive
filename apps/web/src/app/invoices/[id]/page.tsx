@@ -324,21 +324,29 @@ export default function InvoiceDetailPage() {
     const fmtN = (n: number) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
     // Escape special HTML characters in text content to prevent injection
-    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+
+    // Pre-compiled patterns for item variables
+    const ITEM_PATTERNS: Array<[RegExp, (item: InvoiceItem, i: number) => string]> = [
+      [/{{index}}/g,       (_item, i) => esc(String(i + 1))],
+      [/{{description}}/g, (item) => esc(item.description)],
+      [/{{hsnSac}}/g,      (item) => esc(item.hsnSac)],
+      [/{{quantity}}/g,    (item) => esc(String(item.quantity))],
+      [/{{unit}}/g,        (item) => esc(item.unit)],
+      [/{{price}}/g,       (item) => esc(fmtN(item.price))],
+      [/{{gstRate}}/g,     (item) => esc(String(item.gstRate))],
+      [/{{total}}/g,       (item) => esc(fmtN(item.total))],
+    ];
 
     // Resolve items block
     let result = html.replace(/{{#items}}([\s\S]*?){{\/items}}/g, (_match, itemTpl: string) => {
-      return inv.items.map((item, i) =>
-        itemTpl
-          .replace(/{{index}}/g, esc(String(i + 1)))
-          .replace(/{{description}}/g, esc(item.description || ''))
-          .replace(/{{hsnSac}}/g, esc(item.hsnSac || ''))
-          .replace(/{{quantity}}/g, esc(String(item.quantity)))
-          .replace(/{{unit}}/g, esc(item.unit || ''))
-          .replace(/{{price}}/g, esc(fmtN(item.price)))
-          .replace(/{{gstRate}}/g, esc(String(item.gstRate)))
-          .replace(/{{total}}/g, esc(fmtN(item.total)))
-      ).join('');
+      return inv.items.map((item, i) => {
+        let row = itemTpl;
+        for (const [pattern, fn] of ITEM_PATTERNS) {
+          row = row.replace(pattern, fn(item, i));
+        }
+        return row;
+      }).join('');
     });
 
     // Use transparent 1×1 GIF as fallback so the img element renders cleanly
@@ -347,33 +355,33 @@ export default function InvoiceDetailPage() {
       ? inv.business.logo : TRANSPARENT_GIF;
 
     const vars: Record<string, string> = {
-      businessName: esc(inv.business.name || ''),
-      businessGstin: esc(inv.business.gstin || ''),
-      businessAddress: esc(inv.business.address || ''),
-      businessCity: esc(inv.business.city || ''),
-      businessState: esc(inv.business.state || ''),
-      businessPhone: esc(inv.business.phone || ''),
-      businessEmail: esc(inv.business.email || ''),
-      businessInitial: esc(inv.business.name?.charAt(0)?.toUpperCase() || ''),
+      businessName: esc(inv.business.name),
+      businessGstin: esc(inv.business.gstin),
+      businessAddress: esc(inv.business.address),
+      businessCity: esc(inv.business.city),
+      businessState: esc(inv.business.state),
+      businessPhone: esc(inv.business.phone),
+      businessEmail: esc(inv.business.email),
+      businessInitial: esc(inv.business.name?.charAt(0)?.toUpperCase()),
       businessLogo: safeLogoUrl,
-      invoiceNumber: esc(inv.invoiceNumber || ''),
+      invoiceNumber: esc(inv.invoiceNumber),
       invoiceType: esc(inv.type || 'INVOICE'),
       issueDate: esc(fmtDate(inv.issueDate)),
       dueDate: inv.dueDate ? esc(fmtDate(inv.dueDate)) : '',
-      customerName: esc(inv.customer.name || ''),
-      customerGstin: esc(inv.customer.gstin || ''),
+      customerName: esc(inv.customer.name),
+      customerGstin: esc(inv.customer.gstin),
       customerPan: '',
-      customerAddress: esc(inv.customer.billingAddress || ''),
-      customerCity: esc(inv.customer.billingCity || ''),
-      customerState: esc(inv.customer.billingState || ''),
-      customerPincode: esc(inv.customer.billingPincode || ''),
-      customerEmail: esc(inv.customer.email || ''),
-      customerPhone: esc(inv.customer.phone || ''),
-      shipAddress: esc(inv.customer.shippingAddress || inv.customer.billingAddress || ''),
-      shipCity: esc(inv.customer.shippingCity || inv.customer.billingCity || ''),
-      shipState: esc(inv.customer.shippingState || inv.customer.billingState || ''),
-      shipPincode: esc(inv.customer.shippingPincode || inv.customer.billingPincode || ''),
-      placeOfSupply: esc(inv.placeOfSupply || ''),
+      customerAddress: esc(inv.customer.billingAddress),
+      customerCity: esc(inv.customer.billingCity),
+      customerState: esc(inv.customer.billingState),
+      customerPincode: esc(inv.customer.billingPincode),
+      customerEmail: esc(inv.customer.email),
+      customerPhone: esc(inv.customer.phone),
+      shipAddress: esc(inv.customer.shippingAddress || inv.customer.billingAddress),
+      shipCity: esc(inv.customer.shippingCity || inv.customer.billingCity),
+      shipState: esc(inv.customer.shippingState || inv.customer.billingState),
+      shipPincode: esc(inv.customer.shippingPincode || inv.customer.billingPincode),
+      placeOfSupply: esc(inv.placeOfSupply),
       taxType: inv.isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST + SGST)',
       taxableAmount: esc(fmtN(inv.taxableAmount)),
       cgst: esc(fmtN(inv.cgstTotal)),
@@ -382,13 +390,12 @@ export default function InvoiceDetailPage() {
       total: esc(fmtN(inv.total)),
       amountDue: esc(fmtN(inv.amountDue)),
       amountInWords: esc(numberToWords(inv.total ?? 0)),
-      notes: esc(inv.notes || ''),
-      terms: esc(inv.terms || ''),
+      notes: esc(inv.notes),
+      terms: esc(inv.terms),
     };
 
-    for (const [key, value] of Object.entries(vars)) {
-      result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
-    }
+    // Single-pass replacement using a callback for efficiency
+    result = result.replace(/{{(\w+)}}/g, (_match, key) => vars[key] ?? '');
     return result;
   };
 
@@ -597,16 +604,9 @@ export default function InvoiceDetailPage() {
             <iframe
               srcDoc={renderTemplateHtml(selectedTemplate.html, invoice)}
               className="w-full border-0"
-              style={{ minHeight: '900px', height: '100%' }}
+              style={{ minHeight: '900px' }}
               title="Invoice Preview"
               sandbox=""
-              onLoad={(e) => {
-                const iframe = e.currentTarget;
-                try {
-                  const body = iframe.contentDocument?.body;
-                  if (body) iframe.style.height = `${body.scrollHeight + 32}px`;
-                } catch { /* cross-origin sandbox prevents access */ }
-              }}
             />
           </div>
         ) : (

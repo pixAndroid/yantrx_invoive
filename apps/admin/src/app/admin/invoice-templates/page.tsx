@@ -595,7 +595,7 @@ function TemplateModal({
                   srcDoc={form.html}
                   className="w-full h-full"
                   title="Template Preview"
-                  sandbox="allow-same-origin"
+                  sandbox=""
                 />
               </div>
             </div>
@@ -689,7 +689,7 @@ export default function InvoiceTemplatesPage() {
               <span className="text-sm font-medium text-gray-700">{previewTemplate.name} — Preview</span>
               <button onClick={() => setPreviewTemplate(null)}><X className="h-4 w-4 text-gray-500" /></button>
             </div>
-            <iframe srcDoc={previewTemplate.html} className="w-full h-full" title="Preview" sandbox="allow-same-origin" />
+            <iframe srcDoc={previewTemplate.html} className="w-full h-full" title="Preview" sandbox="" />
           </div>
         </div>
       )}
@@ -738,7 +738,7 @@ export default function InvoiceTemplatesPage() {
                 </div>
               </div>
               <div className="rounded-lg overflow-hidden border border-gray-700 bg-white mb-3" style={{ height: '120px' }}>
-                <iframe srcDoc={BUILTIN_TEMPLATE.html} className="w-full h-full" title={BUILTIN_TEMPLATE.name} sandbox="allow-same-origin" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
+                <iframe srcDoc={BUILTIN_TEMPLATE.html} className="w-full h-full" title={BUILTIN_TEMPLATE.name} sandbox="" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => setPreviewTemplate(BUILTIN_TEMPLATE)}
@@ -774,7 +774,7 @@ export default function InvoiceTemplatesPage() {
                   </div>
                 </div>
                 <div className="rounded-lg overflow-hidden border border-gray-700 bg-white mb-3" style={{ height: '120px' }}>
-                  <iframe srcDoc={tmpl.html} className="w-full h-full" title={tmpl.name} sandbox="allow-same-origin" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
+                  <iframe srcDoc={tmpl.html} className="w-full h-full" title={tmpl.name} sandbox="" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setPreviewTemplate(tmpl)}
