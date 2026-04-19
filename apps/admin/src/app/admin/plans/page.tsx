@@ -54,7 +54,9 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
   useEffect(() => {
     adminFetch<{ data: Module[] }>('/admin/modules')
       .then(res => setModules(res.data))
-      .catch(() => {});
+      .catch(() => {
+        // Modules are optional for the quick-add pills; failure is non-fatal
+      });
   }, []);
 
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
@@ -75,12 +77,11 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
   };
 
   const toggleModuleFeature = (moduleName: string) => {
-    const label = moduleName;
     setForm(p => ({
       ...p,
-      features: p.features.includes(label)
-        ? p.features.filter(f => f !== label)
-        : [...p.features, label],
+      features: p.features.includes(moduleName)
+        ? p.features.filter(f => f !== moduleName)
+        : [...p.features, moduleName],
     }));
   };
 
