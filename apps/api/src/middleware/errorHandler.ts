@@ -13,7 +13,13 @@ interface SdkErrorObject {
 }
 
 function isSdkErrorObject(value: unknown): value is SdkErrorObject {
-  return typeof value === 'object' && value !== null && !('stack' in value);
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !('stack' in value) &&
+    'error' in value &&
+    typeof (value as SdkErrorObject).error === 'object'
+  );
 }
 
 const isDev = process.env.NODE_ENV !== 'production';
