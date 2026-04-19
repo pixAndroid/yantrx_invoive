@@ -79,7 +79,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 14mm 14mm 14mm 14mm;
+    margin: 0;
   }
 
   * {
@@ -89,6 +89,7 @@
 
   body {
     background: #ffffff !important;
+    margin: 14mm !important;
   }
 
   .no-print,
