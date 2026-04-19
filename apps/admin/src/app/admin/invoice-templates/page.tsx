@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Eye, Save, X, Check, FileCode2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Save, X, Check, FileCode2, RefreshCw, AlertCircle } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface InvoiceTemplate {
@@ -21,80 +21,254 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Invoice</title>
+  <title>Invoice {{invoiceNumber}}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-    .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-    .business-name { font-size: 24px; font-weight: bold; color: #4f46e5; }
-    .invoice-title { font-size: 28px; font-weight: bold; text-align: right; }
-    .section { margin: 20px 0; }
-    .label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    thead { background: #f9fafb; }
-    th { padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-    td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
-    .total-row { font-weight: bold; font-size: 16px; }
-    .footer { margin-top: 40px; font-size: 12px; color: #9ca3af; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #fff; font-size: 13px; }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    .invoice-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #fff;
+      padding: 32px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .business-logo {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; margin-bottom: 10px;
+    }
+    .business-name { font-size: 22px; font-weight: 700; }
+    .business-meta { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+    .invoice-badge { text-align: right; }
+    .invoice-type {
+      font-size: 30px; font-weight: 800; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .invoice-number { font-size: 14px; color: rgba(255,255,255,0.85); margin-top: 4px; }
+    .invoice-dates { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 4px; line-height: 1.7; }
+
+    /* ── BODY ────────────────────────────────────────────── */
+    .invoice-body { padding: 32px 40px; }
+
+    .parties { display: flex; gap: 40px; margin-bottom: 28px; }
+    .party { flex: 1; }
+    .party-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: #6b7280; margin-bottom: 6px;
+    }
+    .party-name { font-size: 15px; font-weight: 700; color: #111827; }
+    .party-meta { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.6; }
+    .gstin-badge {
+      display: inline-block; font-size: 11px; font-family: monospace;
+      background: #f3f4f6; border: 1px solid #e5e7eb;
+      border-radius: 4px; padding: 2px 6px; margin-top: 4px; color: #374151;
+    }
+
+    .supply-info {
+      background: #f9fafb; border: 1px solid #e5e7eb;
+      border-radius: 8px; padding: 10px 16px;
+      margin-bottom: 24px; font-size: 12px; color: #6b7280;
+      display: flex; gap: 32px;
+    }
+    .supply-info span { font-weight: 600; color: #374151; }
+
+    /* Items table */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+    thead { background: #4f46e5; color: #fff; }
+    th {
+      padding: 10px 12px; text-align: left;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    th:last-child, td:last-child { text-align: right; }
+    th:nth-child(4), th:nth-child(5), th:nth-child(6),
+    td:nth-child(4), td:nth-child(5), td:nth-child(6) { text-align: right; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    tbody tr:hover { background: #eff6ff; }
+    td { padding: 11px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+    td:first-child { color: #9ca3af; }
+    .item-desc { font-weight: 500; color: #111827; }
+    .item-hsn { font-size: 11px; color: #9ca3af; font-family: monospace; }
+    .amount-col { font-weight: 600; color: #111827; }
+
+    /* Totals + Amount in Words */
+    .totals-section {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-top: 20px; gap: 24px;
+    }
+    .amount-in-words {
+      flex: 1; background: #eff6ff; border: 1px solid #c7d2fe;
+      border-radius: 8px; padding: 14px 16px;
+    }
+    .amount-in-words .label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: #6366f1; margin-bottom: 6px;
+    }
+    .amount-in-words .words {
+      font-size: 13px; font-weight: 600; color: #1e1b4b;
+      font-style: italic; line-height: 1.5;
+    }
+    .totals-box { min-width: 260px; }
+    .totals-row {
+      display: flex; justify-content: space-between;
+      padding: 5px 0; font-size: 13px; border-bottom: 1px solid #f3f4f6;
+    }
+    .totals-row .lbl { color: #6b7280; }
+    .totals-row .val { font-weight: 500; color: #111827; }
+    .totals-grand {
+      display: flex; justify-content: space-between;
+      padding: 10px 0 4px; font-size: 16px; font-weight: 700;
+      border-top: 2px solid #4f46e5; margin-top: 4px;
+    }
+    .totals-grand .lbl { color: #111827; }
+    .totals-grand .val { color: #4f46e5; }
+    .totals-balance {
+      display: flex; justify-content: space-between;
+      padding: 4px 0; font-size: 13px; font-weight: 600;
+    }
+    .totals-balance .lbl { color: #dc2626; }
+    .totals-balance .val { color: #dc2626; }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    .invoice-footer {
+      border-top: 2px solid #e5e7eb; margin-top: 32px;
+      padding: 24px 40px;
+      display: flex; justify-content: space-between; gap: 32px;
+    }
+    .footer-col { flex: 1; }
+    .footer-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: #6b7280; margin-bottom: 6px;
+    }
+    .footer-text { font-size: 12px; color: #4b5563; line-height: 1.7; }
+    .footer-bottom {
+      background: #f9fafb; border-top: 1px solid #e5e7eb;
+      padding: 12px 40px; text-align: center;
+      font-size: 11px; color: #9ca3af;
+    }
+    .seal-area {
+      border: 1px dashed #d1d5db; border-radius: 8px;
+      min-height: 70px; padding: 10px; text-align: center;
+      color: #d1d5db; font-size: 11px;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
+
+  <!-- ════ HEADER ════ -->
+  <div class="invoice-header">
     <div>
+      <div class="business-logo">{{businessInitial}}</div>
       <div class="business-name">{{businessName}}</div>
-      <div>GSTIN: {{businessGstin}}</div>
-      <div>{{businessAddress}}</div>
+      <div class="business-meta">GSTIN: {{businessGstin}}</div>
+      <div class="business-meta">{{businessAddress}}</div>
+      <div class="business-meta">{{businessCity}}, {{businessState}}</div>
+      <div class="business-meta">Ph: {{businessPhone}} | {{businessEmail}}</div>
     </div>
-    <div>
-      <div class="invoice-title">{{invoiceType}}</div>
-      <div>{{invoiceNumber}}</div>
-      <div>Date: {{issueDate}}</div>
-      <div>Due: {{dueDate}}</div>
-    </div>
-  </div>
-  <div class="section">
-    <div class="label">Bill To</div>
-    <div><strong>{{customerName}}</strong></div>
-    <div>GSTIN: {{customerGstin}}</div>
-    <div>{{customerAddress}}</div>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Description</th><th>HSN/SAC</th>
-        <th align="right">Qty</th><th align="right">Rate</th>
-        <th align="right">GST</th><th align="right">Amount</th>
-      </tr>
-    </thead>
-    <tbody>{{#items}}
-      <tr>
-        <td>{{index}}</td><td>{{description}}</td><td>{{hsnSac}}</td>
-        <td align="right">{{quantity}} {{unit}}</td>
-        <td align="right">₹{{price}}</td>
-        <td align="right">{{gstRate}}%</td>
-        <td align="right">₹{{total}}</td>
-      </tr>
-    {{/items}}</tbody>
-  </table>
-  <div style="display:flex;justify-content:flex-end;">
-    <div style="min-width:260px;">
-      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:14px;">
-        <span>Taxable Amount</span><span>₹{{taxableAmount}}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:14px;">
-        <span>CGST</span><span>₹{{cgst}}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:14px;">
-        <span>SGST</span><span>₹{{sgst}}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin:8px 0;font-size:16px;font-weight:bold;border-top:2px solid #e5e7eb;padding-top:8px;">
-        <span>Total</span><span>₹{{total}}</span>
+    <div class="invoice-badge">
+      <div class="invoice-type">{{invoiceType}}</div>
+      <div class="invoice-number"># {{invoiceNumber}}</div>
+      <div class="invoice-dates">
+        Issue Date: {{issueDate}}<br>
+        Due Date: {{dueDate}}
       </div>
     </div>
   </div>
-  <div class="footer">
-    <p>Notes: {{notes}}</p>
-    <p>Terms: {{terms}}</p>
+
+  <!-- ════ BODY ════ -->
+  <div class="invoice-body">
+
+    <!-- Parties -->
+    <div class="parties">
+      <div class="party">
+        <div class="party-label">Bill To</div>
+        <div class="party-name">{{customerName}}</div>
+        <div class="party-meta">{{customerAddress}}</div>
+        <div class="party-meta">{{customerCity}}, {{customerState}}</div>
+        {{#customerGstin}}<div class="gstin-badge">GSTIN: {{customerGstin}}</div>{{/customerGstin}}
+        {{#customerPan}}<div class="party-meta">PAN: {{customerPan}}</div>{{/customerPan}}
+        <div class="party-meta">{{customerEmail}}</div>
+        <div class="party-meta">{{customerPhone}}</div>
+      </div>
+    </div>
+
+    <!-- Supply Info -->
+    <div class="supply-info">
+      <div>Place of Supply: <span>{{placeOfSupply}}</span></div>
+      <div>Tax Type: <span>{{taxType}}</span></div>
+    </div>
+
+    <!-- Items Table -->
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Description</th>
+          <th>HSN/SAC</th>
+          <th>Qty</th>
+          <th>Rate (₹)</th>
+          <th>GST %</th>
+          <th>Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>{{#items}}
+        <tr>
+          <td>{{index}}</td>
+          <td><div class="item-desc">{{description}}</div></td>
+          <td><span class="item-hsn">{{hsnSac}}</span></td>
+          <td>{{quantity}} {{unit}}</td>
+          <td>{{price}}</td>
+          <td>{{gstRate}}%</td>
+          <td class="amount-col">{{total}}</td>
+        </tr>
+      {{/items}}</tbody>
+    </table>
+
+    <!-- Totals + Amount in Words -->
+    <div class="totals-section">
+      <!-- Amount in Words on left -->
+      <div class="amount-in-words">
+        <div class="label">Amount in Words</div>
+        <div class="words">{{amountInWords}}</div>
+      </div>
+
+      <!-- Numeric totals on right -->
+      <div class="totals-box">
+        <div class="totals-row"><span class="lbl">Taxable Amount</span><span class="val">₹{{taxableAmount}}</span></div>
+        <div class="totals-row"><span class="lbl">CGST</span><span class="val">₹{{cgst}}</span></div>
+        <div class="totals-row"><span class="lbl">SGST</span><span class="val">₹{{sgst}}</span></div>
+        <div class="totals-row"><span class="lbl">IGST</span><span class="val">₹{{igst}}</span></div>
+        <div class="totals-grand"><span class="lbl">Grand Total</span><span class="val">₹{{total}}</span></div>
+        <div class="totals-balance"><span class="lbl">Balance Due</span><span class="val">₹{{amountDue}}</span></div>
+      </div>
+    </div>
+
+  </div><!-- /invoice-body -->
+
+  <!-- ════ FOOTER ════ -->
+  <div class="invoice-footer">
+    <div class="footer-col">
+      <div class="footer-label">Notes</div>
+      <div class="footer-text">{{notes}}</div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-label">Terms &amp; Conditions</div>
+      <div class="footer-text">{{terms}}</div>
+    </div>
+    <div class="footer-col" style="max-width:160px;text-align:center;">
+      <div class="footer-label">Authorised Signatory</div>
+      <div class="seal-area" style="margin-top:8px;"></div>
+      <div class="footer-text" style="margin-top:6px;">{{businessName}}</div>
+    </div>
   </div>
+
+  <div class="footer-bottom">
+    This is a computer-generated invoice. | {{businessName}} | GSTIN: {{businessGstin}}
+  </div>
+
 </body>
 </html>`;
 
@@ -187,7 +361,16 @@ function TemplateModal({
               <div className="rounded-lg bg-gray-800 border border-gray-700 p-3 text-xs text-gray-400">
                 <p className="font-medium text-gray-300 mb-1">Available Template Variables:</p>
                 <div className="grid grid-cols-3 gap-1 font-mono">
-                  {['{{businessName}}','{{businessGstin}}','{{businessAddress}}','{{invoiceNumber}}','{{invoiceType}}','{{issueDate}}','{{dueDate}}','{{customerName}}','{{customerGstin}}','{{customerAddress}}','{{taxableAmount}}','{{cgst}}','{{sgst}}','{{igst}}','{{total}}','{{notes}}','{{terms}}'].map(v => (
+                  {[
+                    '{{businessName}}','{{businessGstin}}','{{businessAddress}}','{{businessCity}}',
+                    '{{businessState}}','{{businessPhone}}','{{businessEmail}}','{{businessInitial}}',
+                    '{{invoiceNumber}}','{{invoiceType}}','{{issueDate}}','{{dueDate}}',
+                    '{{customerName}}','{{customerGstin}}','{{customerPan}}','{{customerAddress}}',
+                    '{{customerCity}}','{{customerState}}','{{customerEmail}}','{{customerPhone}}',
+                    '{{placeOfSupply}}','{{taxType}}',
+                    '{{taxableAmount}}','{{cgst}}','{{sgst}}','{{igst}}','{{total}}','{{amountDue}}',
+                    '{{amountInWords}}','{{notes}}','{{terms}}',
+                  ].map(v => (
                     <span key={v} className="text-orange-400">{v}</span>
                   ))}
                 </div>
@@ -287,6 +470,18 @@ export default function InvoiceTemplatesPage() {
     } catch {}
   };
 
+  const handleToggleActive = async (tmpl: InvoiceTemplate) => {
+    try {
+      const token = getAdminToken();
+      await fetch(`${API_URL}/admin/invoice-templates/${tmpl.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ isActive: !tmpl.isActive }),
+      });
+      fetchTemplates();
+    } catch {}
+  };
+
   return (
     <>
       {(showModal || editTemplate) && (
@@ -356,8 +551,10 @@ export default function InvoiceTemplatesPage() {
                       {tmpl.isDefault && (
                         <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full">Default</span>
                       )}
-                      {!tmpl.isActive && (
-                        <span className="text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded-full">Inactive</span>
+                      {tmpl.isActive ? (
+                        <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full">Published</span>
+                      ) : (
+                        <span className="text-xs bg-gray-700 text-gray-400 border border-gray-600 px-1.5 py-0.5 rounded-full">Unpublished</span>
                       )}
                     </div>
                     <p className="text-xs text-gray-500 font-mono mt-0.5">#{tmpl.sortOrder}</p>
@@ -374,6 +571,11 @@ export default function InvoiceTemplatesPage() {
                   <button onClick={() => setEditTemplate(tmpl)}
                     className="flex-1 rounded-lg border border-gray-700 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 hover:text-orange-400 flex items-center justify-center gap-1">
                     <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </button>
+                  <button onClick={() => handleToggleActive(tmpl)}
+                    title={tmpl.isActive ? 'Unpublish' : 'Publish'}
+                    className={`rounded-lg border p-1.5 ${tmpl.isActive ? 'border-green-700 text-green-400 hover:bg-green-900/30' : 'border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-green-400'}`}>
+                    {tmpl.isActive ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                   {!tmpl.isDefault && (
                     <button onClick={() => handleSetDefault(tmpl.id)}
