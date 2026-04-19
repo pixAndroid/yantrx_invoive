@@ -32,6 +32,18 @@ interface Product {
 const GST_RATES = [0, 5, 12, 18, 28];
 const UNITS = ['PCS','KG','GRAM','LITRE','METRE','BOX','DOZEN','SET','PAIR','BUNDLE','HOUR','DAY','MONTH','SERVICE'];
 
+function getStockStatusColor(stockCount: number | null, lowStockAlert: number | null): string {
+  if (stockCount === 0) return 'text-red-600';
+  if (lowStockAlert !== null && stockCount !== null && stockCount <= lowStockAlert) return 'text-amber-600';
+  return 'text-green-700';
+}
+
+function getStockStatusLabel(stockCount: number | null, lowStockAlert: number | null): string {
+  if (stockCount === 0) return '⚠ Out of Stock';
+  if (lowStockAlert !== null && stockCount !== null && stockCount <= lowStockAlert) return '⚠ Low Stock';
+  return '✓ In Stock';
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -149,6 +161,32 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+      {/* Stock summary cards (view mode only, for products) */}
+      {!editing && product.type !== 'service' && (
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-gray-500 font-medium">Current Stock</p>
+            <p className={`text-2xl font-bold mt-0.5 ${getStockStatusColor(product.stockCount, product.lowStockAlert)}`}>
+              {product.stockCount !== null ? product.stockCount.toLocaleString('en-IN') : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{product.unit}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-gray-500 font-medium">Low Stock Alert</p>
+            <p className="text-2xl font-bold text-gray-700 mt-0.5">
+              {product.lowStockAlert !== null ? product.lowStockAlert.toLocaleString('en-IN') : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">threshold</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-gray-500 font-medium">Stock Status</p>
+            <p className={`text-sm font-semibold mt-1 ${getStockStatusColor(product.stockCount, product.lowStockAlert)}`}>
+              {getStockStatusLabel(product.stockCount, product.lowStockAlert)}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         {editing ? (
           <div className="grid sm:grid-cols-2 gap-4">
@@ -187,14 +225,22 @@ export default function ProductDetailPage() {
               <input type="number" value={form.costPrice || 0} onChange={e => set('costPrice', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">MRP (₹)</label>
+              <input type="number" value={form.mrp || 0} onChange={e => set('mrp', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">GST Rate (%)</label>
               <select value={form.gstRate || 18} onChange={e => set('gstRate', parseFloat(e.target.value))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
                 {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Qty</label>
-              <input type="number" value={form.stockCount || 0} onChange={e => set('stockCount', parseFloat(e.target.value) || 0)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock Qty</label>
+              <input type="number" min="0" value={form.stockCount ?? ''} onChange={e => set('stockCount', e.target.value === '' ? null : (parseFloat(e.target.value) || null))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Low Stock Alert at</label>
+              <input type="number" min="0" value={form.lowStockAlert ?? ''} onChange={e => set('lowStockAlert', e.target.value === '' ? null : (parseFloat(e.target.value) || null))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
             </div>
           </div>
         ) : (
@@ -211,7 +257,7 @@ export default function ProductDetailPage() {
               { label: 'Cost Price', value: product.costPrice ? `₹${product.costPrice.toLocaleString('en-IN')}` : '—' },
               { label: 'MRP', value: product.mrp ? `₹${product.mrp.toLocaleString('en-IN')}` : '—' },
               { label: 'GST Rate', value: `${product.gstRate}%` },
-              { label: 'Stock Qty', value: product.stockCount !== null ? String(product.stockCount) : '—' },
+              { label: 'Current Stock', value: product.stockCount !== null ? `${product.stockCount.toLocaleString('en-IN')} ${product.unit}` : '—' },
               { label: 'Low Stock Alert', value: product.lowStockAlert !== null ? String(product.lowStockAlert) : '—' },
             ].map(row => (
               <div key={row.label} className="flex justify-between border-b border-gray-50 pb-2">
