@@ -502,13 +502,15 @@ export default function InvoiceDetailPage() {
                   </div>
                 )}
               </div>
-              {/* Status badge */}
-              <div className="mt-3 flex justify-end">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide border"
-                  style={{ background: docBadge.bg, color: docBadge.text, borderColor: docBadge.bg }}>
-                  {docBadge.label}
-                </span>
-              </div>
+              {/* Status badge – hidden for Draft, Sent and Cancelled */}
+              {invoice.status !== 'DRAFT' && invoice.status !== 'SENT' && invoice.status !== 'CANCELLED' && (
+                <div className="mt-3 flex justify-end">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide border"
+                    style={{ background: docBadge.bg, color: docBadge.text, borderColor: docBadge.bg }}>
+                    {docBadge.label}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
