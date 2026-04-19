@@ -195,6 +195,17 @@ export default function EditInvoicePage() {
           placeOfSupply: formData.placeOfSupply || selectedCustomer.billingState || undefined,
           notes: formData.notes || undefined,
           terms: formData.terms || undefined,
+          items: validItems.map(item => ({
+            id: item.id,
+            productId: item.productId || undefined,
+            description: item.description,
+            hsnSac: item.hsnSac || undefined,
+            quantity: item.quantity,
+            unit: item.unit,
+            price: item.price,
+            discount: item.discount,
+            gstRate: item.gstRate,
+          })),
         }),
       });
       success('Invoice updated');

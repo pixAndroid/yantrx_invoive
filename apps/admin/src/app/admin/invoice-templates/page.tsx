@@ -360,10 +360,9 @@ export default function InvoiceTemplatesPage() {
                         <span className="text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded-full">Inactive</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 font-mono mt-0.5">{tmpl.slug}</p>
+                    <p className="text-xs text-gray-500 font-mono mt-0.5">#{tmpl.sortOrder}</p>
                   </div>
                 </div>
-                {tmpl.description && <p className="text-xs text-gray-400 mb-3 line-clamp-2">{tmpl.description}</p>}
                 <div className="rounded-lg overflow-hidden border border-gray-700 bg-white mb-3" style={{ height: '120px' }}>
                   <iframe srcDoc={tmpl.html} className="w-full h-full" title={tmpl.name} sandbox="allow-same-origin" style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%', pointerEvents: 'none' }} />
                 </div>
