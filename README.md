@@ -84,15 +84,32 @@ Start PostgreSQL and Redis locally, then make sure they are accessible at the UR
 
 ### 4. Setup Database
 
+**Fresh database (recommended):**
+
 ```bash
 # Generate Prisma client
 pnpm db:generate
 
-# Push schema to database
-pnpm db:push
+# Apply all migrations to create the schema
+pnpm db:deploy
 
 # Seed with test data
 pnpm db:seed
+```
+
+**Existing database (already set up via `db:push` without migrations):**
+
+If you get errors like `The column 'businesses.defaultTemplateId' does not exist`, your database schema is out of sync. Run:
+
+```bash
+# Option A — use db:push to sync the schema (safe for development)
+pnpm db:push
+
+# Option B — use migration baseline + deploy (recommended for production)
+# 1. Mark the initial schema migration as already applied (tables already exist)
+pnpm exec prisma migrate resolve --applied "20230101000000_init" --schema=./prisma/schema.prisma
+# 2. Apply any pending migrations (adds the missing columns)
+pnpm db:deploy
 ```
 
 ### 5. Start Development Servers
