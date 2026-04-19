@@ -192,4 +192,73 @@ router.put('/modules/:id', async (req: AuthenticatedRequest, res: Response, next
   } catch (error) { next(error); }
 });
 
+const MS_THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+router.delete('/plans/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    await prisma.plan.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Plan deleted' });
+  } catch (error) { next(error); }
+});
+
+router.put('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, email, phone, role } = req.body;
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (role !== undefined) updateData.role = role;
+    const user = await prisma.user.update({ where: { id: req.params.id }, data: updateData });
+    res.json({ success: true, data: user });
+  } catch (error) { next(error); }
+});
+
+router.post('/modules', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, slug, isCore, sortOrder, requiredPlan } = req.body;
+    if (!name || !slug) { res.status(400).json({ success: false, error: 'name and slug required' }); return; }
+    const mod = await prisma.module.create({ data: { name, slug, isCore: isCore || false, isActive: true, sortOrder: sortOrder || 0, requiredPlan: requiredPlan || null } });
+    res.status(201).json({ success: true, data: mod });
+  } catch (error) { next(error); }
+});
+
+router.delete('/modules/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const mod = await prisma.module.findUnique({ where: { id: req.params.id } });
+    if (!mod) { res.status(404).json({ success: false, error: 'Module not found' }); return; }
+    if (mod.isCore) { res.status(400).json({ success: false, error: 'Cannot delete core modules' }); return; }
+    await prisma.module.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Module deleted' });
+  } catch (error) { next(error); }
+});
+
+router.put('/businesses/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, isActive, planId } = req.body;
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (planId !== undefined) updateData.planId = planId;
+    const business = await prisma.business.update({ where: { id: req.params.id }, data: updateData });
+    res.json({ success: true, data: business });
+  } catch (error) { next(error); }
+});
+
+router.post('/subscriptions/:id/assign-plan', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { planId } = req.body;
+    if (!planId) { res.status(400).json({ success: false, error: 'planId required' }); return; }
+    const plan = await prisma.plan.findUnique({ where: { id: planId } });
+    if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
+    const sub = await prisma.subscription.update({
+      where: { id: req.params.id },
+      data: { planId, status: 'ACTIVE', startDate: new Date(), endDate: new Date(Date.now() + MS_THIRTY_DAYS), amount: plan.price },
+      include: { plan: true, business: { select: { id: true, name: true } } },
+    });
+    await prisma.business.update({ where: { id: sub.businessId }, data: { planId } });
+    res.json({ success: true, data: sub });
+  } catch (error) { next(error); }
+});
+
 export default router;

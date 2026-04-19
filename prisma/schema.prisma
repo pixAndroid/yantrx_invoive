@@ -648,3 +648,20 @@ model RefreshToken {
 
   @@map("refresh_tokens")
 }
+
+// ─── Invoice Templates ────────────────────────────────────────────────────
+
+model InvoiceTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  html        String   @db.Text
+  css         String?  @db.Text
+  thumbnail   String?
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("invoice_templates")
+}

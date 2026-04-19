@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Edit2, Check, X, AlertCircle, RefreshCw, Star } from 'lucide-react';
+import { Package, Plus, Edit2, Check, X, AlertCircle, RefreshCw, Star, Trash2 } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Plan {
@@ -21,6 +21,115 @@ interface Plan {
   sortOrder: number;
 }
 
+const DEFAULT_FORM = {
+  name: '', slug: '', description: '', price: '0', yearlyPrice: '',
+  invoiceLimit: '100', customerLimit: '500', userLimit: '2', storageLimit: '500',
+  features: 'Invoicing\nCustomers\nGST Reports',
+  isActive: true, isFeatured: false, sortOrder: '0',
+};
+
+function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState(plan ? {
+    name: plan.name, slug: plan.slug, description: plan.description || '',
+    price: String(plan.price), yearlyPrice: String(plan.yearlyPrice || ''),
+    invoiceLimit: String(plan.invoiceLimit), customerLimit: String(plan.customerLimit),
+    userLimit: String(plan.userLimit), storageLimit: String(plan.storageLimit),
+    features: (plan.features || []).join('\n'),
+    isActive: plan.isActive, isFeatured: plan.isFeatured, sortOrder: String(plan.sortOrder),
+  } : DEFAULT_FORM);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSave = async () => {
+    if (!form.name || !form.slug) { setErr('Name and slug are required'); return; }
+    setSaving(true); setErr('');
+    try {
+      const token = getAdminToken();
+      const payload = {
+        name: form.name, slug: form.slug, description: form.description,
+        price: parseFloat(form.price) || 0,
+        yearlyPrice: form.yearlyPrice ? parseFloat(form.yearlyPrice) : null,
+        invoiceLimit: parseInt(form.invoiceLimit) || 100,
+        customerLimit: parseInt(form.customerLimit) || 500,
+        userLimit: parseInt(form.userLimit) || 2,
+        storageLimit: parseInt(form.storageLimit) || 500,
+        features: form.features.split('\n').map(f => f.trim()).filter(Boolean),
+        isActive: form.isActive, isFeatured: form.isFeatured,
+        sortOrder: parseInt(form.sortOrder) || 0,
+      };
+      const url = plan ? `${API_URL}/admin/plans/${plan.id}` : `${API_URL}/admin/plans`;
+      const method = plan ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!data.success) { setErr(data.error || 'Failed to save'); return; }
+      onSaved();
+      onClose();
+    } catch (e: any) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const inp = (label: string, key: string, type = 'text', ph = '') => (
+    <div>
+      <label className="block text-xs font-medium text-gray-400 mb-1">{label}</label>
+      <input type={type} value={(form as any)[key]} onChange={e => set(key, e.target.value)} placeholder={ph}
+        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" />
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-6 z-10 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-white">{plan ? 'Edit Plan' : 'New Plan'}</h3>
+          <button onClick={onClose}><X className="h-4 w-4 text-gray-400" /></button>
+        </div>
+        {err && <div className="mb-3 text-xs text-red-400 bg-red-900/20 rounded px-3 py-2">{err}</div>}
+        <div className="grid grid-cols-2 gap-3">
+          {inp('Plan Name *', 'name', 'text', 'Pro')}
+          {inp('Slug *', 'slug', 'text', 'pro')}
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
+            <input value={form.description} onChange={e => set('description', e.target.value)} placeholder="For growing businesses"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" />
+          </div>
+          {inp('Monthly Price (₹)', 'price', 'number', '999')}
+          {inp('Yearly Price (₹)', 'yearlyPrice', 'number', '9999')}
+          {inp('Invoice Limit/mo', 'invoiceLimit', 'number', '500')}
+          {inp('Customer Limit', 'customerLimit', 'number', '1000')}
+          {inp('User Limit', 'userLimit', 'number', '5')}
+          {inp('Storage (MB)', 'storageLimit', 'number', '2048')}
+          {inp('Sort Order', 'sortOrder', 'number', '1')}
+          <div className="flex items-center gap-4 pt-2">
+            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+              <input type="checkbox" checked={form.isActive} onChange={e => set('isActive', e.target.checked)} className="rounded border-gray-600" />
+              Active
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+              <input type="checkbox" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} className="rounded border-gray-600" />
+              Featured
+            </label>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1">Features (one per line)</label>
+            <textarea value={form.features} onChange={e => set('features', e.target.value)} rows={4}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none resize-none" />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button onClick={onClose} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400 hover:text-gray-200">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
+            {saving ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
+            {plan ? 'Save Changes' : 'Create Plan'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +137,9 @@ export default function AdminPlansPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editPlan, setEditPlan] = useState<Plan | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchPlans = async () => {
     setLoading(true);
@@ -77,6 +189,16 @@ export default function AdminPlansPage() {
     } catch {}
   };
 
+  const deletePlan = async (planId: string) => {
+    if (!confirm('Delete this plan? This cannot be undone.')) return;
+    setDeletingId(planId);
+    try {
+      const token = getAdminToken();
+      await fetch(`${API_URL}/admin/plans/${planId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      setPlans(prev => prev.filter(p => p.id !== planId));
+    } catch {} finally { setDeletingId(null); }
+  };
+
   const planColorMap: Record<string, { border: string; header: string }> = {
     free: { border: 'border-gray-700', header: 'bg-gray-800/50' },
     starter: { border: 'border-blue-800/50', header: 'bg-blue-900/20' },
@@ -86,6 +208,10 @@ export default function AdminPlansPage() {
 
   return (
     <div className="p-6">
+      {showModal && (
+        <PlanModal plan={editPlan} onClose={() => { setShowModal(false); setEditPlan(null); }} onSaved={fetchPlans} />
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Plans</h1>
@@ -95,7 +221,7 @@ export default function AdminPlansPage() {
           <button onClick={fetchPlans} className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700">
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700">
+          <button onClick={() => { setEditPlan(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700">
             <Plus className="h-4 w-4" /> New Plan
           </button>
         </div>
@@ -192,6 +318,16 @@ export default function AdminPlansPage() {
                     {plan.features.length > 4 && (
                       <p className="text-xs text-gray-600">+{plan.features.length - 4} more features</p>
                     )}
+                  </div>
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-800">
+                    <button onClick={() => { setEditPlan(plan); setShowModal(true); }}
+                      className="flex-1 rounded-lg border border-gray-700 py-1.5 text-xs text-gray-400 hover:text-gray-200 flex items-center justify-center gap-1">
+                      <Edit2 className="h-3 w-3" /> Edit
+                    </button>
+                    <button onClick={() => deletePlan(plan.id)} disabled={deletingId === plan.id}
+                      className="flex-1 rounded-lg border border-red-900 py-1.5 text-xs text-red-500 hover:text-red-400 flex items-center justify-center gap-1 disabled:opacity-50">
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </button>
                   </div>
                 </div>
               </div>

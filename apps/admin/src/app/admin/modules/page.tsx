@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, AlertCircle, RefreshCw, Lock } from 'lucide-react';
+import { Zap, AlertCircle, RefreshCw, Lock, Plus, Trash2, X, Check } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Module {
@@ -19,6 +19,10 @@ export default function AdminModulesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', slug: '', requiredPlan: '', sortOrder: '0' });
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchModules = async () => {
     setLoading(true);
@@ -52,6 +56,31 @@ export default function AdminModulesPage() {
     setTogglingId(null);
   };
 
+  const createModule = async () => {
+    if (!createForm.name || !createForm.slug) return;
+    setCreating(true);
+    try {
+      const token = getAdminToken();
+      const res = await fetch(`${API_URL}/admin/modules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: createForm.name, slug: createForm.slug, requiredPlan: createForm.requiredPlan || null, sortOrder: parseInt(createForm.sortOrder) || 0 }),
+      });
+      const data = await res.json();
+      if (data.success) { setShowCreate(false); setCreateForm({ name: '', slug: '', requiredPlan: '', sortOrder: '0' }); fetchModules(); }
+    } catch {} finally { setCreating(false); }
+  };
+
+  const deleteModule = async (id: string) => {
+    if (!confirm('Delete this module?')) return;
+    setDeletingId(id);
+    try {
+      const token = getAdminToken();
+      await fetch(`${API_URL}/admin/modules/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      setModules(prev => prev.filter(m => m.id !== id));
+    } catch {} finally { setDeletingId(null); }
+  };
+
   const planBadge: Record<string, string> = {
     starter: 'bg-blue-900/30 text-blue-400 border-blue-800',
     pro: 'bg-indigo-900/30 text-indigo-400 border-indigo-800',
@@ -60,14 +89,46 @@ export default function AdminModulesPage() {
 
   return (
     <div className="p-6">
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowCreate(false)} />
+          <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-5 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">New Module</h3>
+              <button onClick={() => setShowCreate(false)}><X className="h-4 w-4 text-gray-400" /></button>
+            </div>
+            <div className="space-y-3">
+              {[{ label: 'Module Name', key: 'name', ph: 'Invoicing' }, { label: 'Slug', key: 'slug', ph: 'invoicing' }, { label: 'Required Plan', key: 'requiredPlan', ph: 'starter (optional)' }, { label: 'Sort Order', key: 'sortOrder', ph: '0' }].map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">{f.label}</label>
+                  <input value={(createForm as any)[f.key]} onChange={e => setCreateForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.ph}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setShowCreate(false)} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400">Cancel</button>
+              <button onClick={createModule} disabled={creating} className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                {creating ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
+                Create Module
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Modules</h1>
           <p className="text-gray-400 mt-1">Manage platform feature modules</p>
         </div>
-        <button onClick={fetchModules} className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700">
-          <RefreshCw className="h-4 w-4" /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchModules} className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700">
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </button>
+          <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700">
+            <Plus className="h-4 w-4" /> New Module
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -116,6 +177,14 @@ export default function AdminModulesPage() {
                   <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${planBadge[mod.requiredPlan] || 'bg-gray-800 text-gray-400 border-gray-700'}`}>
                     {mod.requiredPlan}+
                   </span>
+                </div>
+              )}
+              {!mod.isCore && (
+                <div className="mt-3 pt-3 border-t border-gray-800">
+                  <button onClick={() => deleteModule(mod.id)} disabled={deletingId === mod.id}
+                    className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 disabled:opacity-50">
+                    <Trash2 className="h-3 w-3" /> Delete Module
+                  </button>
                 </div>
               )}
             </div>

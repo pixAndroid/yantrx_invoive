@@ -175,6 +175,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
       include: {
         customer: true,
         branch: true,
+        business: { select: { id: true, name: true, gstin: true, address: true, city: true, state: true, phone: true, email: true, logo: true } },
         items: { include: { product: true }, orderBy: { sortOrder: 'asc' } },
         payments: true,
         createdBy: { select: { id: true, name: true, email: true } },
@@ -289,6 +290,75 @@ router.post('/:id/mark-paid', async (req: AuthenticatedRequest, res: Response, n
 
     const updated = await prisma.invoice.findUnique({ where: { id: invoice.id }, include: { payments: true } });
     res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+router.post('/:id/cancel', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId: req.user!.businessId! },
+    });
+    if (!invoice) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+    if (invoice.status === 'PAID') { res.status(400).json({ success: false, error: 'Cannot cancel a paid invoice' }); return; }
+    if (invoice.status === 'CANCELLED') { res.status(400).json({ success: false, error: 'Invoice already cancelled' }); return; }
+
+    const updated = await prisma.invoice.update({
+      where: { id: req.params.id },
+      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+router.post('/:id/duplicate', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const businessId = req.user!.businessId;
+    if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    const source = await prisma.invoice.findFirst({
+      where: { id: req.params.id, businessId },
+      include: { items: true },
+    });
+    if (!source) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
+
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) { res.status(404).json({ success: false, error: 'Business not found' }); return; }
+
+    const invoiceNumber = `${business.invoicePrefix}-${String(business.invoiceSeq).padStart(4, '0')}`;
+
+    const newInvoice = await prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.create({
+        data: {
+          businessId, customerId: source.customerId, invoiceNumber,
+          type: source.type, status: 'DRAFT',
+          issueDate: new Date(),
+          dueDate: source.dueDate,
+          subtotal: source.subtotal, discountType: source.discountType,
+          discountValue: source.discountValue, discountTotal: source.discountTotal,
+          taxableAmount: source.taxableAmount, cgstTotal: source.cgstTotal,
+          sgstTotal: source.sgstTotal, igstTotal: source.igstTotal,
+          cessTotal: source.cessTotal, gstTotal: source.gstTotal,
+          total: source.total, amountPaid: 0, amountDue: source.total,
+          isInterState: source.isInterState, placeOfSupply: source.placeOfSupply,
+          notes: source.notes, terms: source.terms, createdById: req.user!.id,
+          items: {
+            create: source.items.map(item => ({
+              productId: item.productId, description: item.description,
+              hsnSac: item.hsnSac, quantity: item.quantity, unit: item.unit,
+              price: item.price, discount: item.discount, taxableAmount: item.taxableAmount,
+              gstRate: item.gstRate, cgst: item.cgst, sgst: item.sgst,
+              igst: item.igst, cess: item.cess, total: item.total,
+              sortOrder: item.sortOrder,
+            })),
+          },
+        },
+        include: { customer: true, items: true },
+      });
+      await tx.business.update({ where: { id: businessId }, data: { invoiceSeq: { increment: 1 } } });
+      return inv;
+    });
+
+    res.status(201).json({ success: true, data: newInvoice });
   } catch (error) { next(error); }
 });
 

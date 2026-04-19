@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CreditCard, AlertCircle, RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { adminFetch } from '@/lib/api';
+import { CreditCard, AlertCircle, RefreshCw, CheckCircle, XCircle, Clock, UserCheck, X, Check } from 'lucide-react';
+import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Subscription {
   id: string;
@@ -12,8 +12,16 @@ interface Subscription {
   amount: number;
   autoRenew: boolean;
   createdAt: string;
+  businessId: string;
   business: { id: string; name: string };
   plan: { id: string; name: string; price: number };
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  isActive: boolean;
 }
 
 interface Meta {
@@ -37,6 +45,10 @@ export default function AdminSubscriptionsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [assignModal, setAssignModal] = useState<Subscription | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   const fetchSubs = useCallback(async () => {
     setLoading(true);
@@ -54,6 +66,25 @@ export default function AdminSubscriptionsPage() {
 
   useEffect(() => { fetchSubs(); }, [fetchSubs]);
 
+  useEffect(() => {
+    adminFetch<{ data: Plan[] }>('/admin/plans').then(r => setPlans(r.data.filter(p => p.isActive))).catch(() => {});
+  }, []);
+
+  const handleAssignPlan = async () => {
+    if (!assignModal || !selectedPlan) return;
+    setAssigning(true);
+    try {
+      const token = getAdminToken();
+      await fetch(`${API_URL}/admin/subscriptions/${assignModal.id}/assign-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ planId: selectedPlan }),
+      });
+      setAssignModal(null);
+      fetchSubs();
+    } catch {} finally { setAssigning(false); }
+  };
+
   const planColorMap: Record<string, string> = {
     Free: 'bg-gray-800 text-gray-400 border-gray-700',
     Starter: 'bg-blue-900/50 text-blue-400 border-blue-800',
@@ -63,6 +94,34 @@ export default function AdminSubscriptionsPage() {
 
   return (
     <div className="p-6">
+      {assignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setAssignModal(null)} />
+          <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-5 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">Assign Plan</h3>
+              <button onClick={() => setAssignModal(null)}><X className="h-4 w-4 text-gray-400" /></button>
+            </div>
+            <p className="text-xs text-gray-400 mb-3">Business: <span className="text-gray-200">{assignModal.business.name}</span></p>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Select Plan</label>
+              <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none">
+                <option value="">Choose a plan...</option>
+                {plans.map(p => <option key={p.id} value={p.id}>{p.name} — ₹{p.price}/mo</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setAssignModal(null)} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400">Cancel</button>
+              <button onClick={handleAssignPlan} disabled={assigning || !selectedPlan}
+                className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                {assigning ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
+                Assign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Subscriptions</h1>
@@ -90,16 +149,17 @@ export default function AdminSubscriptionsPage() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Start Date</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">End Date</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Auto Renew</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}><td colSpan={7} className="px-4 py-4"><div className="h-8 bg-gray-800 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={8} className="px-4 py-4"><div className="h-8 bg-gray-800 rounded animate-pulse" /></td></tr>
               ))
             ) : subs.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center">
+                <td colSpan={8} className="px-4 py-12 text-center">
                   <CreditCard className="h-12 w-12 text-gray-700 mx-auto mb-3" />
                   <p className="text-gray-500">No subscriptions found</p>
                 </td>
@@ -140,6 +200,12 @@ export default function AdminSubscriptionsPage() {
                     <span className={`text-xs ${sub.autoRenew ? 'text-green-400' : 'text-gray-500'}`}>
                       {sub.autoRenew ? '✓ Yes' : '✗ No'}
                     </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <button onClick={() => { setAssignModal(sub); setSelectedPlan(sub.plan.id); }}
+                      className="inline-flex items-center gap-1 text-xs rounded-lg border border-orange-800 bg-orange-900/20 px-2 py-1 text-orange-400 hover:bg-orange-900/40">
+                      <UserCheck className="h-3 w-3" /> Assign Plan
+                    </button>
                   </td>
                 </tr>
               );

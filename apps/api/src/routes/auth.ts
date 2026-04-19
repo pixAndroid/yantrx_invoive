@@ -530,4 +530,37 @@ router.post('/logout', authenticate, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
+router.post('/change-password', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ success: false, error: 'currentPassword and newPassword required' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({ success: false, error: 'New password must be at least 8 characters' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user || !user.passwordHash) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    const isValid = await comparePassword(currentPassword, user.passwordHash);
+    if (!isValid) {
+      res.status(401).json({ success: false, error: 'Current password is incorrect' });
+      return;
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: req.user!.id }, data: { passwordHash: newHash } });
+
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2, Mail, Phone, MapPin, FileText, CreditCard,
-  Save, CheckCircle, Camera, Globe, Hash
+  Save, CheckCircle, Camera, Globe, Hash, Bell, Lock, Upload
 } from 'lucide-react';
 import { apiFetch, API_URL, getAccessToken } from '@/lib/api';
 
@@ -35,7 +35,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'business' | 'banking' | 'invoice'>('business');
+  const [activeTab, setActiveTab] = useState<'business' | 'banking' | 'invoice' | 'notifications' | 'security'>('business');
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
 
   useEffect(() => {
     apiFetch<{ data: { business: BusinessSettings } }>('/auth/me')
@@ -79,7 +83,25 @@ export default function SettingsPage() {
     { id: 'business' as const, label: 'Business Info', icon: Building2 },
     { id: 'banking' as const, label: 'Banking', icon: CreditCard },
     { id: 'invoice' as const, label: 'Invoice Settings', icon: FileText },
+    { id: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { id: 'security' as const, label: 'Security', icon: Lock },
   ];
+
+  const handlePasswordChange = async () => {
+    if (!pwForm.current || !pwForm.newPw) { setPwError('All fields required'); return; }
+    if (pwForm.newPw !== pwForm.confirm) { setPwError('Passwords do not match'); return; }
+    if (pwForm.newPw.length < 8) { setPwError('Password must be at least 8 characters'); return; }
+    setPwLoading(true); setPwError(''); setPwSuccess(false);
+    try {
+      await apiFetch('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }) });
+      setPwSuccess(true);
+      setPwForm({ current: '', newPw: '', confirm: '' });
+    } catch (err: any) {
+      setPwError(err.message);
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -349,6 +371,83 @@ export default function SettingsPage() {
                     className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none resize-none"
                   />
                 </div>
+              </div>
+            )}
+            {activeTab === 'notifications' && (
+              <div className="space-y-5">
+                <h3 className="text-sm font-semibold text-gray-700">Email Notifications</h3>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Invoice sent confirmation', desc: 'Receive a copy when you send an invoice' },
+                    { label: 'Payment received', desc: 'Notify when payment is recorded' },
+                    { label: 'Overdue invoice alerts', desc: 'Daily digest of overdue invoices' },
+                    { label: 'Low stock alerts', desc: 'When product stock falls below threshold' },
+                    { label: 'Weekly revenue summary', desc: 'Weekly business performance report' },
+                  ].map(n => (
+                    <div key={n.label} className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{n.label}</p>
+                        <p className="text-xs text-gray-500">{n.desc}</p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full" />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <h3 className="text-sm font-semibold text-gray-700 pt-2">WhatsApp Notifications</h3>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Send invoice via WhatsApp', desc: 'Allow sending invoice links via WhatsApp' },
+                    { label: 'Payment reminders', desc: 'Auto-send payment reminders to customers' },
+                  ].map(n => (
+                    <div key={n.label} className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{n.label}</p>
+                        <p className="text-xs text-gray-500">{n.desc}</p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input type="checkbox" className="sr-only peer" />
+                        <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full" />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
+              <div className="space-y-5 max-w-sm">
+                <h3 className="text-sm font-semibold text-gray-700">Change Password</h3>
+                {pwSuccess && (
+                  <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" /> Password changed successfully.
+                  </div>
+                )}
+                {pwError && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{pwError}</div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+                  <input type="password" value={pwForm.current} onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+                  <input type="password" value={pwForm.newPw} onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+                  <input type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none" />
+                </div>
+                <button onClick={handlePasswordChange} disabled={pwLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+                  {pwLoading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Lock className="h-4 w-4" />}
+                  Update Password
+                </button>
               </div>
             )}
           </motion.div>
