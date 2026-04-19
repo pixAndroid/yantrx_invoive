@@ -125,8 +125,8 @@ export default function CustomerDetailPage() {
         method: 'PUT',
         body: JSON.stringify(updateData),
       });
-      setCustomer(res.data);
-      setForm(res.data);
+      setCustomer({ ...res.data, invoices: customer.invoices });
+      setForm({ ...res.data, invoices: customer.invoices });
       setEditing(false);
       success('Customer updated', 'Changes saved successfully.');
     } catch (err: any) {
@@ -169,8 +169,8 @@ export default function CustomerDetailPage() {
     );
   }
 
-  const totalBilled = customer.invoices.reduce((s, i) => s + i.total, 0);
-  const totalDue = customer.invoices.reduce((s, i) => s + i.amountDue, 0);
+  const totalBilled = (customer.invoices || []).reduce((s, i) => s + i.total, 0);
+  const totalDue = (customer.invoices || []).reduce((s, i) => s + i.amountDue, 0);
 
   const set = (key: string, val: string | number) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -229,7 +229,7 @@ export default function CustomerDetailPage() {
         {[
           { label: 'Total Billed', value: `₹${totalBilled.toLocaleString('en-IN')}`, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           { label: 'Amount Due', value: `₹${totalDue.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'Invoices', value: String(customer.invoices.length), icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Invoices', value: String((customer.invoices || []).length), icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Credit Days', value: String(customer.creditDays), icon: Clock, color: 'text-purple-600', bg: 'bg-purple-50' },
         ].map(card => (
           <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -421,7 +421,7 @@ export default function CustomerDetailPage() {
                 + New Invoice
               </Link>
             </div>
-            {customer.invoices.length === 0 ? (
+            {(customer.invoices || []).length === 0 ? (
               <div className="py-10 text-center">
                 <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                 <p className="text-sm text-gray-400">No invoices yet</p>
@@ -438,7 +438,7 @@ export default function CustomerDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {customer.invoices.map(inv => {
+                  {(customer.invoices || []).map(inv => {
                     const sc = STATUS_CONFIG[inv.status] || STATUS_CONFIG.DRAFT;
                     return (
                       <motion.tr key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50">
