@@ -29,13 +29,7 @@ function calcItem(item: Partial<InvoiceItem>, interState: boolean): InvoiceItem 
   };
 }
 
-const INDIAN_STATES_MODAL = [
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
-  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh',
-  'Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab',
-  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
-  'Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh','Puducherry',
-];
+import { INDIAN_STATES as INDIAN_STATES_MODAL } from '@/lib/constants';
 
 function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Customer) => void }) {
   const { success, error: toastError } = useToast();

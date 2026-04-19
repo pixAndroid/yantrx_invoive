@@ -12,6 +12,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { INDIAN_STATES } from '@/lib/constants';
 
 interface Customer {
   id: string;
@@ -55,14 +56,6 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; Icon: any }> =
   DRAFT: { label: 'Draft', cls: 'bg-gray-100 text-gray-600', Icon: FileText },
   PARTIALLY_PAID: { label: 'Partial', cls: 'bg-amber-100 text-amber-700', Icon: Clock },
 };
-
-const INDIAN_STATES = [
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
-  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh',
-  'Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab',
-  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
-  'Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh','Puducherry',
-];
 
 export default function CustomerDetailPage() {
   const router = useRouter();

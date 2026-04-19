@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, User, Mail, Phone, MapPin, Hash, FileText } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { INDIAN_STATES } from '@/lib/constants';
 
 const GST_TYPES = [
   { value: 'REGULAR', label: 'Regular' },
@@ -12,14 +13,6 @@ const GST_TYPES = [
   { value: 'UNREGISTERED', label: 'Unregistered' },
   { value: 'EXPORT', label: 'Export' },
   { value: 'SEZ', label: 'SEZ' },
-];
-
-const INDIAN_STATES = [
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
-  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh',
-  'Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab',
-  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
-  'Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh','Puducherry',
 ];
 
 export default function NewCustomerPage() {
