@@ -69,6 +69,29 @@ export default function InvoicesPage() {
 
   const totalAmount = invoices.reduce((sum, inv) => sum + inv.total, 0);
 
+  const handleExport = () => {
+    const csv = [
+      ['Invoice No', 'Customer', 'Email', 'Date', 'Due Date', 'Amount', 'Amount Due', 'Status'],
+      ...invoices.map(inv => [
+        inv.invoiceNumber,
+        inv.customer?.name || 'Unknown',
+        inv.customer?.email || '',
+        new Date(inv.issueDate).toLocaleDateString('en-IN'),
+        inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : '',
+        inv.total.toString(),
+        inv.amountDue.toString(),
+        inv.status,
+      ]),
+    ].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6 lg:p-8">
       <div className="flex items-start justify-between mb-6">
@@ -82,7 +105,7 @@ export default function InvoicesPage() {
           <button onClick={fetchInvoices} className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <RefreshCw className="h-4 w-4" />
           </button>
-          <button className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={handleExport} className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Download className="h-4 w-4" /> Export
           </button>
           <Link href="/invoices/new" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">

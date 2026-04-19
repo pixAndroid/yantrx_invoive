@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Printer, Download, Send, CheckCircle, XCircle, Copy,
-  IndianRupee, Clock, AlertCircle, Share2, FileText, X, Check
+  IndianRupee, Clock, AlertCircle, Share2, FileText, X, Check, Edit2
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
@@ -235,6 +235,13 @@ export default function InvoiceDetailPage() {
     window.print();
   };
 
+  const handleDownloadPdf = () => {
+    const prevTitle = document.title;
+    if (invoice) document.title = `Invoice-${invoice.invoiceNumber}`;
+    window.print();
+    document.title = prevTitle;
+  };
+
   const handleWhatsApp = () => {
     if (!invoice) return;
     const msg = `Hi ${invoice.customer.name}, your invoice ${invoice.invoiceNumber} for ₹${invoice.total.toLocaleString('en-IN')} is ready. Please make payment at your earliest convenience. Thank you!`;
@@ -250,7 +257,7 @@ export default function InvoiceDetailPage() {
   }
 
   const badge = STATUS_BADGE[invoice.status] || STATUS_BADGE.DRAFT;
-  const amtPaid = (invoice.total || 0) - (invoice.amountDue || 0);
+  const amtPaid = (invoice.total ?? 0) - (invoice.amountDue ?? 0);
 
   return (
     <>
@@ -289,11 +296,20 @@ export default function InvoiceDetailPage() {
                 <Send className="h-4 w-4" /> Mark Sent
               </button>
             )}
+            {(invoice.status === 'DRAFT' || invoice.status === 'SENT') && (
+              <button onClick={() => router.push(`/invoices/${id}/edit`)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
+                <Edit2 className="h-4 w-4" /> Edit
+              </button>
+            )}
             <button onClick={handleWhatsApp} className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
               <Share2 className="h-4 w-4" /> WhatsApp
             </button>
             <button onClick={handlePrint} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               <Printer className="h-4 w-4" /> Print
+            </button>
+            <button onClick={handleDownloadPdf} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <Download className="h-4 w-4" /> Download PDF
             </button>
             <button onClick={handleDuplicate} disabled={actionLoading === 'dup'}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
@@ -382,24 +398,24 @@ export default function InvoiceDetailPage() {
           {/* Totals */}
           <div className="flex justify-end p-8 border-t border-gray-100">
             <div className="w-full max-w-xs space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Taxable Amount</span><span>₹{invoice.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-600">Taxable Amount</span><span>₹{(invoice.taxableAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               {!invoice.isInterState ? (
                 <>
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">CGST</span><span>₹{invoice.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">SGST</span><span>₹{invoice.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-600">CGST</span><span>₹{(invoice.cgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-600">SGST</span><span>₹{(invoice.sgstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                 </>
               ) : (
-                <div className="flex justify-between text-sm"><span className="text-gray-600">IGST</span><span>₹{invoice.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">IGST</span><span>₹{(invoice.igstAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               )}
               <div className="border-t pt-2 flex justify-between font-bold text-base">
                 <span>Total</span>
-                <span className="text-indigo-600">₹{invoice.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <span className="text-indigo-600">₹{(invoice.total ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               {amtPaid > 0 && (
                 <div className="flex justify-between text-sm text-green-600"><span>Paid</span><span>₹{amtPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               )}
-              {invoice.amountDue > 0 && (
-                <div className="flex justify-between text-sm font-semibold text-red-600"><span>Balance Due</span><span>₹{invoice.amountDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+              {(invoice.amountDue ?? 0) > 0 && (
+                <div className="flex justify-between text-sm font-semibold text-red-600"><span>Balance Due</span><span>₹{(invoice.amountDue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               )}
             </div>
           </div>

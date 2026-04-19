@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { IndianRupee, Plus, Search, Filter, CheckCircle, Clock, AlertCircle, TrendingUp, RefreshCw } from 'lucide-react';
+import { IndianRupee, Plus, Search, Filter, CheckCircle, Clock, AlertCircle, TrendingUp, RefreshCw, X, Check } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface Payment {
@@ -14,9 +14,17 @@ interface Payment {
   paidAt: string;
   notes: string | null;
   invoice: {
+    id: string;
     invoiceNumber: string;
     customer: { name: string } | null;
   } | null;
+}
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  amountDue: number;
+  customer: { name: string } | null;
 }
 
 const STATUS_CONFIG = {
@@ -35,11 +43,135 @@ const METHOD_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
+function RecordPaymentModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceResults, setInvoiceResults] = useState<Invoice[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [form, setForm] = useState({
+    amount: '', method: 'CASH', transactionRef: '', notes: '',
+    paidAt: new Date().toISOString().split('T')[0],
+  });
+  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    if (!invoiceSearch || selectedInvoice) return;
+    const t = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await apiFetch<{ data: Invoice[] }>(`/invoices?search=${encodeURIComponent(invoiceSearch)}&limit=8&status=SENT`);
+        setInvoiceResults(res.data);
+      } catch {} finally { setSearchLoading(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [invoiceSearch, selectedInvoice]);
+
+  const handleSave = async () => {
+    if (!selectedInvoice) { setErr('Please select an invoice'); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { setErr('Enter a valid amount'); return; }
+    setSaving(true); setErr('');
+    try {
+      await apiFetch('/payments', {
+        method: 'POST',
+        body: JSON.stringify({
+          invoiceId: selectedInvoice.id,
+          amount: parseFloat(form.amount),
+          method: form.method,
+          transactionRef: form.transactionRef || undefined,
+          notes: form.notes || undefined,
+          paidAt: form.paidAt,
+        }),
+      });
+      onSaved();
+      onClose();
+    } catch (e: any) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-6 z-10">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-gray-900">Record Payment</h3>
+          <button onClick={onClose}><X className="h-4 w-4 text-gray-400" /></button>
+        </div>
+        {err && <p className="text-xs text-red-600 mb-3">{err}</p>}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Invoice *</label>
+            <div className="relative">
+              <input type="text" placeholder="Search invoice number or customer..."
+                value={invoiceSearch}
+                onChange={e => { setInvoiceSearch(e.target.value); setSelectedInvoice(null); }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              {searchLoading && <div className="absolute right-3 top-2.5 h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />}
+            </div>
+            {invoiceResults.length > 0 && !selectedInvoice && (
+              <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                {invoiceResults.map(inv => (
+                  <button key={inv.id} onClick={() => { setSelectedInvoice(inv); setInvoiceSearch(inv.invoiceNumber); set('amount', String(inv.amountDue || '')); }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex justify-between">
+                    <span className="font-medium">{inv.invoiceNumber}</span>
+                    <span className="text-gray-500">{inv.customer?.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedInvoice && (
+              <p className="text-xs text-indigo-600 mt-1">Selected: {selectedInvoice.invoiceNumber} · Due ₹{selectedInvoice.amountDue?.toLocaleString('en-IN')}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Amount (₹) *</label>
+            <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} step="0.01" min="0.01"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
+            <select value={form.method} onChange={e => set('method', e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+              {['CASH','BANK_TRANSFER','UPI','CHEQUE','CARD','OTHER'].map(m => <option key={m} value={m}>{METHOD_LABELS[m] || m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Payment Date</label>
+            <input type="date" value={form.paidAt} onChange={e => set('paidAt', e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Transaction Ref / UTR</label>
+            <input type="text" value={form.transactionRef} onChange={e => set('transactionRef', e.target.value)} placeholder="Optional"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+            <input type="text" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose} className="flex-1 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 rounded-lg bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-2">
+            {saving ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
+            Record Payment
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [showRecordPayment, setShowRecordPayment] = useState(false);
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -74,6 +206,10 @@ export default function PaymentsPage() {
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
+    <>
+      {showRecordPayment && (
+        <RecordPaymentModal onClose={() => setShowRecordPayment(false)} onSaved={fetchPayments} />
+      )}
     <div className="p-6 lg:p-8">
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -84,7 +220,7 @@ export default function PaymentsPage() {
           <button onClick={fetchPayments} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <button onClick={() => setShowRecordPayment(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
             <Plus className="h-4 w-4" /> Record Payment
           </button>
         </div>
@@ -212,5 +348,6 @@ export default function PaymentsPage() {
         </table>
       </motion.div>
     </div>
+    </>
   );
 }

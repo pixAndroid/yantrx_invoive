@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { authenticate, requireSuperAdmin, AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../utils/prisma';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 router.use(authenticate);
@@ -23,14 +24,19 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response, next: Next
     const page = parseInt(req.query.page as string || '1');
     const limit = parseInt(req.query.limit as string || '20');
     const search = req.query.search as string;
+    const role = req.query.role as string;
+    const isActiveStr = req.query.isActive as string;
 
-    const where = search ? {
-      OR: [
+    const where: any = {};
+    if (search) {
+      where.OR = [
         { name: { contains: search, mode: 'insensitive' as const } },
         { email: { contains: search, mode: 'insensitive' as const } },
         { phone: { contains: search, mode: 'insensitive' as const } },
-      ],
-    } : {};
+      ];
+    }
+    if (role) where.role = role;
+    if (isActiveStr !== undefined && isActiveStr !== '') where.isActive = isActiveStr === 'true';
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -75,13 +81,31 @@ router.get('/businesses', async (req: AuthenticatedRequest, res: Response, next:
   try {
     const page = parseInt(req.query.page as string || '1');
     const limit = parseInt(req.query.limit as string || '20');
-    const businesses = await prisma.business.findMany({
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: { plan: true, owner: { select: { name: true, email: true } }, _count: { select: { invoices: true, customers: true } } },
-    });
-    const total = await prisma.business.count();
+    const search = req.query.search as string;
+    const plan = req.query.plan as string;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { gstin: { contains: search, mode: 'insensitive' as const } },
+        { owner: { name: { contains: search, mode: 'insensitive' as const } } },
+        { owner: { email: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
+    if (plan) where.plan = { slug: plan };
+
+    const [businesses, total] = await Promise.all([
+      prisma.business.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { plan: true, owner: { select: { name: true, email: true } }, _count: { select: { invoices: true, customers: true } } },
+      }),
+      prisma.business.count({ where }),
+    ]);
+
     res.json({
       success: true,
       data: businesses,
@@ -154,8 +178,23 @@ router.get('/subscriptions', async (req: AuthenticatedRequest, res: Response, ne
   try {
     const page = parseInt(req.query.page as string || '1');
     const limit = parseInt(req.query.limit as string || '20');
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const planId = req.query.planId as string;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { business: { name: { contains: search, mode: 'insensitive' as const } } },
+        { plan: { name: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
+    if (status) where.status = status;
+    if (planId) where.planId = planId;
+
     const [subs, total] = await Promise.all([
       prisma.subscription.findMany({
+        where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -164,7 +203,7 @@ router.get('/subscriptions', async (req: AuthenticatedRequest, res: Response, ne
           plan: { select: { id: true, name: true, price: true } },
         },
       }),
-      prisma.subscription.count(),
+      prisma.subscription.count({ where }),
     ]);
     res.json({
       success: true,
@@ -214,6 +253,33 @@ router.put('/users/:id', async (req: AuthenticatedRequest, res: Response, next: 
   } catch (error) { next(error); }
 });
 
+router.post('/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, email, phone, role, password } = req.body;
+    if (!name) { res.status(400).json({ success: false, error: 'Name is required' }); return; }
+    if (!email) { res.status(400).json({ success: false, error: 'Email is required' }); return; }
+    if (!password || password.length < 8) { res.status(400).json({ success: false, error: 'Password must be at least 8 characters' }); return; }
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) { res.status(400).json({ success: false, error: 'Email already in use' }); return; }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        phone: phone || null,
+        role: role || 'STAFF',
+        password: hashedPassword,
+        isActive: true,
+        isVerified: true,
+      },
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, isVerified: true, createdAt: true },
+    });
+    res.status(201).json({ success: true, data: user });
+  } catch (error) { next(error); }
+});
+
 router.post('/modules', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { name, slug, isCore, sortOrder, requiredPlan } = req.body;
@@ -258,6 +324,75 @@ router.post('/subscriptions/:id/assign-plan', async (req: AuthenticatedRequest, 
     });
     await prisma.business.update({ where: { id: sub.businessId }, data: { planId } });
     res.json({ success: true, data: sub });
+  } catch (error) { next(error); }
+});
+
+// ─── Invoice Templates ─────────────────────────────────────────────────────
+
+router.get('/invoice-templates', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const templates = await prisma.invoiceTemplate.findMany({ orderBy: { sortOrder: 'asc' } });
+    res.json({ success: true, data: templates });
+  } catch (error) { next(error); }
+});
+
+router.post('/invoice-templates', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, html, css, isDefault, sortOrder } = req.body;
+    if (!name) { res.status(400).json({ success: false, error: 'name is required' }); return; }
+    if (!html) { res.status(400).json({ success: false, error: 'html is required' }); return; }
+
+    if (isDefault) {
+      await prisma.invoiceTemplate.updateMany({ data: { isDefault: false } });
+    }
+
+    const template = await prisma.invoiceTemplate.create({
+      data: { name, html, css: css || null, isDefault: isDefault || false, sortOrder: sortOrder || 0, isActive: true },
+    });
+    res.status(201).json({ success: true, data: template });
+  } catch (error) { next(error); }
+});
+
+router.put('/invoice-templates/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, html, css, isDefault, isActive, sortOrder } = req.body;
+    const existing = await prisma.invoiceTemplate.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: 'Template not found' }); return; }
+
+    if (isDefault) {
+      await prisma.invoiceTemplate.updateMany({ where: { id: { not: req.params.id } }, data: { isDefault: false } });
+    }
+
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (html !== undefined) data.html = html;
+    if (css !== undefined) data.css = css;
+    if (isDefault !== undefined) data.isDefault = isDefault;
+    if (isActive !== undefined) data.isActive = isActive;
+    if (sortOrder !== undefined) data.sortOrder = sortOrder;
+
+    const template = await prisma.invoiceTemplate.update({ where: { id: req.params.id }, data });
+    res.json({ success: true, data: template });
+  } catch (error) { next(error); }
+});
+
+router.delete('/invoice-templates/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.invoiceTemplate.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: 'Template not found' }); return; }
+    if (existing.isDefault) { res.status(400).json({ success: false, error: 'Cannot delete the default template' }); return; }
+    await prisma.invoiceTemplate.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Template deleted' });
+  } catch (error) { next(error); }
+});
+
+router.post('/invoice-templates/:id/set-default', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.invoiceTemplate.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: 'Template not found' }); return; }
+    await prisma.invoiceTemplate.updateMany({ data: { isDefault: false } });
+    const template = await prisma.invoiceTemplate.update({ where: { id: req.params.id }, data: { isDefault: true } });
+    res.json({ success: true, data: template });
   } catch (error) { next(error); }
 });
 

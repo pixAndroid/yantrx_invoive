@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CreditCard, AlertCircle, RefreshCw, CheckCircle, XCircle, Clock, UserCheck, X, Check } from 'lucide-react';
+import { CreditCard, AlertCircle, RefreshCw, CheckCircle, XCircle, Clock, UserCheck, X, Check, Search, Filter } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Subscription {
@@ -37,12 +37,17 @@ const STATUS_CONFIG: Record<string, { label: string; class: string; icon: typeof
   CANCELLED: { label: 'Cancelled', class: 'bg-red-900/30 text-red-400 border-red-800', icon: XCircle },
   EXPIRED: { label: 'Expired', class: 'bg-gray-800 text-gray-400 border-gray-700', icon: Clock },
   PAST_DUE: { label: 'Past Due', class: 'bg-amber-900/30 text-amber-400 border-amber-800', icon: Clock },
+  TRIAL: { label: 'Trial', class: 'bg-blue-900/30 text-blue-400 border-blue-800', icon: Clock },
 };
 
 export default function AdminSubscriptionsPage() {
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPlanId, setFilterPlanId] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -54,7 +59,11 @@ export default function AdminSubscriptionsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await adminFetch<{ data: Subscription[]; meta: Meta }>(`/admin/subscriptions?page=${page}&limit=20`);
+      const params = new URLSearchParams({ page: String(page), limit: '20' });
+      if (search) params.set('search', search);
+      if (filterStatus) params.set('status', filterStatus);
+      if (filterPlanId) params.set('planId', filterPlanId);
+      const res = await adminFetch<{ data: Subscription[]; meta: Meta }>(`/admin/subscriptions?${params}`);
       setSubs(res.data);
       setMeta(res.meta);
     } catch (err: any) {
@@ -62,9 +71,12 @@ export default function AdminSubscriptionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, search, filterStatus, filterPlanId]);
 
-  useEffect(() => { fetchSubs(); }, [fetchSubs]);
+  useEffect(() => {
+    const t = setTimeout(fetchSubs, 300);
+    return () => clearTimeout(t);
+  }, [fetchSubs]);
 
   useEffect(() => {
     adminFetch<{ data: Plan[] }>('/admin/plans').then(r => setPlans(r.data.filter(p => p.isActive))).catch(() => {});
@@ -127,10 +139,52 @@ export default function AdminSubscriptionsPage() {
           <h1 className="text-2xl font-bold text-white">Subscriptions</h1>
           <p className="text-gray-400 mt-1">{meta ? `${meta.total} subscriptions` : 'Loading...'}</p>
         </div>
-        <button onClick={fetchSubs} className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700">
-          <RefreshCw className="h-4 w-4" /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchSubs} className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700">
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </button>
+          <button onClick={() => setShowFilter(p => !p)}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-700 ${(filterStatus || filterPlanId) ? 'border-orange-500 bg-orange-500/10 text-orange-400' : 'border-gray-700 bg-gray-800 text-gray-300'}`}>
+            <Filter className="h-4 w-4" /> Filter
+          </button>
+        </div>
       </div>
+
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <input type="text" placeholder="Search by business or plan..." value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-700 bg-gray-800 text-sm text-gray-200 placeholder-gray-500 focus:border-orange-500 focus:outline-none" />
+        </div>
+      </div>
+
+      {showFilter && (
+        <div className="mb-4 p-4 rounded-xl border border-gray-700 bg-gray-800/50 flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400">Status:</label>
+            <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none">
+              <option value="">All</option>
+              {['ACTIVE','TRIAL','EXPIRED','CANCELLED','PAST_DUE'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400">Plan:</label>
+            <select value={filterPlanId} onChange={e => { setFilterPlanId(e.target.value); setPage(1); }}
+              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none">
+              <option value="">All Plans</option>
+              {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          {(filterStatus || filterPlanId) && (
+            <button onClick={() => { setFilterStatus(''); setFilterPlanId(''); setPage(1); }}
+              className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1">
+              <X className="h-3 w-3" /> Clear filters
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-900/30 border border-red-800 px-4 py-3 text-sm text-red-400 flex items-center gap-2">
