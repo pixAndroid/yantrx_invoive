@@ -108,7 +108,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
       })
       .catch(() => {});
-  }, [router]);
+  }, [router, pathname]);
 
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
 
