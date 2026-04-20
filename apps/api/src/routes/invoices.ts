@@ -209,13 +209,94 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
       return;
     }
 
-    const { businessId: _bId, createdById: _cId, invoiceNumber: _iN, items: _items, ...updateData } = req.body;
+    const { customerId, type, issueDate, dueDate, items, discountType, discountValue, isInterState, placeOfSupply, notes, terms } = req.body;
 
-    const invoice = await prisma.invoice.update({
-      where: { id: req.params.id },
-      data: updateData,
-      include: { customer: true, items: true },
+    // Verify customer belongs to business
+    if (customerId) {
+      const customer = await prisma.customer.findFirst({ where: { id: customerId, businessId: req.user!.businessId! } });
+      if (!customer) { res.status(404).json({ success: false, error: 'Customer not found' }); return; }
+    }
+
+    // Recalculate totals from items
+    let subtotal = 0, cgstTotal = 0, sgstTotal = 0, igstTotal = 0, cessTotal = 0;
+    const interState = isInterState ?? existing.isInterState;
+
+    const processedItems = (items || []).map((item: any, idx: number) => {
+      const itemSubtotal = (item.quantity || 1) * (item.price || 0);
+      const itemDiscount = (item.discount || 0);
+      const taxableAmount = itemSubtotal - itemDiscount;
+      const tax = calculateTax(taxableAmount, item.gstRate || 0, item.cessRate || 0, interState);
+
+      subtotal += itemSubtotal;
+      cgstTotal += tax.cgst;
+      sgstTotal += tax.sgst;
+      igstTotal += tax.igst;
+      cessTotal += tax.cess;
+
+      return {
+        productId: item.productId || null,
+        description: item.description,
+        hsnSac: item.hsnSac || null,
+        quantity: item.quantity || 1,
+        unit: item.unit || null,
+        price: item.price || 0,
+        discount: itemDiscount,
+        taxableAmount,
+        gstRate: item.gstRate || 0,
+        cgst: tax.cgst,
+        sgst: tax.sgst,
+        igst: tax.igst,
+        cess: tax.cess,
+        total: tax.total,
+        sortOrder: idx,
+      };
     });
+
+    let discountTotal = 0;
+    const appliedDiscountType = discountType ?? existing.discountType;
+    const appliedDiscountValue = discountValue ?? existing.discountValue;
+    if (appliedDiscountType && appliedDiscountValue) {
+      discountTotal = appliedDiscountType === 'percentage' ? (subtotal * appliedDiscountValue) / 100 : appliedDiscountValue;
+    }
+
+    const taxableAmount = subtotal - discountTotal;
+    const gstTotal = cgstTotal + sgstTotal + igstTotal + cessTotal;
+    const total = taxableAmount + gstTotal;
+    const amountDue = Math.max(0, total - existing.amountPaid);
+
+    const invoice = await prisma.$transaction(async (tx) => {
+      // Delete existing items and recreate
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: req.params.id } });
+
+      return tx.invoice.update({
+        where: { id: req.params.id },
+        data: {
+          ...(customerId && { customerId }),
+          ...(type && { type }),
+          issueDate: issueDate ? new Date(issueDate) : undefined,
+          dueDate: dueDate ? new Date(dueDate) : (dueDate === null ? null : undefined),
+          isInterState: interState,
+          ...(placeOfSupply !== undefined && { placeOfSupply: placeOfSupply || null }),
+          ...(notes !== undefined && { notes: notes || null }),
+          ...(terms !== undefined && { terms: terms || null }),
+          discountType: appliedDiscountType || null,
+          discountValue: appliedDiscountValue || null,
+          discountTotal,
+          subtotal,
+          taxableAmount,
+          cgstTotal,
+          sgstTotal,
+          igstTotal,
+          cessTotal,
+          gstTotal,
+          total,
+          amountDue,
+          items: { create: processedItems },
+        },
+        include: { customer: true, items: true },
+      });
+    });
+
     res.json({ success: true, data: invoice });
   } catch (error) { next(error); }
 });
