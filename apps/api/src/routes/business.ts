@@ -42,24 +42,6 @@ router.post('/', [
   } catch (error) { next(error); }
 });
 
-router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const membership = await prisma.membership.findFirst({
-      where: { userId: req.user!.id, businessId: req.params.id, isActive: true },
-    });
-    if (!membership) {
-      res.status(403).json({ success: false, error: 'Access denied' });
-      return;
-    }
-    const business = await prisma.business.findUnique({
-      where: { id: req.params.id },
-      include: { plan: true, branches: true, subscriptions: { include: { plan: true }, orderBy: { createdAt: 'desc' }, take: 1 } },
-    });
-    if (!business) { res.status(404).json({ success: false, error: 'Business not found' }); return; }
-    res.json({ success: true, data: business });
-  } catch (error) { next(error); }
-});
-
 router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const businessId = req.user!.businessId;
@@ -94,6 +76,24 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: Next
         pendingInvoicesCount: pendingAgg._count.id || 0,
       },
     });
+  } catch (error) { next(error); }
+});
+
+router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const membership = await prisma.membership.findFirst({
+      where: { userId: req.user!.id, businessId: req.params.id, isActive: true },
+    });
+    if (!membership) {
+      res.status(403).json({ success: false, error: 'Access denied' });
+      return;
+    }
+    const business = await prisma.business.findUnique({
+      where: { id: req.params.id },
+      include: { plan: true, branches: true, subscriptions: { include: { plan: true }, orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!business) { res.status(404).json({ success: false, error: 'Business not found' }); return; }
+    res.json({ success: true, data: business });
   } catch (error) { next(error); }
 });
 
