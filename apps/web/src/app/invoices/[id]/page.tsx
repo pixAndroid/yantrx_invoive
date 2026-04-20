@@ -254,7 +254,7 @@ export default function InvoiceDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [actionLoading, setActionLoading] = useState('');
-  const [theme, setTheme] = useState<ThemeKey>('corporate-blue');
+  const [theme, setTheme] = useState<ThemeKey>('classic-black');
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [templates, setTemplates] = useState<PublicTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
