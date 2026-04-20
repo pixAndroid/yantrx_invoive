@@ -12,6 +12,8 @@ import {
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
 
+const INVOICE_USAGE_WARNING_RATIO = 0.8;
+
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/invoices', label: 'Invoices', icon: FileText },
@@ -229,7 +231,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
                 <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= 0.8 ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                    className={`h-full rounded-full transition-all ${planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= INVOICE_USAGE_WARNING_RATIO ? 'bg-amber-500' : 'bg-indigo-500'}`}
                     style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
                   />
                 </div>

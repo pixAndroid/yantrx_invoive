@@ -11,6 +11,7 @@ interface Customer { id: string; name: string; email: string | null; phone: stri
 interface InvoiceItem { id: string; description: string; productId: string | null; hsnSac: string; quantity: number; unit: string; price: number; discount: number; gstRate: number; taxableAmount: number; cgst: number; sgst: number; igst: number; total: number; }
 
 const GST_RATES = [0, 5, 12, 18, 28];
+const INVOICE_WARNING_THRESHOLD = 2;
 
 function generateId() { return crypto.randomUUID().replace(/-/g, '').slice(0, 9); }
 
@@ -331,7 +332,7 @@ export default function NewInvoicePage() {
             <a href="/settings/billing" className="flex-shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Upgrade Plan</a>
           </div>
         )}
-        {invoicesLeft !== null && invoicesLeft <= 2 && !invoiceLimitReached && (
+        {invoicesLeft !== null && invoicesLeft <= INVOICE_WARNING_THRESHOLD && !invoiceLimitReached && (
           <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-4">
             <p className="text-sm font-medium text-amber-800">Only <strong>{invoicesLeft}</strong> invoice{invoicesLeft === 1 ? '' : 's'} left this month. <a href="/settings/billing" className="underline">Upgrade your plan</a> to avoid interruption.</p>
           </div>
