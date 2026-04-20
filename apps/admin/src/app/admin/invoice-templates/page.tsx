@@ -549,22 +549,114 @@ function TemplateModal({
                   className="rounded border-gray-600 bg-gray-700 text-orange-500" />
                 <span className="text-sm text-gray-300">Set as default template for all customers</span>
               </label>
-              <div className="rounded-lg bg-gray-800 border border-gray-700 p-3 text-xs text-gray-400">
-                <p className="font-medium text-gray-300 mb-1">Available Template Variables:</p>
-                <div className="grid grid-cols-3 gap-1 font-mono">
-                  {[
-                    '{{businessName}}','{{businessGstin}}','{{businessAddress}}','{{businessCity}}',
-                    '{{businessState}}','{{businessPhone}}','{{businessEmail}}','{{businessInitial}}',
-                    '{{businessLogo}}',
-                    '{{invoiceNumber}}','{{invoiceType}}','{{issueDate}}','{{dueDate}}',
-                    '{{customerName}}','{{customerGstin}}','{{customerPan}}','{{customerAddress}}',
-                    '{{customerCity}}','{{customerState}}','{{customerEmail}}','{{customerPhone}}',
-                    '{{placeOfSupply}}','{{taxType}}',
-                    '{{taxableAmount}}','{{cgst}}','{{sgst}}','{{igst}}','{{total}}','{{amountDue}}',
-                    '{{amountInWords}}','{{notes}}','{{terms}}',
-                  ].map(v => (
-                    <span key={v} className="text-orange-400">{v}</span>
-                  ))}
+              <div className="rounded-lg bg-gray-800 border border-gray-700 p-4 text-xs text-gray-400 space-y-4">
+                <p className="font-semibold text-gray-200 text-sm">Available Template Variables</p>
+
+                {/* Business Info */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Business Info</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{businessName}}','{{businessGstin}}','{{businessAddress}}','{{businessCity}}','{{businessState}}','{{businessPhone}}','{{businessEmail}}','{{businessInitial}}','{{businessLogo}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Invoice Info */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Invoice Info</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{invoiceNumber}}','{{invoiceType}}','{{issueDate}}','{{dueDate}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Customer / Bill To */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Customer / Bill To</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{customerName}}','{{customerGstin}}','{{customerPan}}','{{customerAddress}}','{{customerCity}}','{{customerState}}','{{customerPincode}}','{{customerEmail}}','{{customerPhone}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Shipping / Ship To */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Shipping / Ship To</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{shipAddress}}','{{shipCity}}','{{shipState}}','{{shipPincode}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                  <p className="text-gray-600 mt-1">Falls back to billing address when no separate shipping address is saved.</p>
+                </div>
+
+                {/* Supply & Tax */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Supply &amp; Tax</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{placeOfSupply}}','{{taxType}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                  <p className="text-gray-600 mt-1"><span className="text-orange-400 font-mono">{'{{taxType}}'}</span> resolves to <span className="text-gray-400">"Intra-State (CGST + SGST)"</span> or <span className="text-gray-400">"Inter-State (IGST)"</span> automatically.</p>
+                </div>
+
+                {/* Totals & Amounts */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Totals &amp; Amounts</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{taxableAmount}}','{{cgst}}','{{sgst}}','{{igst}}','{{total}}','{{amountDue}}','{{amountInWords}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notes & Terms */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Notes &amp; Terms</p>
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {['{{notes}}','{{terms}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Items Loop */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Items Loop</p>
+                  <p className="text-gray-400 mb-2">Wrap a <code className="bg-gray-700 px-1 rounded text-orange-300">&lt;tr&gt;</code> row inside the loop block to repeat it for every line item:</p>
+                  <pre className="bg-gray-950 border border-gray-700 rounded p-2 text-orange-400 font-mono whitespace-pre-wrap leading-5 select-all">{`{{#items}}
+  <tr>
+    <td>{{index}}</td>
+    <td>{{description}}</td>
+    <td>{{hsnSac}}</td>
+    <td>{{quantity}} {{unit}}</td>
+    <td>{{price}}</td>
+    <td>{{gstRate}}%</td>
+    <td>{{total}}</td>
+  </tr>
+{{/items}}`}</pre>
+                  <div className="grid grid-cols-3 gap-1 font-mono mt-2">
+                    {['{{index}}','{{description}}','{{hsnSac}}','{{quantity}}','{{unit}}','{{price}}','{{gstRate}}','{{total}}'].map(v => (
+                      <span key={v} className="text-orange-400">{v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Conditional Blocks */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Conditional Blocks</p>
+                  <p className="text-gray-400 mb-2">Wrap any HTML in <code className="bg-gray-700 px-1 rounded text-blue-300">{'{{#variable}}'}</code> / <code className="bg-gray-700 px-1 rounded text-blue-300">{'{{/variable}}'}</code> to render it only when the variable is non-empty:</p>
+                  <pre className="bg-gray-950 border border-gray-700 rounded p-2 text-blue-300 font-mono whitespace-pre-wrap leading-5 select-all">{`{{#customerGstin}}
+  <div>GSTIN: {{customerGstin}}</div>
+{{/customerGstin}}
+
+{{#customerPan}}
+  <div>PAN: {{customerPan}}</div>
+{{/customerPan}}`}</pre>
                 </div>
               </div>
             </div>
