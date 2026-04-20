@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Search, Save, Send, ArrowLeft, Calculator, UserPlus, X, Check } from 'lucide-react';
+import { Plus, Trash2, Search, Save, Send, ArrowLeft, Calculator, UserPlus, X, Check, Lock } from 'lucide-react';
 import { apiFetch, getUserData } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 
@@ -313,13 +313,25 @@ export default function NewInvoicePage() {
             <h1 className="text-2xl font-bold text-gray-900">New Invoice</h1>
             <p className="text-gray-500 text-sm">Create a GST-compliant invoice</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => handleSave()} disabled={isLoading || invoiceLimitReached} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-              <Save className="h-4 w-4" /> Save Draft
-            </button>
-            <button onClick={() => handleSave('SENT')} disabled={isLoading || invoiceLimitReached} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
-              <Send className="h-4 w-4" /> Save &amp; Send
-            </button>
+          <div className="ml-auto flex flex-col items-end gap-1">
+            {invoiceLimitReached && (
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                className="flex items-center gap-1 text-red-500"
+              >
+                <Lock className="h-4 w-4" />
+                <span className="text-xs font-semibold">Limit reached</span>
+              </motion.div>
+            )}
+            <div className="flex items-center gap-2">
+              <button onClick={() => handleSave()} disabled={isLoading || invoiceLimitReached} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                <Save className="h-4 w-4" /> Save Draft
+              </button>
+              <button onClick={() => handleSave('SENT')} disabled={isLoading || invoiceLimitReached} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                <Send className="h-4 w-4" /> Save &amp; Send
+              </button>
+            </div>
           </div>
         </div>
 
@@ -519,6 +531,16 @@ export default function NewInvoicePage() {
                 </div>
               </div>
               <div className="mt-6 space-y-2">
+                {invoiceLimitReached && (
+                  <motion.div
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                    className="flex items-center justify-center gap-1.5 text-red-500 mb-1"
+                  >
+                    <Lock className="h-5 w-5" />
+                    <span className="text-xs font-semibold">Invoice limit reached</span>
+                  </motion.div>
+                )}
                 <button onClick={() => handleSave()} disabled={isLoading} className="w-full rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Save as Draft</button>
                 <button onClick={() => handleSave('SENT')} disabled={isLoading} className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-50">
                   {isLoading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Send className="h-4 w-4" />}
