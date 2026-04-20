@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, User, Mail, Phone, MapPin, Hash, FileText } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
@@ -30,6 +30,7 @@ export default function NewCustomerPage() {
   const { success, error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customerLimitReached, setCustomerLimitReached] = useState(false);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -51,6 +52,21 @@ export default function NewCustomerPage() {
   });
   const [sameAsB, setSameAsB] = useState(true);
 
+  useEffect(() => {
+    Promise.all([
+      apiFetch('/subscriptions'),
+      apiFetch('/business/stats'),
+    ]).then(([subRes, statsRes]: [any, any]) => {
+      const sub = subRes.data?.[0];
+      if (!sub) return;
+      const customerLimit: number = sub.plan?.customerLimit || 0;
+      const customersUsed: number = statsRes.data?.activeCustomers ?? 0;
+      if (customerLimit > 0) {
+        setCustomerLimitReached(customersUsed >= customerLimit);
+      }
+    }).catch(() => {});
+  }, []);
+
   const set = (key: string, val: string) => {
     setForm(prev => ({ ...prev, [key]: val }));
     if (errors[key]) setErrors(prev => { const e = { ...prev }; delete e[key]; return e; });
@@ -69,6 +85,7 @@ export default function NewCustomerPage() {
   };
 
   const handleSubmit = async () => {
+    if (customerLimitReached) { toastError('Customer limit reached', 'Please upgrade your plan to add more customers.'); return; }
     if (!validate()) return;
     setLoading(true);
     try {
@@ -124,7 +141,7 @@ export default function NewCustomerPage() {
         <div className="ml-auto">
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || customerLimitReached}
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
           >
             {loading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Save className="h-4 w-4" />}
@@ -132,6 +149,16 @@ export default function NewCustomerPage() {
           </button>
         </div>
       </div>
+
+      {customerLimitReached && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-800">Customer limit reached</p>
+            <p className="text-xs text-red-600 mt-0.5">You have reached the maximum number of customers allowed by your current plan. Please upgrade to add more customers.</p>
+          </div>
+          <a href="/settings/billing" className="flex-shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Upgrade Plan</a>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

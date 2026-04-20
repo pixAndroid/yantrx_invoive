@@ -60,6 +60,19 @@ router.post('/', [
     const businessId = req.user!.businessId;
     if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
 
+    // Enforce customer limit per plan
+    const business = await prisma.business.findUnique({ where: { id: businessId }, include: { plan: true } });
+    if (business?.plan && business.plan.customerLimit > 0) {
+      const customerCount = await prisma.customer.count({ where: { businessId, isActive: true } });
+      if (customerCount >= business.plan.customerLimit) {
+        res.status(403).json({
+          success: false,
+          error: `Customer limit reached. Your ${business.plan.name} plan allows ${business.plan.customerLimit} customer${business.plan.customerLimit === 1 ? '' : 's'}. Please upgrade to add more customers.`,
+        });
+        return;
+      }
+    }
+
     const customer = await prisma.customer.create({
       data: { ...req.body, businessId },
     });

@@ -52,7 +52,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
-  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; features: string[] } | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[] } | null>(null);
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
 
@@ -88,6 +88,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 name: sub.plan?.name || 'Free',
                 invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
                 invoiceLimit: sub.plan?.invoiceLimit || 5,
+                customersUsed: statsRes?.data?.activeCustomers ?? 0,
+                customerLimit: sub.plan?.customerLimit || 0,
                 features: sub.plan?.features || [],
               });
             })
@@ -96,6 +98,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 name: sub.plan?.name || 'Free',
                 invoicesUsed: 0,
                 invoiceLimit: sub.plan?.invoiceLimit || 5,
+                customersUsed: 0,
+                customerLimit: sub.plan?.customerLimit || 0,
                 features: sub.plan?.features || [],
               });
             });
@@ -213,9 +217,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* User section */}
       <div className="border-t border-gray-100 p-4">
         {planInfo && (
-          <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
-            <p className="text-xs font-medium text-amber-800">{planInfo.name} Plan</p>
-            <p className="text-xs text-amber-600 mt-0.5">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
+          <div className={`mb-3 rounded-lg p-3 border ${planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+            <p className="text-xs font-semibold text-gray-800">{planInfo.name} Plan</p>
+            {planInfo.invoiceLimit > 0 && (
+              <>
+                <div className="flex items-center justify-between mt-1.5">
+                  <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
+                  <p className={`text-xs font-semibold ${planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'text-red-600' : 'text-indigo-600'}`}>
+                    {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
+                  </p>
+                </div>
+                <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= 0.8 ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                    style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
+                  />
+                </div>
+              </>
+            )}
+            {planInfo.customerLimit > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {planInfo.customersUsed}/{planInfo.customerLimit} customers
+              </p>
+            )}
             <Link href="/settings/billing" className="mt-2 block text-center rounded-md bg-amber-600 py-1 text-xs font-semibold text-white hover:bg-amber-700">
               Upgrade
             </Link>
