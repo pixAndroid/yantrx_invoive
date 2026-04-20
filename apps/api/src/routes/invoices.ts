@@ -84,12 +84,18 @@ router.post('/', [
 
     // Enforce invoice limit per plan
     if (business.plan && business.plan.invoiceLimit > 0) {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const invoicesThisMonth = await prisma.invoice.count({
-        where: { businessId, createdAt: { gte: startOfMonth } },
+      // Use the active subscription's startDate as the billing-period start so that
+      // upgrading a plan resets the invoice count immediately.
+      const activeSub = await prisma.subscription.findFirst({
+        where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+        orderBy: { startDate: 'desc' },
       });
-      if (invoicesThisMonth >= business.plan.invoiceLimit) {
+      const now = new Date();
+      const periodStart = activeSub?.startDate ?? new Date(now.getFullYear(), now.getMonth(), 1);
+      const invoicesThisPeriod = await prisma.invoice.count({
+        where: { businessId, createdAt: { gte: periodStart } },
+      });
+      if (invoicesThisPeriod >= business.plan.invoiceLimit) {
         res.status(403).json({
           success: false,
           error: `Invoice limit reached. Your ${business.plan.name} plan allows ${business.plan.invoiceLimit} invoice${business.plan.invoiceLimit === 1 ? '' : 's'} per month. Please upgrade to create more invoices.`,

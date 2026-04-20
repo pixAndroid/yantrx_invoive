@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CreditCard, CheckCircle, ArrowRight, AlertCircle, Loader2, X } from 'lucide-react';
+import { CreditCard, CheckCircle, ArrowRight, AlertCircle, Loader2, X, TrendingUp } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface Plan {
@@ -20,8 +20,14 @@ interface Plan {
 interface Subscription {
   id: string;
   status: string;
+  startDate: string;
   endDate: string;
   plan: Plan;
+}
+
+interface UsageStats {
+  invoicesThisMonth: number;
+  activeCustomers: number;
 }
 
 declare global {
@@ -44,6 +50,7 @@ function loadRazorpayScript(): Promise<boolean> {
 export default function BillingPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<Subscription | null>(null);
+  const [usage, setUsage] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -53,9 +60,12 @@ export default function BillingPage() {
     Promise.all([
       apiFetch<{ data: Plan[] }>('/plans').catch(() => ({ data: [] })),
       apiFetch<{ data: Subscription[] }>('/subscriptions').catch(() => ({ data: [] })),
-    ]).then(([plansRes, subsRes]) => {
+      apiFetch<{ data: UsageStats }>('/business/stats').catch(() => ({ data: null as any })),
+    ]).then(([plansRes, subsRes, statsRes]) => {
       setPlans(plansRes.data || []);
-      setCurrentSub(subsRes.data?.[0] || null);
+      const activeSub = (subsRes.data || []).find(s => s.status === 'ACTIVE' || s.status === 'TRIAL') || null;
+      setCurrentSub(activeSub);
+      setUsage(statsRes.data || null);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -135,6 +145,12 @@ export default function BillingPage() {
     business: 'border-purple-400',
   };
 
+  const invoicesUsed = usage?.invoicesThisMonth ?? 0;
+  const invoiceLimit = currentSub?.plan.invoiceLimit ?? 0;
+  const invoiceUsagePct = invoiceLimit > 0 ? Math.min(100, (invoicesUsed / invoiceLimit) * 100) : 0;
+  const isOverLimit = invoiceLimit > 0 && invoicesUsed >= invoiceLimit;
+  const isNearLimit = !isOverLimit && invoiceLimit > 0 && invoicesUsed / invoiceLimit >= 0.8;
+
   return (
     <div className="p-6 lg:p-8 max-w-4xl">
       <div className="mb-6">
@@ -150,7 +166,7 @@ export default function BillingPage() {
 
       {currentSub && (
         <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm font-medium text-indigo-700">Current Plan</p>
               <p className="text-xl font-bold text-indigo-900 mt-1">{currentSub.plan.name}</p>
@@ -166,6 +182,41 @@ export default function BillingPage() {
               {currentSub.plan.price === 0 ? 'Free' : `₹${currentSub.plan.price}/mo`}
             </span>
           </div>
+
+          {/* Usage meters */}
+          {invoiceLimit > 0 && usage !== null && (
+            <div className="mt-2 space-y-2">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-indigo-700 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Invoices this period
+                  </span>
+                  <span className={`text-xs font-semibold ${isOverLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-indigo-700'}`}>
+                    {invoicesUsed} / {invoiceLimit >= 999999 ? '∞' : invoiceLimit}
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-indigo-200 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${isOverLimit ? 'bg-red-500' : isNearLimit ? 'bg-amber-500' : 'bg-indigo-600'}`}
+                    style={{ width: `${invoiceUsagePct}%` }}
+                  />
+                </div>
+                {isOverLimit && (
+                  <p className="mt-1 text-xs text-red-600 font-medium">Limit reached — upgrade to create more invoices</p>
+                )}
+                {isNearLimit && !isOverLimit && (
+                  <p className="mt-1 text-xs text-amber-600">You're close to your invoice limit</p>
+                )}
+              </div>
+              {currentSub.plan.customerLimit > 0 && currentSub.plan.customerLimit < 999999 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-indigo-600">Customers</span>
+                  <span className="text-xs font-medium text-indigo-800">{usage.activeCustomers} / {currentSub.plan.customerLimit}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -241,7 +292,7 @@ export default function BillingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-8">
             <button
-              onClick={() => setSelectedPlan(null)}
+              onClick={() => { setSelectedPlan(null); setError(''); }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
               aria-label="Close"
             >
@@ -257,7 +308,7 @@ export default function BillingPage() {
               </div>
             )}
 
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-5 mb-6">
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-5 mb-4">
               <div className="flex items-baseline justify-between mb-4">
                 <span className="text-lg font-bold text-indigo-900">{selectedPlan.name} Plan</span>
                 <span className="text-2xl font-bold text-indigo-900">₹{selectedPlan.price}<span className="text-sm font-normal text-indigo-600">/mo</span></span>
@@ -284,6 +335,13 @@ export default function BillingPage() {
               </ul>
             </div>
 
+            {isOverLimit && currentSub && (
+              <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 flex-shrink-0" />
+                Upgrading will reset your invoice count for the new billing period.
+              </div>
+            )}
+
             {error && (
               <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
@@ -292,7 +350,7 @@ export default function BillingPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => setSelectedPlan(null)}
+                onClick={() => { setSelectedPlan(null); setError(''); }}
                 className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
               >
                 Cancel

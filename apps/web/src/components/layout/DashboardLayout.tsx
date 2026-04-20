@@ -81,28 +81,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     apiFetch('/subscriptions')
       .then((res: any) => {
-        if (res.data?.length > 0) {
-          const sub = res.data[0];
+        const activeSub = (res.data || []).find((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL');
+        if (activeSub) {
           // Fetch this month's invoice count from business stats
           apiFetch('/business/stats')
             .then((statsRes: any) => {
               setPlanInfo({
-                name: sub.plan?.name || 'Free',
+                name: activeSub.plan?.name || 'Free',
                 invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
-                invoiceLimit: sub.plan?.invoiceLimit || 5,
+                invoiceLimit: activeSub.plan?.invoiceLimit || 5,
                 customersUsed: statsRes?.data?.activeCustomers ?? 0,
-                customerLimit: sub.plan?.customerLimit || 0,
-                features: sub.plan?.features || [],
+                customerLimit: activeSub.plan?.customerLimit || 0,
+                features: activeSub.plan?.features || [],
               });
             })
             .catch(() => {
               setPlanInfo({
-                name: sub.plan?.name || 'Free',
+                name: activeSub.plan?.name || 'Free',
                 invoicesUsed: 0,
-                invoiceLimit: sub.plan?.invoiceLimit || 5,
+                invoiceLimit: activeSub.plan?.invoiceLimit || 5,
                 customersUsed: 0,
-                customerLimit: sub.plan?.customerLimit || 0,
-                features: sub.plan?.features || [],
+                customerLimit: activeSub.plan?.customerLimit || 0,
+                features: activeSub.plan?.features || [],
               });
             });
         }
