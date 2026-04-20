@@ -363,7 +363,7 @@ export default function BillingPage() {
                 {upgrading === selectedPlan.id ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
                 ) : (
-                  <>Confirm &amp; Pay <ArrowRight className="h-4 w-4" /></>
+                  <>Confirm & Pay <ArrowRight className="h-4 w-4" /></>
                 )}
               </button>
             </div>
