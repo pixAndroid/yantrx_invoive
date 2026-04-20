@@ -11,6 +11,7 @@ interface Customer { id: string; name: string; email: string | null; phone: stri
 interface InvoiceItem { id: string; description: string; productId: string | null; hsnSac: string; quantity: number; unit: string; price: number; discount: number; gstRate: number; taxableAmount: number; cgst: number; sgst: number; igst: number; total: number; }
 
 const GST_RATES = [0, 5, 12, 18, 28];
+const INVOICE_WARNING_THRESHOLD = 2;
 
 function generateId() { return crypto.randomUUID().replace(/-/g, '').slice(0, 9); }
 
@@ -30,7 +31,7 @@ function calcItem(item: Partial<InvoiceItem>, interState: boolean): InvoiceItem 
 
 import { INDIAN_STATES as INDIAN_STATES_MODAL } from '@/lib/constants';
 
-function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Customer) => void }) {
+function AddCustomerModal({ onClose, onCreated, customerLimitReached }: { onClose: () => void; onCreated: (c: Customer) => void; customerLimitReached?: boolean }) {
   const { success, error: toastError } = useToast();
   const [form, setForm] = useState({
     name: '', email: '', phone: '', gstin: '',
@@ -41,6 +42,7 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [loading, setLoading] = useState(false);
   const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
   const handleCreate = async () => {
+    if (customerLimitReached) { toastError('Customer limit reached', 'Please upgrade your plan to add more customers.'); return; }
     if (!form.name.trim()) { toastError('Name required'); return; }
     setLoading(true);
     try {
@@ -80,6 +82,11 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
           <h3 className="text-base font-semibold text-gray-900">Add New Customer</h3>
           <button onClick={onClose}><X className="h-4 w-4 text-gray-400" /></button>
         </div>
+        {customerLimitReached && (
+          <div className="mb-3 rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700">
+            <strong>Customer limit reached.</strong> Please upgrade your plan to add more customers.
+          </div>
+        )}
         <div className="space-y-3">
           {([
             { label: 'Name *', key: 'name', placeholder: 'Customer name' },
@@ -147,7 +154,7 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
         </div>
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="flex-1 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-          <button onClick={handleCreate} disabled={loading}
+          <button onClick={handleCreate} disabled={loading || customerLimitReached}
             className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 flex items-center justify-center gap-2">
             {loading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
             Add Customer
@@ -171,6 +178,9 @@ export default function NewInvoicePage() {
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [invoiceLimitReached, setInvoiceLimitReached] = useState(false);
+  const [customerLimitReached, setCustomerLimitReached] = useState(false);
+  const [invoicesLeft, setInvoicesLeft] = useState<number | null>(null);
 
   const [items, setItems] = useState<InvoiceItem[]>([
     calcItem({ id: generateId(), description: '', quantity: 1, price: 0, gstRate: 18, unit: 'PCS' }, false),
@@ -192,6 +202,26 @@ export default function NewInvoicePage() {
         })
         .catch(() => {});
     }
+
+    // Check plan limits
+    Promise.all([
+      apiFetch('/subscriptions'),
+      apiFetch('/business/stats'),
+    ]).then(([subRes, statsRes]: [any, any]) => {
+      const sub = subRes.data?.[0];
+      if (!sub) return;
+      const invoiceLimit: number = sub.plan?.invoiceLimit || 0;
+      const customerLimit: number = sub.plan?.customerLimit || 0;
+      const invoicesUsed: number = statsRes.data?.invoicesThisMonth ?? 0;
+      const customersUsed: number = statsRes.data?.activeCustomers ?? 0;
+      if (invoiceLimit > 0) {
+        setInvoiceLimitReached(invoicesUsed >= invoiceLimit);
+        setInvoicesLeft(Math.max(0, invoiceLimit - invoicesUsed));
+      }
+      if (customerLimit > 0) {
+        setCustomerLimitReached(customersUsed >= customerLimit);
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -273,6 +303,7 @@ export default function NewInvoicePage() {
     <>
       {showAddCustomer && (
         <AddCustomerModal onClose={() => setShowAddCustomer(false)}
+          customerLimitReached={customerLimitReached}
           onCreated={(c) => { setSelectedCustomer(c); setCustomerSearch(c.name); setShowAddCustomer(false); }} />
       )}
       <div className="p-4 lg:p-8 max-w-6xl mx-auto">
@@ -283,14 +314,29 @@ export default function NewInvoicePage() {
             <p className="text-gray-500 text-sm">Create a GST-compliant invoice</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => handleSave()} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            <button onClick={() => handleSave()} disabled={isLoading || invoiceLimitReached} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
               <Save className="h-4 w-4" /> Save Draft
             </button>
-            <button onClick={() => handleSave('SENT')} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button onClick={() => handleSave('SENT')} disabled={isLoading || invoiceLimitReached} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
               <Send className="h-4 w-4" /> Save &amp; Send
             </button>
           </div>
         </div>
+
+        {invoiceLimitReached && (
+          <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-800">Invoice limit reached</p>
+              <p className="text-xs text-red-600 mt-0.5">You have used all invoices allowed by your current plan this month. Please upgrade to create more invoices.</p>
+            </div>
+            <a href="/settings/billing" className="flex-shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Upgrade Plan</a>
+          </div>
+        )}
+        {invoicesLeft !== null && invoicesLeft <= INVOICE_WARNING_THRESHOLD && !invoiceLimitReached && (
+          <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-4">
+            <p className="text-sm font-medium text-amber-800">Only <strong>{invoicesLeft}</strong> invoice{invoicesLeft === 1 ? '' : 's'} left this month. <a href="/settings/billing" className="underline">Upgrade your plan</a> to avoid interruption.</p>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

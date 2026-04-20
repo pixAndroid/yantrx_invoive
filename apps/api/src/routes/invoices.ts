@@ -79,8 +79,24 @@ router.post('/', [
     if (!customer) { res.status(404).json({ success: false, error: 'Customer not found' }); return; }
 
     // Get next invoice number
-    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    const business = await prisma.business.findUnique({ where: { id: businessId }, include: { plan: true } });
     if (!business) { res.status(404).json({ success: false, error: 'Business not found' }); return; }
+
+    // Enforce invoice limit per plan
+    if (business.plan && business.plan.invoiceLimit > 0) {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const invoicesThisMonth = await prisma.invoice.count({
+        where: { businessId, createdAt: { gte: startOfMonth } },
+      });
+      if (invoicesThisMonth >= business.plan.invoiceLimit) {
+        res.status(403).json({
+          success: false,
+          error: `Invoice limit reached. Your ${business.plan.name} plan allows ${business.plan.invoiceLimit} invoice${business.plan.invoiceLimit === 1 ? '' : 's'} per month. Please upgrade to create more invoices.`,
+        });
+        return;
+      }
+    }
 
     const invoiceNumber = `${business.invoicePrefix}-${String(business.invoiceSeq).padStart(4, '0')}`;
 
