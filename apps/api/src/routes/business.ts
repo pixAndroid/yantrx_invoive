@@ -50,13 +50,21 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: Next
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Use the active subscription's startDate as the billing-period start so that
+    // upgrading a plan resets the invoice count immediately.
+    const activeSub = await prisma.subscription.findFirst({
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+      orderBy: { startDate: 'desc' },
+    });
+    const invoiceCountFrom = activeSub?.startDate ?? startOfMonth;
+
     const [totalRevenue, invoicesThisMonth, activeCustomers, pendingAgg] = await Promise.all([
       prisma.invoice.aggregate({
         where: { businessId, isPaid: true },
         _sum: { total: true },
       }),
       prisma.invoice.count({
-        where: { businessId, createdAt: { gte: startOfMonth } },
+        where: { businessId, createdAt: { gte: invoiceCountFrom } },
       }),
       prisma.customer.count({ where: { businessId } }),
       prisma.invoice.aggregate({
