@@ -260,6 +260,18 @@ export default function InvoiceDetailPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
+  const TEMPLATE_STORAGE_KEY = 'invoice_default_template';
+
+  const handleSelectTemplate = (id: string | null) => {
+    setSelectedTemplateId(id);
+    setShowTemplatePicker(false);
+    if (id) {
+      localStorage.setItem(TEMPLATE_STORAGE_KEY, id);
+    } else {
+      localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+    }
+  };
+
   const fetchInvoice = useCallback(async () => {
     setLoading(true);
     try {
@@ -276,7 +288,13 @@ export default function InvoiceDetailPage() {
 
   useEffect(() => {
     apiFetch<{ data: PublicTemplate[] }>('/invoices/templates')
-      .then(res => setTemplates(res.data))
+      .then(res => {
+        setTemplates(res.data);
+        const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+        if (saved && res.data.some(t => t.id === saved)) {
+          setSelectedTemplateId(saved);
+        }
+      })
       .catch((err: unknown) => { console.error('Failed to load invoice templates:', err); });
   }, []);
 
@@ -535,14 +553,14 @@ export default function InvoiceDetailPage() {
               {showTemplatePicker && (
                 <div className="absolute left-0 top-10 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-52">
                   <button
-                    onClick={() => { setSelectedTemplateId(null); setShowTemplatePicker(false); }}
+                    onClick={() => handleSelectTemplate(null)}
                     className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${!selectedTemplateId ? 'font-semibold' : ''}`}>
                     <span className="inline-block h-3 w-3 rounded-full bg-gray-400 flex-shrink-0" />
                     Default (Themed)
                     {!selectedTemplateId && <Check className="h-3.5 w-3.5 ml-auto text-gray-500" />}
                   </button>
                   {templates.map(tmpl => (
-                    <button key={tmpl.id} onClick={() => { setSelectedTemplateId(tmpl.id); setShowTemplatePicker(false); }}
+                    <button key={tmpl.id} onClick={() => handleSelectTemplate(tmpl.id)}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${selectedTemplateId === tmpl.id ? 'font-semibold' : ''}`}>
                       <span className="inline-block h-3 w-3 rounded-full bg-indigo-500 flex-shrink-0" />
                       {tmpl.name}
