@@ -13,9 +13,11 @@ async function main() {
   // back to the free tier).  Each keyword in NAV_FEATURE_REQUIREMENTS must appear
   // in at least one feature string for the corresponding route to be enabled.
   const FREE_FEATURES    = ['5 invoices/month', '10 customers', 'Invoicing', 'Payments', 'Customers', 'Basic GST reports', 'PDF download', 'Email support'];
+  const DAILY_FEATURES   = ['2 invoices/day', '2 customers', '1 team member', 'Invoicing', 'Payments', 'Customers'];
   const STARTER_FEATURES = ['100 invoices/month', '200 customers', '2 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'GST reports', 'Expense Tracker', 'Email invoices', 'Payment tracking'];
   const PRO_FEATURES     = ['500 invoices/month', 'Unlimited customers', '5 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'Advanced GST reports', 'Expense Tracker', 'Inventory', 'HRM', 'CRM', 'Multi-branch', 'Payment gateway', 'Priority support'];
   const BUSINESS_FEATURES = ['Unlimited invoices', 'Unlimited customers', '20 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'Full GST suite', 'Expense Tracker', 'Inventory', 'HRM', 'CRM', 'API access', 'Multi-branch', 'Dedicated manager'];
+  const YEARLY_FEATURES  = ['500 invoices/year', '500 customers', '2 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'GST reports', 'Email invoices'];
 
   const freePlan = await prisma.plan.upsert({
     where: { slug: 'free' },
@@ -25,6 +27,19 @@ async function main() {
       price: 0, invoiceLimit: 5, customerLimit: 10, productLimit: 10, userLimit: 1, storageLimit: 50,
       features: FREE_FEATURES,
       sortOrder: 0,
+    },
+  });
+
+  // Fix any existing Daily plan whose slug was incorrectly set, then upsert.
+  await prisma.plan.updateMany({ where: { name: 'Daily', NOT: { slug: 'daily' } }, data: { slug: 'daily' } });
+  const dailyPlan = await prisma.plan.upsert({
+    where: { slug: 'daily' },
+    update: { dailyPrice: 10, features: DAILY_FEATURES },
+    create: {
+      name: 'Daily', slug: 'daily', description: 'Try out Yantrix for a day',
+      price: 0, dailyPrice: 10, invoiceLimit: 2, customerLimit: 2, productLimit: 5, userLimit: 1, storageLimit: 50,
+      features: DAILY_FEATURES,
+      sortOrder: -1,
     },
   });
 
@@ -58,7 +73,20 @@ async function main() {
     },
   });
 
-  console.log('  ✓ 4 plans created\n');
+  // Fix any existing Yearly plan whose slug was incorrectly set, then upsert.
+  await prisma.plan.updateMany({ where: { name: 'Yearly', NOT: { slug: 'yearly' } }, data: { slug: 'yearly' } });
+  const yearlyPlan = await prisma.plan.upsert({
+    where: { slug: 'yearly' },
+    update: { yearlyPrice: 999, features: YEARLY_FEATURES },
+    create: {
+      name: 'Yearly', slug: 'yearly', description: 'Annual plan — pay once, save more',
+      price: 0, yearlyPrice: 999, invoiceLimit: 500, customerLimit: 500, productLimit: 200, userLimit: 2, storageLimit: 1000,
+      features: YEARLY_FEATURES,
+      sortOrder: 5,
+    },
+  });
+
+  console.log('  ✓ 6 plans created\n');
 
   // Modules
   console.log('Creating modules...');
