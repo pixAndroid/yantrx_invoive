@@ -265,10 +265,14 @@ export default function InvoiceDetailPage() {
   const handleSelectTemplate = (id: string | null) => {
     setSelectedTemplateId(id);
     setShowTemplatePicker(false);
-    if (id) {
-      localStorage.setItem(TEMPLATE_STORAGE_KEY, id);
-    } else {
-      localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+    try {
+      if (id) {
+        localStorage.setItem(TEMPLATE_STORAGE_KEY, id);
+      } else {
+        localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+      }
+    } catch {
+      // localStorage may be unavailable (e.g. private browsing or quota exceeded)
     }
   };
 
@@ -290,7 +294,7 @@ export default function InvoiceDetailPage() {
     apiFetch<{ data: PublicTemplate[] }>('/invoices/templates')
       .then(res => {
         setTemplates(res.data);
-        const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+        const saved = typeof window !== 'undefined' ? localStorage.getItem(TEMPLATE_STORAGE_KEY) : null;
         if (saved && res.data.some(t => t.id === saved)) {
           setSelectedTemplateId(saved);
         }
