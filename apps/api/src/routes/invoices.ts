@@ -91,6 +91,17 @@ router.post('/', [
         orderBy: { startDate: 'desc' },
       });
       const now = new Date();
+
+      // Block invoice creation if subscription has expired
+      if (activeSub && activeSub.endDate < now) {
+        await prisma.subscription.update({ where: { id: activeSub.id }, data: { status: 'EXPIRED' } });
+        res.status(403).json({
+          success: false,
+          error: 'Your subscription has expired. Please renew your plan to create invoices.',
+        });
+        return;
+      }
+
       const periodStart = activeSub?.startDate ?? new Date(now.getFullYear(), now.getMonth(), 1);
       const invoicesThisPeriod = await prisma.invoice.count({
         where: { businessId, createdAt: { gte: periodStart } },

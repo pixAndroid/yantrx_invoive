@@ -10,6 +10,13 @@ router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunct
   try {
     const businessId = req.user!.businessId;
     if (!businessId) { res.status(400).json({ success: false, error: 'Business context required' }); return; }
+
+    // Auto-expire any subscriptions whose endDate has passed
+    await prisma.subscription.updateMany({
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] }, endDate: { lt: new Date() } },
+      data: { status: 'EXPIRED' },
+    });
+
     const subs = await prisma.subscription.findMany({
       where: { businessId },
       include: { plan: true },

@@ -54,7 +54,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
-  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[] } | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[]; isExpired?: boolean } | null>(null);
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
 
@@ -81,30 +81,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     apiFetch('/subscriptions')
       .then((res: any) => {
-        const activeSub = (res.data || []).find((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL');
-        if (activeSub) {
-          // Fetch this month's invoice count from business stats
-          apiFetch('/business/stats')
-            .then((statsRes: any) => {
-              setPlanInfo({
-                name: activeSub.plan?.name || 'Free',
-                invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
-                invoiceLimit: activeSub.plan?.invoiceLimit || 5,
-                customersUsed: statsRes?.data?.activeCustomers ?? 0,
-                customerLimit: activeSub.plan?.customerLimit || 0,
-                features: activeSub.plan?.features || [],
-              });
-            })
-            .catch(() => {
-              setPlanInfo({
-                name: activeSub.plan?.name || 'Free',
-                invoicesUsed: 0,
-                invoiceLimit: activeSub.plan?.invoiceLimit || 5,
-                customersUsed: 0,
-                customerLimit: activeSub.plan?.customerLimit || 0,
-                features: activeSub.plan?.features || [],
-              });
+        const subs = res.data || [];
+        const activeSub = subs.find((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL');
+        const expiredSub = !activeSub ? subs.find((s: any) => s.status === 'EXPIRED') : null;
+        const sub = activeSub || expiredSub;
+        if (sub) {
+          const isExpired = sub.status === 'EXPIRED';
+          if (isExpired) {
+            // For expired subs, show plan name but no active features
+            setPlanInfo({
+              name: sub.plan?.name || 'Unknown',
+              invoicesUsed: 0,
+              invoiceLimit: 0,
+              customersUsed: 0,
+              customerLimit: 0,
+              features: [],
+              isExpired: true,
             });
+          } else {
+            // Fetch this month's invoice count from business stats
+            apiFetch('/business/stats')
+              .then((statsRes: any) => {
+                setPlanInfo({
+                  name: sub.plan?.name || 'Free',
+                  invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
+                  invoiceLimit: sub.plan?.invoiceLimit || 5,
+                  customersUsed: statsRes?.data?.activeCustomers ?? 0,
+                  customerLimit: sub.plan?.customerLimit || 0,
+                  features: sub.plan?.features || [],
+                  isExpired: false,
+                });
+              })
+              .catch(() => {
+                setPlanInfo({
+                  name: sub.plan?.name || 'Free',
+                  invoicesUsed: 0,
+                  invoiceLimit: sub.plan?.invoiceLimit || 5,
+                  customersUsed: 0,
+                  customerLimit: sub.plan?.customerLimit || 0,
+                  features: sub.plan?.features || [],
+                  isExpired: false,
+                });
+              });
+          }
         }
       })
       .catch(() => {});
@@ -115,6 +134,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isNavEnabled = (href: string): boolean => {
     const requiredKeywords = NAV_FEATURE_REQUIREMENTS[href];
     if (!requiredKeywords) return true; // No requirement — always accessible
+    // All feature-gated items are locked when plan is expired
+    if (planInfo?.isExpired) return false;
     if (!planInfo) return true; // Still loading — show as enabled to avoid flicker
     return requiredKeywords.some(keyword =>
       planInfo.features.some(f => f.toLowerCase().includes(keyword.toLowerCase()))
@@ -219,9 +240,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* User section */}
       <div className="border-t border-gray-100 p-4">
         {planInfo && (
-          <div className={`mb-3 rounded-lg p-3 border ${planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className={`mb-3 rounded-lg p-3 border ${planInfo.isExpired ? 'bg-red-50 border-red-300' : planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
             <p className="text-xs font-semibold text-gray-800">{planInfo.name} Plan</p>
-            {planInfo.invoiceLimit > 0 && (
+            {planInfo.isExpired ? (
+              <p className="text-xs text-red-600 font-medium mt-1">Plan expired — features disabled</p>
+            ) : planInfo.invoiceLimit > 0 ? (
               <>
                 <div className="flex items-center justify-between mt-1.5">
                   <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
@@ -236,14 +259,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   />
                 </div>
               </>
-            )}
-            {planInfo.customerLimit > 0 && (
+            ) : null}
+            {!planInfo.isExpired && planInfo.customerLimit > 0 && (
               <p className="text-xs text-gray-500 mt-1">
                 {planInfo.customersUsed}/{planInfo.customerLimit} customers
               </p>
             )}
-            <Link href="/settings/billing" className="mt-2 block text-center rounded-md bg-amber-600 py-1 text-xs font-semibold text-white hover:bg-amber-700">
-              Upgrade
+            <Link
+              href="/settings/billing"
+              className={`mt-2 block text-center rounded-md py-1 text-xs font-semibold text-white ${planInfo.isExpired ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+            >
+              {planInfo.isExpired ? 'Renew Plan' : 'Upgrade'}
             </Link>
           </div>
         )}
