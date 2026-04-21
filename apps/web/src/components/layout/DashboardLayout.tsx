@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
+import { BusinessProfileSetupModal } from '@/components/ui/BusinessProfileSetupModal';
 
 const INVOICE_USAGE_WARNING_RATIO = 0.8;
 
@@ -64,6 +65,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[]; isExpired?: boolean; endDate?: string } | null>(null);
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
+  const [setupSettings, setSetupSettings] = useState<any | null>(null);
+  const [setupRequired, setSetupRequired] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -83,6 +86,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           setBusinessLogo(biz.logo);
         }
         if (biz?.name) setBusinessName(biz.name);
+
+        // Check if business profile setup is required
+        const bizId = biz?.id || getUserData().businessId;
+        if (bizId) {
+          apiFetch(`/business/${bizId}`)
+            .then((bizRes: any) => {
+              const s = bizRes?.data;
+              if (s) {
+                const isIncomplete =
+                  !s.email?.trim() ||
+                  !s.phone?.trim() ||
+                  !s.address?.trim() ||
+                  !s.invoicePrefix?.trim();
+                if (isIncomplete) {
+                  setSetupSettings(s);
+                  setSetupRequired(true);
+                }
+              }
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => {});
 
@@ -241,6 +265,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     window.location.href = '/auth/login';
+  };
+
+  const handleSetupComplete = (updated: any) => {
+    setSetupRequired(false);
+    setSetupSettings(null);
+    if (updated?.name) setBusinessName(updated.name);
+    if (updated?.logo && typeof updated.logo === 'string' && isSafeImageUrl(updated.logo)) {
+      setBusinessLogo(updated.logo);
+    }
   };
 
   const displayName = userData.name || 'User';
@@ -519,6 +552,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Business Profile Setup Modal */}
+      {setupRequired && setupSettings && (
+        <BusinessProfileSetupModal
+          settings={setupSettings}
+          onComplete={handleSetupComplete}
+        />
+      )}
     </div>
   );
 }
