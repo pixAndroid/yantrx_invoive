@@ -86,32 +86,55 @@ router.post('/', [
     if (business.plan && business.plan.invoiceLimit > 0) {
       // Use the active subscription's startDate as the billing-period start so that
       // upgrading a plan resets the invoice count immediately.
-      const activeSub = await prisma.subscription.findFirst({
+      let activeSub = await prisma.subscription.findFirst({
         where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
         orderBy: { startDate: 'desc' },
       });
       const now = new Date();
 
-      // Block invoice creation if subscription has expired
+      // Auto-expire subscription when endDate has passed
       if (activeSub && activeSub.endDate < now) {
         await prisma.subscription.update({ where: { id: activeSub.id }, data: { status: 'EXPIRED' } });
-        res.status(403).json({
-          success: false,
-          error: 'Your subscription has expired. Please renew your plan to create invoices.',
-        });
-        return;
+        activeSub = null;
       }
 
-      const periodStart = activeSub?.startDate ?? new Date(now.getFullYear(), now.getMonth(), 1);
-      const invoicesThisPeriod = await prisma.invoice.count({
-        where: { businessId, createdAt: { gte: periodStart } },
-      });
-      if (invoicesThisPeriod >= business.plan.invoiceLimit) {
-        res.status(403).json({
-          success: false,
-          error: `Invoice limit reached. Your ${business.plan.name} plan allows ${business.plan.invoiceLimit} invoice${business.plan.invoiceLimit === 1 ? '' : 's'} per month. Please upgrade to create more invoices.`,
+      if (!activeSub) {
+        // No active subscription — fall back to the free/lowest-tier plan limits
+        // so that users can still create invoices within those limits instead of
+        // being completely blocked.
+        const freePlan =
+          (await prisma.plan.findUnique({ where: { slug: 'free' } })) ??
+          (await prisma.plan.findFirst({ where: { price: 0 }, orderBy: { price: 'asc' } }));
+        if (!freePlan || freePlan.invoiceLimit <= 0) {
+          res.status(403).json({
+            success: false,
+            error: 'Your subscription has expired. Please renew your plan to create invoices.',
+          });
+          return;
+        }
+        const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const invoicesThisPeriod = await prisma.invoice.count({
+          where: { businessId, createdAt: { gte: periodStart } },
         });
-        return;
+        if (invoicesThisPeriod >= freePlan.invoiceLimit) {
+          res.status(403).json({
+            success: false,
+            error: `Invoice limit reached. Your subscription has expired and free tier allows ${freePlan.invoiceLimit} invoice${freePlan.invoiceLimit === 1 ? '' : 's'} per month. Please renew your plan to create more invoices.`,
+          });
+          return;
+        }
+      } else {
+        const periodStart = activeSub.startDate;
+        const invoicesThisPeriod = await prisma.invoice.count({
+          where: { businessId, createdAt: { gte: periodStart } },
+        });
+        if (invoicesThisPeriod >= business.plan.invoiceLimit) {
+          res.status(403).json({
+            success: false,
+            error: `Invoice limit reached. Your ${business.plan.name} plan allows ${business.plan.invoiceLimit} invoice${business.plan.invoiceLimit === 1 ? '' : 's'} per month. Please upgrade to create more invoices.`,
+          });
+          return;
+        }
       }
     }
 

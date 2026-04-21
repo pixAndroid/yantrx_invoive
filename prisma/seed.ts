@@ -8,43 +8,52 @@ async function main() {
 
   // Plans
   console.log('Creating plans...');
+  // Feature lists are also used by the client nav-gating logic to determine which
+  // sidebar items are accessible for a given plan (and for expired plans falling
+  // back to the free tier).  Each keyword in NAV_FEATURE_REQUIREMENTS must appear
+  // in at least one feature string for the corresponding route to be enabled.
+  const FREE_FEATURES    = ['5 invoices/month', '10 customers', 'Invoicing', 'Payments', 'Customers', 'Basic GST reports', 'PDF download', 'Email support'];
+  const STARTER_FEATURES = ['100 invoices/month', '200 customers', '2 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'GST reports', 'Expense Tracker', 'Email invoices', 'Payment tracking'];
+  const PRO_FEATURES     = ['500 invoices/month', 'Unlimited customers', '5 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'Advanced GST reports', 'Expense Tracker', 'Inventory', 'HRM', 'CRM', 'Multi-branch', 'Payment gateway', 'Priority support'];
+  const BUSINESS_FEATURES = ['Unlimited invoices', 'Unlimited customers', '20 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'Full GST suite', 'Expense Tracker', 'Inventory', 'HRM', 'CRM', 'API access', 'Multi-branch', 'Dedicated manager'];
+
   const freePlan = await prisma.plan.upsert({
     where: { slug: 'free' },
-    update: {},
+    update: { features: FREE_FEATURES },
     create: {
       name: 'Free', slug: 'free', description: 'Perfect for freelancers',
       price: 0, invoiceLimit: 5, customerLimit: 10, productLimit: 10, userLimit: 1, storageLimit: 50,
-      features: ['5 invoices/month', '10 customers', 'PDF download', 'Basic GST reports', 'Email support'],
+      features: FREE_FEATURES,
       sortOrder: 0,
     },
   });
 
   const starterPlan = await prisma.plan.upsert({
-    where: { slug: 'starter' }, update: {},
+    where: { slug: 'starter' }, update: { features: STARTER_FEATURES },
     create: {
       name: 'Starter', slug: 'starter', description: 'For growing businesses',
       price: 149, yearlyPrice: 1490, invoiceLimit: 100, customerLimit: 200, productLimit: 100, userLimit: 2, storageLimit: 500,
-      features: ['100 invoices/month', '200 customers', '2 team members', 'GST reports', 'Email invoices', 'Payment tracking'],
+      features: STARTER_FEATURES,
       sortOrder: 1,
     },
   });
 
   const proPlan = await prisma.plan.upsert({
-    where: { slug: 'pro' }, update: {},
+    where: { slug: 'pro' }, update: { features: PRO_FEATURES },
     create: {
       name: 'Pro', slug: 'pro', description: 'Most popular for established businesses',
       price: 299, yearlyPrice: 2990, invoiceLimit: 500, customerLimit: 999999, productLimit: 999999, userLimit: 5, storageLimit: 2000,
-      features: ['500 invoices/month', 'Unlimited customers', '5 team members', 'Advanced GST reports', 'Multi-branch', 'Payment gateway', 'Priority support'],
+      features: PRO_FEATURES,
       sortOrder: 2, isFeatured: true,
     },
   });
 
   const businessPlan = await prisma.plan.upsert({
-    where: { slug: 'business' }, update: {},
+    where: { slug: 'business' }, update: { features: BUSINESS_FEATURES },
     create: {
       name: 'Business', slug: 'business', description: 'For large enterprises',
       price: 599, yearlyPrice: 5990, invoiceLimit: 999999, customerLimit: 999999, productLimit: 999999, userLimit: 20, storageLimit: 10000,
-      features: ['Unlimited invoices', 'Unlimited customers', '20 team members', 'Full GST suite', 'API access', 'Dedicated manager'],
+      features: BUSINESS_FEATURES,
       sortOrder: 3,
     },
   });
