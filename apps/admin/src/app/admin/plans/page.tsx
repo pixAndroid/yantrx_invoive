@@ -403,9 +403,10 @@ export default function AdminPlansPage() {
                   </div>
 
                   {(() => {
-                    const displayPrice = plan.slug === 'daily'
+                    const slugLower = plan.slug.toLowerCase();
+                    const displayPrice = slugLower === 'daily'
                       ? { amount: plan.dailyPrice ?? plan.price, unit: '/day' }
-                      : plan.slug === 'yearly'
+                      : (slugLower === 'yearly' || slugLower === 'yealty')
                       ? { amount: plan.yearlyPrice ?? plan.price, unit: '/yr' }
                       : { amount: plan.price, unit: '/mo' };
                     return (
@@ -434,7 +435,7 @@ export default function AdminPlansPage() {
                             </span>
                             {(displayPrice.amount ?? 0) > 0 && <span className="text-xs text-gray-500">{displayPrice.unit}</span>}
                             <button
-                              onClick={() => { setEditingId(plan.id); setEditPrice(String(plan.price)); }}
+                              onClick={() => { setEditingId(plan.id); setEditPrice(String(displayPrice.amount ?? plan.price)); }}
                               className="ml-1 text-gray-600 hover:text-gray-400"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
