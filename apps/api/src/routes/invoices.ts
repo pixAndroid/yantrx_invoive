@@ -129,9 +129,10 @@ router.post('/', [
           where: { businessId, createdAt: { gte: periodStart } },
         });
         if (invoicesThisPeriod >= business.plan.invoiceLimit) {
+          const periodLabel = business.plan.slug === 'daily' ? 'day' : business.plan.slug === 'yearly' ? 'year' : 'month';
           res.status(403).json({
             success: false,
-            error: `Invoice limit reached. Your ${business.plan.name} plan allows ${business.plan.invoiceLimit} invoice${business.plan.invoiceLimit === 1 ? '' : 's'} per month. Please upgrade to create more invoices.`,
+            error: `Invoice limit reached. Your ${business.plan.name} plan allows ${business.plan.invoiceLimit} invoice${business.plan.invoiceLimit === 1 ? '' : 's'} per ${periodLabel}. Please upgrade to create more invoices.`,
           });
           return;
         }

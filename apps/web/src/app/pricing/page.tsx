@@ -15,6 +15,7 @@ interface Plan {
   slug: string;
   description: string | null;
   price: number;
+  dailyPrice: number | null;
   yearlyPrice: number | null;
   currency: string;
   invoiceLimit: number;
@@ -37,6 +38,17 @@ function loadRazorpayScript(): Promise<boolean> {
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
+}
+
+/** Returns the display price and period label for a plan based on its billing type. */
+function getPlanDisplayPrice(plan: Plan): { amount: number; period: string; invoicePeriod: string } {
+  if (plan.slug === 'daily') {
+    return { amount: plan.dailyPrice ?? plan.price, period: '/day', invoicePeriod: 'day' };
+  }
+  if (plan.slug === 'yearly') {
+    return { amount: plan.yearlyPrice ?? plan.price, period: '/yr', invoicePeriod: 'year' };
+  }
+  return { amount: plan.price, period: '/mo', invoicePeriod: 'month' };
 }
 
 const NAV_LINKS = [
@@ -84,7 +96,7 @@ export default function PricingPage() {
       window.location.href = '/auth/register';
       return;
     }
-    if (plan.price === 0) {
+    if (plan.price === 0 && !plan.dailyPrice && !plan.yearlyPrice) {
       window.location.href = '/dashboard';
       return;
     }
@@ -278,9 +290,9 @@ export default function PricingPage() {
 
                   <div className="mb-6">
                     <span className="text-4xl font-bold text-gray-900">
-                      {plan.price === 0 ? '₹0' : `₹${plan.price}`}
+                      ₹{getPlanDisplayPrice(plan).amount}
                     </span>
-                    <span className="text-sm text-gray-500">/month</span>
+                    <span className="text-sm text-gray-500">{getPlanDisplayPrice(plan).period}</span>
                   </div>
 
                   <button
@@ -292,18 +304,18 @@ export default function PricingPage() {
                   >
                     {plan.name === 'Business'
                       ? 'Contact Sales'
-                      : loggedIn && plan.price > 0
+                      : loggedIn && getPlanDisplayPrice(plan).amount > 0
                         ? 'Upgrade Now'
-                        : loggedIn && plan.price === 0
+                        : loggedIn && getPlanDisplayPrice(plan).amount === 0
                           ? 'Go to Dashboard'
-                          : plan.price === 0
+                          : getPlanDisplayPrice(plan).amount === 0
                             ? 'Get Started Free'
                             : 'Start Free Trial'}
                   </button>
 
                   <ul className="space-y-2.5">
                     <li className="text-sm text-gray-600">
-                      {plan.invoiceLimit >= 999999 ? 'Unlimited' : plan.invoiceLimit} invoices/month
+                      {plan.invoiceLimit >= 999999 ? 'Unlimited' : plan.invoiceLimit} invoices/{getPlanDisplayPrice(plan).invoicePeriod}
                     </li>
                     <li className="text-sm text-gray-600">
                       {plan.customerLimit >= 999999 ? 'Unlimited' : plan.customerLimit} customers
@@ -434,12 +446,12 @@ export default function PricingPage() {
                   <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 mb-5">
                     <div className="flex items-center justify-between mb-3">
                       <span className="font-semibold text-gray-900">{selectedPlan.name} Plan</span>
-                      <span className="text-xl font-bold text-indigo-600">₹{selectedPlan.price}<span className="text-sm font-normal text-gray-500">/mo</span></span>
+                      <span className="text-xl font-bold text-indigo-600">₹{getPlanDisplayPrice(selectedPlan).amount}<span className="text-sm font-normal text-gray-500">{getPlanDisplayPrice(selectedPlan).period}</span></span>
                     </div>
                     <ul className="space-y-1.5">
                       <li className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                        {selectedPlan.invoiceLimit >= 999999 ? 'Unlimited' : selectedPlan.invoiceLimit} invoices/month
+                        {selectedPlan.invoiceLimit >= 999999 ? 'Unlimited' : selectedPlan.invoiceLimit} invoices/{getPlanDisplayPrice(selectedPlan).invoicePeriod}
                       </li>
                       <li className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
@@ -485,7 +497,7 @@ export default function PricingPage() {
                       {paymentLoading ? (
                         <><Loader2 className="h-4 w-4 animate-spin" /> Processing…</>
                       ) : (
-                        <>Pay ₹{selectedPlan.price} <ArrowRight className="h-4 w-4" /></>
+                        <>Pay ₹{getPlanDisplayPrice(selectedPlan).amount} <ArrowRight className="h-4 w-4" /></>
                       )}
                     </button>
                   </div>

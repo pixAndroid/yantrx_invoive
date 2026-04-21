@@ -6,6 +6,25 @@ import prisma from '../utils/prisma';
 const router = Router();
 router.use(authenticate);
 
+/** Returns endDate and amount to charge based on plan billing period (daily / yearly / monthly). */
+function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
+  const now = new Date();
+  if (plan.slug === 'daily') {
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 1);
+    return { endDate, amount: plan.dailyPrice ?? plan.price };
+  }
+  if (plan.slug === 'yearly') {
+    const endDate = new Date(now);
+    endDate.setFullYear(endDate.getFullYear() + 1);
+    return { endDate, amount: plan.yearlyPrice ?? plan.price };
+  }
+  // default: monthly
+  const endDate = new Date(now);
+  endDate.setMonth(endDate.getMonth() + 1);
+  return { endDate, amount: plan.price };
+}
+
 router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const businessId = req.user!.businessId;
@@ -41,14 +60,16 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
       data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Changed plan' },
     });
 
+    const { endDate: planEndDate, amount: planAmount } = getPlanBillingDetails(plan);
+
     const sub = await prisma.subscription.create({
       data: {
         businessId,
         planId,
         status: 'ACTIVE',
         startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        amount: plan.price,
+        endDate: planEndDate,
+        amount: planAmount,
       },
       include: { plan: true },
     });
@@ -76,10 +97,12 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
 
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
-    if (plan.price <= 0) { res.status(400).json({ success: false, error: 'Cannot create payment order for free plan' }); return; }
+
+    const { amount: planAmount } = getPlanBillingDetails(plan);
+    if (planAmount <= 0) { res.status(400).json({ success: false, error: 'Cannot create payment order for free plan' }); return; }
 
     const order = await createOrder({
-      amount: plan.price,
+      amount: planAmount,
       currency: 'INR',
       receipt: `sub_${businessId.slice(0, 8)}_${Date.now()}`,
       notes: { businessId, planId, planName: plan.name },
@@ -124,15 +147,17 @@ router.post('/verify-payment', async (req: AuthenticatedRequest, res: Response, 
       data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Upgraded to new plan' },
     });
 
+    const { endDate: planEndDate, amount: planAmount } = getPlanBillingDetails(plan);
+
     const sub = await prisma.subscription.create({
       data: {
         businessId,
         planId,
         status: 'ACTIVE',
         startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        endDate: planEndDate,
         razorpayOrderId: razorpay_order_id,
-        amount: plan.price,
+        amount: planAmount,
         metadata: { razorpay_payment_id, razorpay_signature },
       },
       include: { plan: true },
