@@ -217,7 +217,11 @@ export default function AdminSubscriptionsPage() {
                 </td>
               </tr>
             ) : subs.map(sub => {
-              const statusConfig = STATUS_CONFIG[sub.status] || STATUS_CONFIG.ACTIVE;
+              const effectiveStatus =
+                (sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) < new Date()
+                  ? 'EXPIRED'
+                  : sub.status;
+              const statusConfig = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.ACTIVE;
               return (
                 <tr key={sub.id} className="hover:bg-gray-800/30 transition-colors">
                   <td className="px-4 py-4">
