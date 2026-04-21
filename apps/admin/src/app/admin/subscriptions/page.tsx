@@ -10,7 +10,6 @@ interface Subscription {
   startDate: string;
   endDate: string;
   amount: number;
-  autoRenew: boolean;
   createdAt: string;
   businessId: string;
   business: { id: string; name: string };
@@ -202,18 +201,17 @@ export default function AdminSubscriptionsPage() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Start Date</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">End Date</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Auto Renew</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}><td colSpan={8} className="px-4 py-4"><div className="h-8 bg-gray-800 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={7} className="px-4 py-4"><div className="h-8 bg-gray-800 rounded animate-pulse" /></td></tr>
               ))
             ) : subs.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center">
+                <td colSpan={7} className="px-4 py-12 text-center">
                   <CreditCard className="h-12 w-12 text-gray-700 mx-auto mb-3" />
                   <p className="text-gray-500">No subscriptions found</p>
                 </td>
@@ -249,11 +247,6 @@ export default function AdminSubscriptionsPage() {
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500">
                     {new Date(sub.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`text-xs ${sub.autoRenew ? 'text-green-400' : 'text-gray-500'}`}>
-                      {sub.autoRenew ? '✓ Yes' : '✗ No'}
-                    </span>
                   </td>
                   <td className="px-4 py-4">
                     <button onClick={() => { setAssignModal(sub); setSelectedPlan(sub.plan.id); }}
