@@ -68,10 +68,17 @@ export default function BillingPage() {
     ]).then(([plansRes, subsRes, statsRes]) => {
       setPlans(plansRes.data || []);
       const subs = subsRes.data || [];
-      setAllSubs(subs);
+      // Compute effective status: treat ACTIVE/TRIAL as EXPIRED when endDate has passed
+      const now = new Date();
+      const effectiveSubs = subs.map(s =>
+        (s.status === 'ACTIVE' || s.status === 'TRIAL') && new Date(s.endDate) < now
+          ? { ...s, status: 'EXPIRED' }
+          : s
+      );
+      setAllSubs(effectiveSubs);
       // Prefer active/trial; fall back to most recent expired sub so we can show the expired banner
-      const activeSub = subs.find(s => s.status === 'ACTIVE' || s.status === 'TRIAL')
-        || subs.find(s => s.status === 'EXPIRED')
+      const activeSub = effectiveSubs.find(s => s.status === 'ACTIVE' || s.status === 'TRIAL')
+        || effectiveSubs.find(s => s.status === 'EXPIRED')
         || null;
       setCurrentSub(activeSub);
       setUsage(statsRes.data || null);
