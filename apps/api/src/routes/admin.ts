@@ -182,6 +182,12 @@ router.get('/subscriptions', async (req: AuthenticatedRequest, res: Response, ne
     const status = req.query.status as string;
     const planId = req.query.planId as string;
 
+    // Auto-expire any subscriptions whose endDate has passed (across all businesses)
+    await prisma.subscription.updateMany({
+      where: { status: { in: ['ACTIVE', 'TRIAL'] }, endDate: { lt: new Date() } },
+      data: { status: 'EXPIRED' },
+    });
+
     const where: any = {};
     if (search) {
       where.OR = [

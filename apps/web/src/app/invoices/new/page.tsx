@@ -208,13 +208,18 @@ export default function NewInvoicePage() {
       apiFetch('/subscriptions'),
       apiFetch('/business/stats'),
     ]).then(([subRes, statsRes]: [any, any]) => {
-      const sub = subRes.data?.[0];
+      const subs: any[] = subRes.data || [];
+      const sub = subs.find((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL') || null;
       if (!sub) return;
       const invoiceLimit: number = sub.plan?.invoiceLimit || 0;
       const customerLimit: number = sub.plan?.customerLimit || 0;
       const invoicesUsed: number = statsRes.data?.invoicesThisMonth ?? 0;
       const customersUsed: number = statsRes.data?.activeCustomers ?? 0;
-      if (invoiceLimit > 0) {
+      // Block invoice creation if plan is expired
+      if (sub.status === 'EXPIRED') {
+        setInvoiceLimitReached(true);
+        setInvoicesLeft(0);
+      } else if (invoiceLimit > 0) {
         setInvoiceLimitReached(invoicesUsed >= invoiceLimit);
         setInvoicesLeft(Math.max(0, invoiceLimit - invoicesUsed));
       }

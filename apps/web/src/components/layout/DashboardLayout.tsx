@@ -54,7 +54,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
-  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[]; isExpired?: boolean } | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[]; isExpired?: boolean; endDate?: string } | null>(null);
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
 
@@ -97,6 +97,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               customerLimit: 0,
               features: [],
               isExpired: true,
+              endDate: sub.endDate,
             });
           } else {
             // Fetch this month's invoice count from business stats
@@ -110,6 +111,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   customerLimit: sub.plan?.customerLimit || 0,
                   features: sub.plan?.features || [],
                   isExpired: false,
+                  endDate: sub.endDate,
                 });
               })
               .catch(() => {
@@ -121,6 +123,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   customerLimit: sub.plan?.customerLimit || 0,
                   features: sub.plan?.features || [],
                   isExpired: false,
+                  endDate: sub.endDate,
                 });
               });
           }
@@ -243,7 +246,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className={`mb-3 rounded-lg p-3 border ${planInfo.isExpired ? 'bg-red-50 border-red-300' : planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
             <p className="text-xs font-semibold text-gray-800">{planInfo.name} Plan</p>
             {planInfo.isExpired ? (
-              <p className="text-xs text-red-600 font-medium mt-1">Plan expired — features disabled</p>
+              <>
+                <p className="text-xs text-red-600 font-medium mt-1">Plan expired — features disabled</p>
+                {planInfo.endDate && (
+                  <p className="text-xs text-red-500 mt-0.5">
+                    Expired on {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                )}
+              </>
             ) : planInfo.invoiceLimit > 0 ? (
               <>
                 <div className="flex items-center justify-between mt-1.5">
@@ -258,6 +268,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
                   />
                 </div>
+                {planInfo.endDate && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Expires {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                )}
               </>
             ) : null}
             {!planInfo.isExpired && planInfo.customerLimit > 0 && (
@@ -343,13 +358,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex-1" />
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/invoices/new"
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              New Invoice
-            </Link>
+            {(() => {
+              const invoiceBlocked = planInfo?.isExpired || (planInfo?.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit);
+              return invoiceBlocked ? (
+                <Link
+                  href="/settings/billing"
+                  aria-disabled="true"
+                  title={planInfo?.isExpired ? 'Plan expired — renew to create invoices' : 'Invoice limit reached — upgrade to create more invoices'}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gray-300 px-3.5 py-2 text-sm font-semibold text-gray-500 pointer-events-none"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  New Invoice
+                </Link>
+              ) : (
+                <Link
+                  href="/invoices/new"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  New Invoice
+                </Link>
+              );
+            })()}
 
             <button className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100">
               <Bell className="h-5 w-5" />
