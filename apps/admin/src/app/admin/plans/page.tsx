@@ -10,6 +10,7 @@ interface Plan {
   slug: string;
   description: string;
   price: number;
+  dailyPrice: number | null;
   yearlyPrice: number | null;
   invoiceLimit: number;
   customerLimit: number;
@@ -30,7 +31,7 @@ interface Module {
 }
 
 const DEFAULT_FORM = {
-  name: '', slug: '', description: '', price: '0', yearlyPrice: '',
+  name: '', slug: '', description: '', price: '0', dailyPrice: '', yearlyPrice: '',
   invoiceLimit: '100', customerLimit: '500', userLimit: '2', storageLimit: '500',
   features: [] as string[],
   isActive: true, isFeatured: false, sortOrder: '0',
@@ -39,7 +40,7 @@ const DEFAULT_FORM = {
 function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState(plan ? {
     name: plan.name, slug: plan.slug, description: plan.description || '',
-    price: String(plan.price), yearlyPrice: String(plan.yearlyPrice || ''),
+    price: String(plan.price), dailyPrice: String(plan.dailyPrice || ''), yearlyPrice: String(plan.yearlyPrice || ''),
     invoiceLimit: String(plan.invoiceLimit), customerLimit: String(plan.customerLimit),
     userLimit: String(plan.userLimit), storageLimit: String(plan.storageLimit),
     features: plan.features || [],
@@ -93,6 +94,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
       const payload = {
         name: form.name, slug: form.slug, description: form.description,
         price: parseFloat(form.price) || 0,
+        dailyPrice: form.dailyPrice ? parseFloat(form.dailyPrice) : null,
         yearlyPrice: form.yearlyPrice ? parseFloat(form.yearlyPrice) : null,
         invoiceLimit: parseInt(form.invoiceLimit) || 100,
         customerLimit: parseInt(form.customerLimit) || 500,
@@ -139,6 +141,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
               className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none" />
           </div>
           {inp('Monthly Price (₹)', 'price', 'number', '999')}
+          {inp('Daily Price (₹)', 'dailyPrice', 'number', '10')}
           {inp('Yearly Price (₹)', 'yearlyPrice', 'number', '9999')}
           {inp('Invoice Limit/mo', 'invoiceLimit', 'number', '500')}
           {inp('Customer Limit', 'customerLimit', 'number', '1000')}
