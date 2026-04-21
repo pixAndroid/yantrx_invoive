@@ -76,7 +76,7 @@ export default function TermsPage() {
               </p>
               <ul>
                 <li>All prices are in Indian Rupees (INR) and inclusive of applicable GST</li>
-                <li>Subscriptions auto-renew unless cancelled before the renewal date</li>
+                <li>Subscriptions do not auto-renew; you must manually renew your plan before the expiry date to continue using premium features</li>
                 <li>You may cancel your subscription at any time; cancellation takes effect at the end of the billing period</li>
                 <li>We reserve the right to change pricing with 30 days notice</li>
               </ul>

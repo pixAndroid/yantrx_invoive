@@ -127,7 +127,7 @@ async function main() {
   const existingSub = await prisma.subscription.findFirst({ where: { businessId: demoBiz.id } });
   if (!existingSub) {
     await prisma.subscription.create({
-      data: { businessId: demoBiz.id, planId: proPlan.id, status: 'ACTIVE', startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), amount: proPlan.price, autoRenew: true },
+      data: { businessId: demoBiz.id, planId: proPlan.id, status: 'ACTIVE', startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), amount: proPlan.price },
     });
   }
 

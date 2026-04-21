@@ -282,7 +282,7 @@ model Subscription {
   razorpayOrderId String?
   amount         Float
   currency       String             @default("INR")
-  autoRenew      Boolean            @default(true)
+
   cancelledAt    DateTime?
   cancelReason   String?
   metadata       Json               @default("{}")

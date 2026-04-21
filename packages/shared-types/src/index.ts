@@ -186,7 +186,6 @@ export interface Subscription {
   razorpaySubId: string | null;
   amount: number;
   currency: string;
-  autoRenew: boolean;
   cancelledAt: Date | null;
   createdAt: Date;
   plan?: Plan;
