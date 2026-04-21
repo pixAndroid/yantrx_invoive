@@ -143,7 +143,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
           {inp('Monthly Price (₹)', 'price', 'number', '999')}
           {inp('Daily Price (₹)', 'dailyPrice', 'number', '10')}
           {inp('Yearly Price (₹)', 'yearlyPrice', 'number', '9999')}
-          {inp('Invoice Limit/mo', 'invoiceLimit', 'number', '500')}
+          {inp('Invoice Limit', 'invoiceLimit', 'number', '500')}
           {inp('Customer Limit', 'customerLimit', 'number', '1000')}
           {inp('User Limit', 'userLimit', 'number', '5')}
           {inp('Storage (MB)', 'storageLimit', 'number', '2048')}

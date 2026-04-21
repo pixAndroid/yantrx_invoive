@@ -9,12 +9,13 @@ router.use(authenticate);
 /** Returns endDate and amount to charge based on plan billing period (daily / yearly / monthly). */
 function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
   const now = new Date();
-  if (plan.slug === 'daily') {
+  const slug = plan.slug.toLowerCase();
+  if (slug === 'daily') {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 1);
     return { endDate, amount: plan.dailyPrice ?? plan.price };
   }
-  if (plan.slug === 'yearly') {
+  if (slug === 'yearly') {
     const endDate = new Date(now);
     endDate.setFullYear(endDate.getFullYear() + 1);
     return { endDate, amount: plan.yearlyPrice ?? plan.price };

@@ -15,6 +15,12 @@ const DEFAULT_PLANS = [
     sortOrder: 0, isFeatured: false,
   },
   {
+    name: 'Daily', slug: 'daily', description: 'Try out Yantrix for a day',
+    price: 0, dailyPrice: 10, invoiceLimit: 2, customerLimit: 2, productLimit: 5, userLimit: 1, storageLimit: 50,
+    features: ['2 invoices/day', '2 customers', '1 team member', 'Invoicing', 'Payments', 'Customers'],
+    sortOrder: -1, isFeatured: false,
+  },
+  {
     name: 'Starter', slug: 'starter', description: 'For growing businesses',
     price: 149, yearlyPrice: 1490, invoiceLimit: 100, customerLimit: 200, productLimit: 100, userLimit: 2, storageLimit: 500,
     features: ['100 invoices/month', '200 customers', '2 team members', 'GST reports', 'Email invoices', 'Payment tracking'],
@@ -32,26 +38,34 @@ const DEFAULT_PLANS = [
     features: ['Unlimited invoices', 'Unlimited customers', '20 team members', 'Full GST suite', 'API access', 'Dedicated manager'],
     sortOrder: 3, isFeatured: false,
   },
+  {
+    name: 'Yearly', slug: 'yearly', description: 'Annual plan — pay once, save more',
+    price: 0, yearlyPrice: 999, invoiceLimit: 500, customerLimit: 500, productLimit: 200, userLimit: 2, storageLimit: 1000,
+    features: ['500 invoices/year', '500 customers', '2 team members', 'Invoicing', 'Payments', 'Customers', 'Products & Services', 'GST reports', 'Email invoices'],
+    sortOrder: 5, isFeatured: false,
+  },
 ];
 
 async function ensureDefaultPlans() {
   try {
-    const count = await prisma.plan.count();
-    if (count > 0) return;
-
-    console.log('⚡ No plans found — seeding default plans...');
-    await Promise.all(
-      DEFAULT_PLANS.map(plan =>
-        prisma.plan.upsert({
-          where: { slug: plan.slug },
-          update: {},
-          create: plan,
-        })
-      )
-    );
-    console.log('✅ Default plans seeded');
+    // Upsert each default plan individually so that plans added after the initial
+    // deployment (e.g. 'daily', 'yearly') are created even when other plans already exist.
+    for (const plan of DEFAULT_PLANS) {
+      await prisma.plan.upsert({
+        where: { slug: plan.slug },
+        update: {}, // never override admin-managed fields
+        create: plan,
+      }).catch((err: any) => {
+        // Ignore unique-constraint violations on the plan name — an admin-created plan
+        // with the same name but a different slug already exists; leave it untouched.
+        // Re-throw anything else so it surfaces in the outer catch.
+        const code: string | undefined = err?.code ?? err?.meta?.code;
+        if (code !== 'P2002') throw err;
+      });
+    }
+    console.log('✅ Default plans verified');
   } catch (error) {
-    console.error('⚠️  Failed to seed default plans:', error instanceof Error ? error.message : String(error));
+    console.error('⚠️  Failed to ensure default plans:', error instanceof Error ? error.message : String(error));
     // Non-fatal: the API can still serve requests; plans can be seeded manually via pnpm db:seed
   }
 }

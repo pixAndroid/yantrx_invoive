@@ -42,10 +42,11 @@ function loadRazorpayScript(): Promise<boolean> {
 
 /** Returns the display price and period label for a plan based on its billing type. */
 function getPlanDisplayPrice(plan: Plan): { amount: number; period: string; invoicePeriod: string } {
-  if (plan.slug === 'daily') {
+  const slug = plan.slug.toLowerCase();
+  if (slug === 'daily') {
     return { amount: plan.dailyPrice ?? plan.price, period: '/day', invoicePeriod: 'day' };
   }
-  if (plan.slug === 'yearly') {
+  if (slug === 'yearly') {
     return { amount: plan.yearlyPrice ?? plan.price, period: '/yr', invoicePeriod: 'year' };
   }
   return { amount: plan.price, period: '/mo', invoicePeriod: 'month' };
