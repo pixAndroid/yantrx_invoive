@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, FileText, CheckCircle, ArrowRight, ChevronRight } from 'lucide-react';
-import { apiFetch, API_URL, getAccessToken } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 
 interface BusinessSettings {
   id: string;
@@ -20,6 +20,8 @@ interface BusinessSettings {
   pincode: string | null;
   invoicePrefix: string;
 }
+
+export type { BusinessSettings };
 
 interface Props {
   settings: BusinessSettings;
@@ -58,21 +60,11 @@ export function BusinessProfileSetupModal({ settings, onComplete }: Props) {
     setSaving(true);
     setError('');
     try {
-      const token = getAccessToken();
-      const res = await fetch(`${API_URL}/business/${form.id}`, {
+      await apiFetch(`/business/${form.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (data.success) {
-        onComplete(form);
-      } else {
-        setError(data.error || 'Failed to save. Please try again.');
-      }
+      onComplete(form);
     } catch (err: any) {
       setError(err.message || 'Failed to save. Please try again.');
     } finally {

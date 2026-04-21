@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
-import { BusinessProfileSetupModal } from '@/components/ui/BusinessProfileSetupModal';
+import { BusinessProfileSetupModal, type BusinessSettings as BizSettings } from '@/components/ui/BusinessProfileSetupModal';
 
 const INVOICE_USAGE_WARNING_RATIO = 0.8;
 
@@ -65,7 +65,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[]; isExpired?: boolean; endDate?: string } | null>(null);
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
-  const [setupSettings, setSetupSettings] = useState<any | null>(null);
+  const [setupSettings, setSetupSettings] = useState<BizSettings | null>(null);
   const [setupRequired, setSetupRequired] = useState(false);
 
   useEffect(() => {
@@ -267,13 +267,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     window.location.href = '/auth/login';
   };
 
-  const handleSetupComplete = (updated: any) => {
+  const handleSetupComplete = (updated: BizSettings) => {
     setSetupRequired(false);
     setSetupSettings(null);
     if (updated?.name) setBusinessName(updated.name);
-    if (updated?.logo && typeof updated.logo === 'string' && isSafeImageUrl(updated.logo)) {
-      setBusinessLogo(updated.logo);
-    }
   };
 
   const displayName = userData.name || 'User';
