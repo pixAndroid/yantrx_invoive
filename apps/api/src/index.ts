@@ -55,9 +55,12 @@ async function ensureDefaultPlans() {
         where: { slug: plan.slug },
         update: {}, // never override admin-managed fields
         create: plan,
-      }).catch(() => {
-        // Silently ignore name-uniqueness conflicts — an admin-created plan with the
-        // same name but a different slug already exists; leave it untouched.
+      }).catch((err: any) => {
+        // Ignore unique-constraint violations on the plan name — an admin-created plan
+        // with the same name but a different slug already exists; leave it untouched.
+        // Re-throw anything else so it surfaces in the outer catch.
+        const code: string | undefined = err?.code ?? err?.meta?.code;
+        if (code !== 'P2002') throw err;
       });
     }
     console.log('✅ Default plans verified');
