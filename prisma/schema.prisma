@@ -248,6 +248,7 @@ model Plan {
   slug           String  @unique
   description    String?
   price          Float   @default(0)
+  dailyPrice     Float?
   yearlyPrice    Float?
   currency       String  @default("INR")
   invoiceLimit   Int     @default(5)
