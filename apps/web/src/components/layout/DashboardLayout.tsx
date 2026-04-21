@@ -28,13 +28,20 @@ const NAV_ITEMS = [
 ];
 
 // Keywords that must appear (case-insensitive) in plan.features to enable a nav item.
-// Items with no entry here are always enabled.
+// Items with no entry here are always enabled for active plans.
 // Multiple keywords per route use OR logic — the item is enabled if ANY keyword matches.
+// When a plan is expired the client falls back to the free-plan feature set, so routes
+// whose keywords are absent from the free plan (e.g. expense, inventory, hrm, crm)
+// become automatically locked.
 const NAV_FEATURE_REQUIREMENTS: Record<string, string[]> = {
   '/customers': ['customer'],
   '/products': ['product'],
   '/reports': ['report', 'gst'],
   '/payments': ['payment'],
+  '/expenses': ['expense'],
+  '/inventory': ['inventory'],
+  '/hrm': ['hrm'],
+  '/crm': ['crm'],
 };
 
 const SETTINGS_ITEMS = [
@@ -80,7 +87,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .catch(() => {});
 
     apiFetch('/subscriptions')
-      .then((res: any) => {
+      .then(async (res: any) => {
         const subs = res.data || [];
         const activeSub = subs.find((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL');
         const expiredSub = !activeSub ? subs.find((s: any) => s.status === 'EXPIRED') : null;
@@ -88,17 +95,53 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         if (sub) {
           const isExpired = sub.status === 'EXPIRED';
           if (isExpired) {
-            // For expired subs, show plan name but no active features
-            setPlanInfo({
-              name: sub.plan?.name || 'Unknown',
-              invoicesUsed: 0,
-              invoiceLimit: 0,
-              customersUsed: 0,
-              customerLimit: 0,
-              features: [],
-              isExpired: true,
-              endDate: sub.endDate,
-            });
+            // Fetch the free/lowest-tier plan to determine fallback features and limits
+            let freePlanFeatures: string[] = [];
+            let freePlanInvoiceLimit = 5;
+            let freePlanCustomerLimit = 10;
+            try {
+              const plansRes: any = await apiFetch('/plans');
+              const plans: any[] = plansRes.data || [];
+              // Prefer the plan explicitly slugged 'free'; fall back to cheapest plan
+              const freePlan =
+                plans.find((p: any) => p.slug === 'free') ||
+                plans.find((p: any) => p.price === 0) ||
+                plans.slice().sort((a: any, b: any) => a.price - b.price)[0];
+              if (freePlan) {
+                freePlanFeatures = freePlan.features || [];
+                freePlanInvoiceLimit = freePlan.invoiceLimit || 5;
+                freePlanCustomerLimit = freePlan.customerLimit || 10;
+              }
+            } catch (err) {
+              console.error('Failed to fetch plans for expired-plan fallback:', err);
+            }
+
+            // Fetch usage stats so the sidebar widget shows real counts
+            apiFetch('/business/stats')
+              .then((statsRes: any) => {
+                setPlanInfo({
+                  name: sub.plan?.name || 'Unknown',
+                  invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
+                  invoiceLimit: freePlanInvoiceLimit,
+                  customersUsed: statsRes?.data?.activeCustomers ?? 0,
+                  customerLimit: freePlanCustomerLimit,
+                  features: freePlanFeatures,
+                  isExpired: true,
+                  endDate: sub.endDate,
+                });
+              })
+              .catch(() => {
+                setPlanInfo({
+                  name: sub.plan?.name || 'Unknown',
+                  invoicesUsed: 0,
+                  invoiceLimit: freePlanInvoiceLimit,
+                  customersUsed: 0,
+                  customerLimit: freePlanCustomerLimit,
+                  features: freePlanFeatures,
+                  isExpired: true,
+                  endDate: sub.endDate,
+                });
+              });
           } else {
             // Fetch this month's invoice count from business stats
             apiFetch('/business/stats')
@@ -137,9 +180,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isNavEnabled = (href: string): boolean => {
     const requiredKeywords = NAV_FEATURE_REQUIREMENTS[href];
     if (!requiredKeywords) return true; // No requirement — always accessible
-    // All feature-gated items are locked when plan is expired
-    if (planInfo?.isExpired) return false;
     if (!planInfo) return true; // Still loading — show as enabled to avoid flicker
+    // When expired, planInfo.features contains free-plan features, so routes whose
+    // keywords are absent from the free plan will be naturally locked here.
     return requiredKeywords.some(keyword =>
       planInfo.features.some(f => f.toLowerCase().includes(keyword.toLowerCase()))
     );
@@ -242,15 +285,40 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* User section */}
       <div className="border-t border-gray-100 p-4">
-        {planInfo && (
-          <div className={`mb-3 rounded-lg p-3 border ${planInfo.isExpired ? 'bg-red-50 border-red-300' : planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+        {planInfo && (() => {
+          const invoiceLimitReached = planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit;
+          const invoiceBarColor = invoiceLimitReached ? 'bg-red-500' : planInfo.isExpired ? 'bg-orange-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= INVOICE_USAGE_WARNING_RATIO ? 'bg-amber-500' : 'bg-indigo-500';
+          const invoiceTextColor = invoiceLimitReached ? 'text-red-600' : planInfo.isExpired ? 'text-orange-600' : 'text-indigo-600';
+          return (
+          <div className={`mb-3 rounded-lg p-3 border ${planInfo.isExpired ? 'bg-red-50 border-red-300' : invoiceLimitReached ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
             <p className="text-xs font-semibold text-gray-800">{planInfo.name} Plan</p>
             {planInfo.isExpired ? (
               <>
-                <p className="text-xs text-red-600 font-medium mt-1">Plan expired — features disabled</p>
+                <p className="text-xs text-red-600 font-medium mt-1">Plan expired — free tier active</p>
                 {planInfo.endDate && (
                   <p className="text-xs text-red-500 mt-0.5">
                     Expired on {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                )}
+                {planInfo.invoiceLimit > 0 && (
+                  <>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
+                      <p className={`text-xs font-semibold ${invoiceTextColor}`}>
+                        {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
+                      </p>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${invoiceBarColor}`}
+                        style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+                {planInfo.customerLimit > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {planInfo.customersUsed}/{planInfo.customerLimit} customers
                   </p>
                 )}
               </>
@@ -258,13 +326,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <>
                 <div className="flex items-center justify-between mt-1.5">
                   <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
-                  <p className={`text-xs font-semibold ${planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'text-red-600' : 'text-indigo-600'}`}>
+                  <p className={`text-xs font-semibold ${invoiceTextColor}`}>
                     {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
                   </p>
                 </div>
                 <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${planInfo.invoicesUsed >= planInfo.invoiceLimit ? 'bg-red-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= INVOICE_USAGE_WARNING_RATIO ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                    className={`h-full rounded-full transition-all ${invoiceBarColor}`}
                     style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
                   />
                 </div>
@@ -287,7 +355,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {planInfo.isExpired ? 'Renew Plan' : 'Upgrade'}
             </Link>
           </div>
-        )}
+          );
+        })()}
         <div className="flex items-center gap-2 mb-3 px-1">
           <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold">{initials}</span>
