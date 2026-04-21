@@ -402,39 +402,48 @@ export default function AdminPlansPage() {
                     </button>
                   </div>
 
-                  <div className="flex items-baseline gap-1 mt-3">
-                    {editingId === plan.id ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400">₹</span>
-                        <input
-                          type="number"
-                          value={editPrice}
-                          onChange={e => setEditPrice(e.target.value)}
-                          className="w-24 rounded-lg border border-gray-600 bg-gray-800 px-2 py-1 text-lg font-bold text-white focus:border-orange-500 focus:outline-none"
-                          autoFocus
-                        />
-                        <button onClick={() => savePrice(plan.id)} disabled={saving} className="text-green-400 hover:text-green-300">
-                          <Check className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-gray-300">
-                          <X className="h-4 w-4" />
-                        </button>
+                  {(() => {
+                    const displayPrice = plan.slug === 'daily'
+                      ? { amount: plan.dailyPrice ?? plan.price, unit: '/day' }
+                      : plan.slug === 'yearly'
+                      ? { amount: plan.yearlyPrice ?? plan.price, unit: '/yr' }
+                      : { amount: plan.price, unit: '/mo' };
+                    return (
+                      <div className="flex items-baseline gap-1 mt-3">
+                        {editingId === plan.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400">₹</span>
+                            <input
+                              type="number"
+                              value={editPrice}
+                              onChange={e => setEditPrice(e.target.value)}
+                              className="w-24 rounded-lg border border-gray-600 bg-gray-800 px-2 py-1 text-lg font-bold text-white focus:border-orange-500 focus:outline-none"
+                              autoFocus
+                            />
+                            <button onClick={() => savePrice(plan.id)} disabled={saving} className="text-green-400 hover:text-green-300">
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-gray-300">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-2xl font-bold text-white">
+                              {(displayPrice.amount ?? 0) === 0 ? 'Free' : `₹${displayPrice.amount}`}
+                            </span>
+                            {(displayPrice.amount ?? 0) > 0 && <span className="text-xs text-gray-500">{displayPrice.unit}</span>}
+                            <button
+                              onClick={() => { setEditingId(plan.id); setEditPrice(String(plan.price)); }}
+                              className="ml-1 text-gray-600 hover:text-gray-400"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
-                    ) : (
-                      <>
-                        <span className="text-2xl font-bold text-white">
-                          {plan.price === 0 ? 'Free' : `₹${plan.price}`}
-                        </span>
-                        {plan.price > 0 && <span className="text-xs text-gray-500">/mo</span>}
-                        <button
-                          onClick={() => { setEditingId(plan.id); setEditPrice(String(plan.price)); }}
-                          className="ml-1 text-gray-600 hover:text-gray-400"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="p-4">
