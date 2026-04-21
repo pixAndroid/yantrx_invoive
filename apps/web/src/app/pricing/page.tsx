@@ -46,7 +46,7 @@ function getPlanDisplayPrice(plan: Plan): { amount: number; period: string; invo
   if (slug === 'daily') {
     return { amount: plan.dailyPrice ?? plan.price, period: '/day', invoicePeriod: 'day' };
   }
-  if (slug === 'yearly') {
+  if (slug === 'yearly' || slug === 'yealty') {
     return { amount: plan.yearlyPrice ?? plan.price, period: '/yr', invoicePeriod: 'year' };
   }
   return { amount: plan.price, period: '/mo', invoicePeriod: 'month' };
