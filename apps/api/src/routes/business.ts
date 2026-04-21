@@ -53,7 +53,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: Next
     // Use the active subscription's startDate as the billing-period start so that
     // upgrading a plan resets the invoice count immediately.
     const activeSub = await prisma.subscription.findFirst({
-      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] } },
+      where: { businessId, status: { in: ['ACTIVE', 'TRIAL'] }, endDate: { gte: now } },
       orderBy: { startDate: 'desc' },
     });
     const invoiceCountFrom = activeSub?.startDate ?? startOfMonth;

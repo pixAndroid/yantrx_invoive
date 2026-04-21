@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CreditCard, CheckCircle, ArrowRight, AlertCircle, Loader2, X, TrendingUp } from 'lucide-react';
+import { CreditCard, CheckCircle, ArrowRight, AlertCircle, Loader2, X, TrendingUp, History, Clock } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface Plan {
@@ -22,7 +22,9 @@ interface Subscription {
   status: string;
   startDate: string;
   endDate: string;
+  amount: number;
   plan: Plan;
+  createdAt?: string;
 }
 
 interface UsageStats {
@@ -50,11 +52,13 @@ function loadRazorpayScript(): Promise<boolean> {
 export default function BillingPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<Subscription | null>(null);
+  const [allSubs, setAllSubs] = useState<Subscription[]>([]);
   const [usage, setUsage] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -63,7 +67,12 @@ export default function BillingPage() {
       apiFetch<{ data: UsageStats }>('/business/stats').catch(() => ({ data: null as any })),
     ]).then(([plansRes, subsRes, statsRes]) => {
       setPlans(plansRes.data || []);
-      const activeSub = (subsRes.data || []).find(s => s.status === 'ACTIVE' || s.status === 'TRIAL') || null;
+      const subs = subsRes.data || [];
+      setAllSubs(subs);
+      // Prefer active/trial; fall back to most recent expired sub so we can show the expired banner
+      const activeSub = subs.find(s => s.status === 'ACTIVE' || s.status === 'TRIAL')
+        || subs.find(s => s.status === 'EXPIRED')
+        || null;
       setCurrentSub(activeSub);
       setUsage(statsRes.data || null);
     }).finally(() => setLoading(false));
@@ -145,11 +154,24 @@ export default function BillingPage() {
     business: 'border-purple-400',
   };
 
+  const isExpired = currentSub?.status === 'EXPIRED';
+  const isActive = currentSub?.status === 'ACTIVE' || currentSub?.status === 'TRIAL';
+
   const invoicesUsed = usage?.invoicesThisMonth ?? 0;
-  const invoiceLimit = currentSub?.plan.invoiceLimit ?? 0;
+  const invoiceLimit = isActive ? (currentSub?.plan.invoiceLimit ?? 0) : 0;
   const invoiceUsagePct = invoiceLimit > 0 ? Math.min(100, (invoicesUsed / invoiceLimit) * 100) : 0;
   const isOverLimit = invoiceLimit > 0 && invoicesUsed >= invoiceLimit;
   const isNearLimit = !isOverLimit && invoiceLimit > 0 && invoicesUsed / invoiceLimit >= 0.8;
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><CheckCircle className="h-3 w-3" />Active</span>;
+      case 'TRIAL': return <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full"><Clock className="h-3 w-3" />Trial</span>;
+      case 'EXPIRED': return <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-full"><AlertCircle className="h-3 w-3" />Expired</span>;
+      case 'CANCELLED': return <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full"><X className="h-3 w-3" />Cancelled</span>;
+      default: return <span className="text-xs text-gray-500">{status}</span>;
+    }
+  };
 
   return (
     <div className="p-6 lg:p-8 max-w-4xl">
@@ -164,27 +186,46 @@ export default function BillingPage() {
         </div>
       )}
 
+      {/* Expired plan banner */}
+      {isExpired && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-300 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Your plan has expired</p>
+            <p className="mt-0.5">Premium features are disabled. Please renew or upgrade your plan to continue creating invoices and using premium features.</p>
+          </div>
+        </div>
+      )}
+
       {currentSub && (
-        <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+        <div className={`mb-6 rounded-2xl border p-5 ${isExpired ? 'border-red-200 bg-red-50' : 'border-indigo-200 bg-indigo-50'}`}>
           <div className="flex items-start justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-indigo-700">Current Plan</p>
-              <p className="text-xl font-bold text-indigo-900 mt-1">{currentSub.plan.name}</p>
-              <p className="text-sm text-indigo-600 mt-1">
-                {currentSub.status === 'ACTIVE' ? (
-                  <><CheckCircle className="inline h-3.5 w-3.5 mr-1" />Active · Renews {new Date(currentSub.endDate).toLocaleDateString('en-IN')}</>
+              <p className={`text-sm font-medium ${isExpired ? 'text-red-700' : 'text-indigo-700'}`}>Current Plan</p>
+              <p className={`text-xl font-bold mt-1 ${isExpired ? 'text-red-900' : 'text-indigo-900'}`}>{currentSub.plan.name}</p>
+              <div className="mt-1">
+                {isActive ? (
+                  <p className="text-sm text-indigo-600">
+                    <CheckCircle className="inline h-3.5 w-3.5 mr-1" />Active · Renews {new Date(currentSub.endDate).toLocaleDateString('en-IN')}
+                  </p>
+                ) : isExpired ? (
+                  <p className="text-sm text-red-600">
+                    <AlertCircle className="inline h-3.5 w-3.5 mr-1" />Expired on {new Date(currentSub.endDate).toLocaleDateString('en-IN')}
+                  </p>
                 ) : (
-                  <><AlertCircle className="inline h-3.5 w-3.5 mr-1" />{currentSub.status}</>
+                  <p className="text-sm text-gray-500">
+                    <AlertCircle className="inline h-3.5 w-3.5 mr-1" />{currentSub.status}
+                  </p>
                 )}
-              </p>
+              </div>
             </div>
-            <span className="text-2xl font-bold text-indigo-900">
+            <span className={`text-2xl font-bold ${isExpired ? 'text-red-900' : 'text-indigo-900'}`}>
               {currentSub.plan.price === 0 ? 'Free' : `₹${currentSub.plan.price}/mo`}
             </span>
           </div>
 
-          {/* Usage meters */}
-          {invoiceLimit > 0 && usage !== null && (
+          {/* Usage meters — only shown for active subscriptions */}
+          {isActive && invoiceLimit > 0 && usage !== null && (
             <div className="mt-2 space-y-2">
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -229,7 +270,7 @@ export default function BillingPage() {
           <h2 className="text-base font-semibold text-gray-900 mb-4">Available Plans</h2>
           <div className="grid md:grid-cols-3 gap-4">
             {plans.filter(p => p.slug !== 'free').map(plan => {
-              const isCurrent = currentSub?.plan.id === plan.id;
+              const isCurrent = isActive && currentSub?.plan.id === plan.id;
               const isUpgrading = upgrading === plan.id;
               return (
                 <div key={plan.id} className={`rounded-2xl border-2 bg-white p-6 ${planColors[plan.slug] || 'border-gray-200'} ${plan.isFeatured ? 'shadow-lg' : 'shadow-sm'}`}>
@@ -264,6 +305,8 @@ export default function BillingPage() {
                     className={`w-full rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 ${
                       isCurrent
                         ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : isExpired && currentSub?.plan.id === plan.id
+                        ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60'
                     }`}
                   >
@@ -271,6 +314,8 @@ export default function BillingPage() {
                       <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
                     ) : isCurrent ? (
                       'Current Plan'
+                    ) : isExpired && currentSub?.plan.id === plan.id ? (
+                      <>Renew <ArrowRight className="h-4 w-4" /></>
                     ) : (
                       <>Upgrade <ArrowRight className="h-4 w-4" /></>
                     )}
@@ -285,6 +330,49 @@ export default function BillingPage() {
             </Link>
           </div>
         </>
+      )}
+
+      {/* Subscription History */}
+      {allSubs.length > 0 && (
+        <div className="mt-8">
+          <button
+            onClick={() => setShowHistory(h => !h)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900 mb-3"
+          >
+            <History className="h-4 w-4" />
+            Subscription History
+            <span className="ml-1 text-xs font-normal text-gray-400">({allSubs.length} record{allSubs.length !== 1 ? 's' : ''})</span>
+            <ArrowRight className={`h-3.5 w-3.5 text-gray-400 transition-transform ${showHistory ? 'rotate-90' : ''}`} />
+          </button>
+          {showHistory && (
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Start</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">End</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {allSubs.map(sub => (
+                    <tr key={sub.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{sub.plan.name}</td>
+                      <td className="px-4 py-3">{statusBadge(sub.status)}</td>
+                      <td className="px-4 py-3 text-gray-500">{new Date(sub.startDate).toLocaleDateString('en-IN')}</td>
+                      <td className="px-4 py-3 text-gray-500">{new Date(sub.endDate).toLocaleDateString('en-IN')}</td>
+                      <td className="px-4 py-3 text-right text-gray-700 font-medium">
+                        {sub.amount > 0 ? `₹${sub.amount}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Plan Confirmation Modal */}
