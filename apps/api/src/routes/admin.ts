@@ -333,6 +333,39 @@ router.post('/subscriptions/:id/assign-plan', async (req: AuthenticatedRequest, 
   } catch (error) { next(error); }
 });
 
+router.put('/subscriptions/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { startDate, endDate } = req.body;
+    if (!startDate && !endDate) {
+      res.status(400).json({ success: false, error: 'startDate or endDate required' });
+      return;
+    }
+    const existing = await prisma.subscription.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: 'Subscription not found' }); return; }
+
+    const updateData: any = {};
+    if (startDate) updateData.startDate = new Date(startDate);
+    if (endDate) {
+      updateData.endDate = new Date(endDate);
+      // Automatically re-activate if the new endDate is in the future and sub was expired
+      if (new Date(endDate) > new Date() && existing.status === 'EXPIRED') {
+        updateData.status = 'ACTIVE';
+      }
+      // Mark as expired if new endDate is now in the past
+      if (new Date(endDate) <= new Date() && (existing.status === 'ACTIVE' || existing.status === 'TRIAL')) {
+        updateData.status = 'EXPIRED';
+      }
+    }
+
+    const sub = await prisma.subscription.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: { plan: true, business: { select: { id: true, name: true } } },
+    });
+    res.json({ success: true, data: sub });
+  } catch (error) { next(error); }
+});
+
 // ─── Invoice Templates ─────────────────────────────────────────────────────
 
 router.get('/invoice-templates', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
