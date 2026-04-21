@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CreditCard, AlertCircle, RefreshCw, CheckCircle, XCircle, Clock, UserCheck, X, Check, Search, Filter } from 'lucide-react';
+import { CreditCard, AlertCircle, RefreshCw, CheckCircle, XCircle, Clock, UserCheck, X, Check, Search, Filter, CalendarDays } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Subscription {
@@ -39,6 +39,31 @@ const STATUS_CONFIG: Record<string, { label: string; class: string; icon: typeof
   TRIAL: { label: 'Trial', class: 'bg-blue-900/30 text-blue-400 border-blue-800', icon: Clock },
 };
 
+/** Compute effective status: if DB still says ACTIVE/TRIAL but endDate is past → EXPIRED */
+function getEffectiveStatus(sub: Subscription): string {
+  if ((sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) < new Date()) {
+    return 'EXPIRED';
+  }
+  return sub.status;
+}
+
+/** Return { pct, daysLeft } for a subscription period. pct = 0–100 elapsed. */
+function getPeriodProgress(sub: Subscription): { pct: number; daysLeft: number } {
+  const start = new Date(sub.startDate).getTime();
+  const end = new Date(sub.endDate).getTime();
+  const now = Date.now();
+  const daysLeft = Math.max(0, Math.ceil((end - now) / 86_400_000));
+  const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+  return { pct, daysLeft };
+}
+
+/** Convert a Date string to the value expected by <input type="datetime-local"> */
+function toDatetimeLocal(dateStr: string): string {
+  const d = new Date(dateStr);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function AdminSubscriptionsPage() {
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -50,9 +75,18 @@ export default function AdminSubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [plans, setPlans] = useState<Plan[]>([]);
+
+  // Assign-plan modal
   const [assignModal, setAssignModal] = useState<Subscription | null>(null);
   const [selectedPlan, setSelectedPlan] = useState('');
   const [assigning, setAssigning] = useState(false);
+
+  // Edit-dates modal
+  const [editModal, setEditModal] = useState<Subscription | null>(null);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const fetchSubs = useCallback(async () => {
     setLoading(true);
@@ -96,6 +130,38 @@ export default function AdminSubscriptionsPage() {
     } catch {} finally { setAssigning(false); }
   };
 
+  const openEditModal = (sub: Subscription) => {
+    setEditModal(sub);
+    setEditStartDate(toDatetimeLocal(sub.startDate));
+    setEditEndDate(toDatetimeLocal(sub.endDate));
+    setSaveError('');
+  };
+
+  const handleSaveDates = async () => {
+    if (!editModal) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      const token = getAdminToken();
+      const res = await fetch(`${API_URL}/admin/subscriptions/${editModal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          startDate: new Date(editStartDate).toISOString(),
+          endDate: new Date(editEndDate).toISOString(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update dates');
+      setEditModal(null);
+      fetchSubs();
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to update dates');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const planColorMap: Record<string, string> = {
     Free: 'bg-gray-800 text-gray-400 border-gray-700',
     Starter: 'bg-blue-900/50 text-blue-400 border-blue-800',
@@ -105,6 +171,7 @@ export default function AdminSubscriptionsPage() {
 
   return (
     <div className="p-6">
+      {/* ── Assign Plan Modal ── */}
       {assignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setAssignModal(null)} />
@@ -133,6 +200,52 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Edit Dates Modal ── */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setEditModal(null)} />
+          <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-5 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">Edit Subscription Dates</h3>
+              <button onClick={() => setEditModal(null)}><X className="h-4 w-4 text-gray-400" /></button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">Business: <span className="text-gray-200">{editModal.business.name}</span></p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Start Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  value={editStartDate}
+                  onChange={e => setEditStartDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Expiry Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  value={editEndDate}
+                  onChange={e => setEditEndDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+            </div>
+            {saveError && (
+              <p className="mt-2 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{saveError}</p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setEditModal(null)} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400">Cancel</button>
+              <button onClick={handleSaveDates} disabled={saving || !editStartDate || !editEndDate}
+                className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                {saving ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Subscriptions</h1>
@@ -201,27 +314,38 @@ export default function AdminSubscriptionsPage() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Start Date</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">End Date</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Time Left</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}><td colSpan={7} className="px-4 py-4"><div className="h-8 bg-gray-800 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={8} className="px-4 py-4"><div className="h-8 bg-gray-800 rounded animate-pulse" /></td></tr>
               ))
             ) : subs.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center">
+                <td colSpan={8} className="px-4 py-12 text-center">
                   <CreditCard className="h-12 w-12 text-gray-700 mx-auto mb-3" />
                   <p className="text-gray-500">No subscriptions found</p>
                 </td>
               </tr>
             ) : subs.map(sub => {
-              const effectiveStatus =
-                (sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) < new Date()
-                  ? 'EXPIRED'
-                  : sub.status;
+              const effectiveStatus = getEffectiveStatus(sub);
               const statusConfig = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.ACTIVE;
+              const { pct, daysLeft } = getPeriodProgress(sub);
+              const isActiveOrTrial = effectiveStatus === 'ACTIVE' || effectiveStatus === 'TRIAL';
+
+              // Progress bar color based on time remaining
+              let barColor = 'bg-green-500';
+              if (!isActiveOrTrial) {
+                barColor = 'bg-gray-600';
+              } else if (daysLeft <= 3) {
+                barColor = 'bg-red-500';
+              } else if (daysLeft <= 7) {
+                barColor = 'bg-amber-500';
+              }
+
               return (
                 <tr key={sub.id} className="hover:bg-gray-800/30 transition-colors">
                   <td className="px-4 py-4">
@@ -252,11 +376,38 @@ export default function AdminSubscriptionsPage() {
                   <td className="px-4 py-4 text-sm text-gray-500">
                     {new Date(sub.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
+                  {/* Time-left progress bar */}
+                  <td className="px-4 py-4 min-w-[120px]">
+                    {isActiveOrTrial ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-medium ${daysLeft <= 3 ? 'text-red-400' : daysLeft <= 7 ? 'text-amber-400' : 'text-green-400'}`}>
+                            {daysLeft}d left
+                          </span>
+                          <span className="text-xs text-gray-600">{Math.round(pct)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-gray-700 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${barColor}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-4">
-                    <button onClick={() => { setAssignModal(sub); setSelectedPlan(sub.plan.id); }}
-                      className="inline-flex items-center gap-1 text-xs rounded-lg border border-orange-800 bg-orange-900/20 px-2 py-1 text-orange-400 hover:bg-orange-900/40">
-                      <UserCheck className="h-3 w-3" /> Assign Plan
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => { setAssignModal(sub); setSelectedPlan(sub.plan.id); }}
+                        className="inline-flex items-center gap-1 text-xs rounded-lg border border-orange-800 bg-orange-900/20 px-2 py-1 text-orange-400 hover:bg-orange-900/40">
+                        <UserCheck className="h-3 w-3" /> Assign Plan
+                      </button>
+                      <button onClick={() => openEditModal(sub)}
+                        className="inline-flex items-center gap-1 text-xs rounded-lg border border-gray-700 bg-gray-800 px-2 py-1 text-gray-300 hover:bg-gray-700">
+                        <CalendarDays className="h-3 w-3" /> Edit Dates
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

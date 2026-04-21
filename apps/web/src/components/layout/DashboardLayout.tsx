@@ -89,32 +89,54 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     apiFetch('/subscriptions')
       .then(async (res: any) => {
         const subs = res.data || [];
-        const activeSub = subs.find((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL');
-        const expiredSub = !activeSub ? subs.find((s: any) => s.status === 'EXPIRED') : null;
-        const sub = activeSub || expiredSub;
+
+        // Helper to fetch free-plan limits/features (used for expired subs and no-sub fallback)
+        const fetchFreePlanInfo = async (): Promise<{ features: string[]; invoiceLimit: number; customerLimit: number }> => {
+          try {
+            const plansRes: any = await apiFetch('/plans');
+            const plans: any[] = plansRes.data || [];
+            const freePlan =
+              plans.find((p: any) => p.slug === 'free') ||
+              plans.find((p: any) => p.price === 0) ||
+              plans.slice().sort((a: any, b: any) => a.price - b.price)[0];
+            if (freePlan) {
+              return {
+                features: freePlan.features || [],
+                invoiceLimit: freePlan.invoiceLimit || 5,
+                customerLimit: freePlan.customerLimit || 10,
+              };
+            }
+          } catch (err) {
+            console.error('Failed to fetch plans for free-plan fallback:', err);
+          }
+          return { features: [], invoiceLimit: 5, customerLimit: 10 };
+        };
+
+        // Client-side expiry check: treat ACTIVE/TRIAL sub as expired if endDate is in the past
+        const activeSub = subs.find(
+          (s: any) =>
+            (s.status === 'ACTIVE' || s.status === 'TRIAL') &&
+            new Date(s.endDate) > new Date()
+        );
+        const clientExpiredSub = !activeSub
+          ? subs.find(
+              (s: any) =>
+                s.status === 'EXPIRED' ||
+                ((s.status === 'ACTIVE' || s.status === 'TRIAL') && new Date(s.endDate) <= new Date())
+            )
+          : null;
+        const sub = activeSub || clientExpiredSub;
+
         if (sub) {
-          const isExpired = sub.status === 'EXPIRED';
+          // Treat as expired if the subscription is EXPIRED in DB, or endDate is in the past
+          const isExpired =
+            sub.status === 'EXPIRED' ||
+            ((sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) <= new Date());
+
           if (isExpired) {
             // Fetch the free/lowest-tier plan to determine fallback features and limits
-            let freePlanFeatures: string[] = [];
-            let freePlanInvoiceLimit = 5;
-            let freePlanCustomerLimit = 10;
-            try {
-              const plansRes: any = await apiFetch('/plans');
-              const plans: any[] = plansRes.data || [];
-              // Prefer the plan explicitly slugged 'free'; fall back to cheapest plan
-              const freePlan =
-                plans.find((p: any) => p.slug === 'free') ||
-                plans.find((p: any) => p.price === 0) ||
-                plans.slice().sort((a: any, b: any) => a.price - b.price)[0];
-              if (freePlan) {
-                freePlanFeatures = freePlan.features || [];
-                freePlanInvoiceLimit = freePlan.invoiceLimit || 5;
-                freePlanCustomerLimit = freePlan.customerLimit || 10;
-              }
-            } catch (err) {
-              console.error('Failed to fetch plans for expired-plan fallback:', err);
-            }
+            const { features: freePlanFeatures, invoiceLimit: freePlanInvoiceLimit, customerLimit: freePlanCustomerLimit } =
+              await fetchFreePlanInfo();
 
             // Fetch usage stats so the sidebar widget shows real counts
             apiFetch('/business/stats')
@@ -143,7 +165,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 });
               });
           } else {
-            // Fetch this month's invoice count from business stats
+            // Active subscription — use the plan's own features (Free plan users are gated by their plan's features list)
             apiFetch('/business/stats')
               .then((statsRes: any) => {
                 setPlanInfo({
@@ -170,6 +192,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 });
               });
           }
+        } else {
+          // No subscription at all — fall back to free-plan feature restrictions
+          const { features: freePlanFeatures, invoiceLimit: freePlanInvoiceLimit, customerLimit: freePlanCustomerLimit } =
+            await fetchFreePlanInfo();
+          apiFetch('/business/stats')
+            .then((statsRes: any) => {
+              setPlanInfo({
+                name: 'Free',
+                invoicesUsed: statsRes?.data?.invoicesThisMonth ?? 0,
+                invoiceLimit: freePlanInvoiceLimit,
+                customersUsed: statsRes?.data?.activeCustomers ?? 0,
+                customerLimit: freePlanCustomerLimit,
+                features: freePlanFeatures,
+                isExpired: true,
+              });
+            })
+            .catch(() => {
+              setPlanInfo({
+                name: 'Free',
+                invoicesUsed: 0,
+                invoiceLimit: freePlanInvoiceLimit,
+                customersUsed: 0,
+                customerLimit: freePlanCustomerLimit,
+                features: freePlanFeatures,
+                isExpired: true,
+              });
+            });
         }
       })
       .catch(() => {});
