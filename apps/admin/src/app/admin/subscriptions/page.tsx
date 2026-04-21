@@ -39,9 +39,11 @@ const STATUS_CONFIG: Record<string, { label: string; class: string; icon: typeof
   TRIAL: { label: 'Trial', class: 'bg-blue-900/30 text-blue-400 border-blue-800', icon: Clock },
 };
 
+const MILLISECONDS_PER_DAY = 86_400_000;
+
 /** Compute effective status: if DB still says ACTIVE/TRIAL but endDate is past → EXPIRED */
 function getEffectiveStatus(sub: Subscription): string {
-  if ((sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) < new Date()) {
+  if ((sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) <= new Date()) {
     return 'EXPIRED';
   }
   return sub.status;
@@ -52,7 +54,7 @@ function getPeriodProgress(sub: Subscription): { pct: number; daysLeft: number }
   const start = new Date(sub.startDate).getTime();
   const end = new Date(sub.endDate).getTime();
   const now = Date.now();
-  const daysLeft = Math.max(0, Math.ceil((end - now) / 86_400_000));
+  const daysLeft = Math.max(0, Math.ceil((end - now) / MILLISECONDS_PER_DAY));
   const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
   return { pct, daysLeft };
 }
