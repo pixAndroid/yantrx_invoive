@@ -8,24 +8,21 @@ router.use(authenticate);
 
 /** Returns endDate and amount to charge based on plan billing period (daily / yearly / monthly). */
 function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
-  const now = Date.now();
+  const now = new Date();
   if (plan.slug === 'daily') {
-    return {
-      endDate: new Date(now + 1 * 24 * 60 * 60 * 1000),
-      amount: plan.dailyPrice ?? plan.price,
-    };
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 1);
+    return { endDate, amount: plan.dailyPrice ?? plan.price };
   }
   if (plan.slug === 'yearly') {
-    return {
-      endDate: new Date(now + 365 * 24 * 60 * 60 * 1000),
-      amount: plan.yearlyPrice ?? plan.price,
-    };
+    const endDate = new Date(now);
+    endDate.setFullYear(endDate.getFullYear() + 1);
+    return { endDate, amount: plan.yearlyPrice ?? plan.price };
   }
   // default: monthly
-  return {
-    endDate: new Date(now + 30 * 24 * 60 * 60 * 1000),
-    amount: plan.price,
-  };
+  const endDate = new Date(now);
+  endDate.setMonth(endDate.getMonth() + 1);
+  return { endDate, amount: plan.price };
 }
 
 router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
