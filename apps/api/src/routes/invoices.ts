@@ -8,6 +8,43 @@ import { calculateTax } from '@yantrix/billing';
 const router = Router();
 router.use(authenticate);
 
+// Invoice statuses for which stock has already been deducted
+const STOCK_DEDUCTED_STATUSES = ['SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID'];
+
+// Revert stock for all items on invoice cancellation using atomic increments in a single transaction
+async function revertInvoiceStock(
+  businessId: string,
+  invoiceNumber: string,
+  items: Array<{ productId: string | null; quantity: number }>,
+  createdById: string
+): Promise<void> {
+  const stockItems = items.filter(i => i.productId);
+  if (stockItems.length === 0) return;
+
+  const trackedItems = (await Promise.all(
+    stockItems.map(async item => {
+      const product = await prisma.product.findUnique({ where: { id: item.productId! }, select: { stockCount: true } });
+      return product?.stockCount !== null && product?.stockCount !== undefined ? { item, prevQty: product.stockCount } : null;
+    })
+  )).filter((x): x is { item: typeof stockItems[0]; prevQty: number } => x !== null);
+
+  if (trackedItems.length === 0) return;
+
+  await prisma.$transaction(
+    trackedItems.flatMap(({ item, prevQty }) => [
+      prisma.product.update({ where: { id: item.productId! }, data: { stockCount: { increment: item.quantity } } }),
+      prisma.stockMovement.create({
+        data: {
+          businessId, productId: item.productId!, type: 'RETURN',
+          quantity: item.quantity, previousQty: prevQty, newQty: prevQty + item.quantity,
+          reference: invoiceNumber, notes: `Cancelled invoice ${invoiceNumber}`,
+          createdById,
+        },
+      }),
+    ])
+  );
+}
+
 router.get('/templates', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const templates = await prisma.invoiceTemplate.findMany({
@@ -402,30 +439,8 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: Nex
     });
 
     // Revert stock if the invoice was already sent (stock was previously deducted)
-    const SENT_STATUSES = ['SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID'];
-    if (SENT_STATUSES.includes(existing.status)) {
-      for (const item of existing.items) {
-        if (!item.productId) continue;
-        const product = await prisma.product.findUnique({ where: { id: item.productId } });
-        if (!product || product.stockCount === null) continue;
-        const newQty = product.stockCount + item.quantity;
-        await prisma.$transaction([
-          prisma.product.update({ where: { id: item.productId }, data: { stockCount: newQty } }),
-          prisma.stockMovement.create({
-            data: {
-              businessId,
-              productId: item.productId,
-              type: 'RETURN',
-              quantity: item.quantity,
-              previousQty: product.stockCount,
-              newQty,
-              reference: existing.invoiceNumber,
-              notes: `Cancelled invoice ${existing.invoiceNumber}`,
-              createdById: req.user!.id,
-            },
-          }),
-        ]);
-      }
+    if (STOCK_DEDUCTED_STATUSES.includes(existing.status)) {
+      await revertInvoiceStock(businessId, existing.invoiceNumber, existing.items, req.user!.id);
     }
 
     res.json({ success: true, message: 'Invoice cancelled' });
@@ -447,28 +462,32 @@ router.post('/:id/send', async (req: AuthenticatedRequest, res: Response, next: 
       data: { status: 'SENT', sentAt: new Date() },
     });
 
-    // Deduct stock for items that have a linked product with stock tracking
-    for (const item of invoice.items) {
-      if (!item.productId) continue;
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
-      if (!product || product.stockCount === null) continue;
-      const newQty = product.stockCount - item.quantity;
-      await prisma.$transaction([
-        prisma.product.update({ where: { id: item.productId }, data: { stockCount: newQty } }),
-        prisma.stockMovement.create({
-          data: {
-            businessId,
-            productId: item.productId,
-            type: 'SALE',
-            quantity: item.quantity,
-            previousQty: product.stockCount,
-            newQty,
-            reference: invoice.invoiceNumber,
-            notes: `Invoice ${invoice.invoiceNumber}`,
-            createdById: req.user!.id,
-          },
-        }),
-      ]);
+    // Deduct stock for items that have a linked product with stock tracking.
+    // Uses atomic decrement to avoid race conditions; all movements in one transaction.
+    const stockItems = invoice.items.filter(i => i.productId);
+    if (stockItems.length > 0) {
+      const trackedItems = (await Promise.all(
+        stockItems.map(async item => {
+          const product = await prisma.product.findUnique({ where: { id: item.productId! }, select: { stockCount: true } });
+          return product?.stockCount !== null && product?.stockCount !== undefined ? { item, prevQty: product.stockCount } : null;
+        })
+      )).filter((x): x is { item: typeof stockItems[0]; prevQty: number } => x !== null);
+
+      if (trackedItems.length > 0) {
+        await prisma.$transaction(
+          trackedItems.flatMap(({ item, prevQty }) => [
+            prisma.product.update({ where: { id: item.productId! }, data: { stockCount: { decrement: item.quantity } } }),
+            prisma.stockMovement.create({
+              data: {
+                businessId, productId: item.productId!, type: 'SALE',
+                quantity: item.quantity, previousQty: prevQty, newQty: prevQty - item.quantity,
+                reference: invoice.invoiceNumber, notes: `Invoice ${invoice.invoiceNumber}`,
+                createdById: req.user!.id,
+              },
+            }),
+          ])
+        );
+      }
     }
 
     res.json({ success: true, message: 'Invoice sent successfully', data: updated });
@@ -537,30 +556,8 @@ router.post('/:id/cancel', async (req: AuthenticatedRequest, res: Response, next
     });
 
     // Revert stock if the invoice was already sent (stock was previously deducted)
-    const SENT_STATUSES = ['SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID'];
-    if (SENT_STATUSES.includes(invoice.status)) {
-      for (const item of invoice.items) {
-        if (!item.productId) continue;
-        const product = await prisma.product.findUnique({ where: { id: item.productId } });
-        if (!product || product.stockCount === null) continue;
-        const newQty = product.stockCount + item.quantity;
-        await prisma.$transaction([
-          prisma.product.update({ where: { id: item.productId }, data: { stockCount: newQty } }),
-          prisma.stockMovement.create({
-            data: {
-              businessId,
-              productId: item.productId,
-              type: 'RETURN',
-              quantity: item.quantity,
-              previousQty: product.stockCount,
-              newQty,
-              reference: invoice.invoiceNumber,
-              notes: `Cancelled invoice ${invoice.invoiceNumber}`,
-              createdById: req.user!.id,
-            },
-          }),
-        ]);
-      }
+    if (STOCK_DEDUCTED_STATUSES.includes(invoice.status)) {
+      await revertInvoiceStock(businessId, invoice.invoiceNumber, invoice.items, req.user!.id);
     }
 
     res.json({ success: true, data: updated });

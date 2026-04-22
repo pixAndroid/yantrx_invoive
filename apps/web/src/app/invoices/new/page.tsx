@@ -275,13 +275,17 @@ export default function NewInvoicePage() {
   const handleDescriptionChange = useCallback((id: string, value: string) => {
     updateItem(id, 'description', value);
     // Clear previous timer for this item
-    if (descSearchTimers.current[id]) clearTimeout(descSearchTimers.current[id]);
+    if (descSearchTimers.current[id]) {
+      clearTimeout(descSearchTimers.current[id]);
+      delete descSearchTimers.current[id];
+    }
     if (!value.trim()) {
       setProductSuggestions(prev => { const next = { ...prev }; delete next[id]; return next; });
       setActiveSuggestionItem(null);
       return;
     }
     descSearchTimers.current[id] = setTimeout(async () => {
+      delete descSearchTimers.current[id];
       try {
         const res = await apiFetch<{ data: Product[] }>(`/products?search=${encodeURIComponent(value.trim())}&limit=8`);
         if (res.data && res.data.length > 0) {
