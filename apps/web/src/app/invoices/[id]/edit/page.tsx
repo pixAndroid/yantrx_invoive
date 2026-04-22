@@ -301,7 +301,7 @@ export default function EditInvoicePage() {
         <AddCustomerModal onClose={() => setShowAddCustomer(false)}
           onCreated={(c) => { setSelectedCustomer(c); setCustomerSearch(c.name); setShowAddCustomer(false); }} />
       )}
-      <div className="p-4 lg:p-8 max-w-6xl mx-auto">
+      <div className="p-4 lg:p-6 xl:p-8 w-full max-w-full">
         <div className="flex items-center gap-4 mb-6">
           <button onClick={() => router.back()} className="rounded-lg p-2 hover:bg-gray-100"><ArrowLeft className="h-5 w-5" /></button>
           <div>
