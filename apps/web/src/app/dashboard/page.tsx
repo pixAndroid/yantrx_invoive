@@ -243,10 +243,10 @@ export default function DashboardPage() {
                     className="w-full rounded-t-sm bg-indigo-100 relative overflow-hidden group cursor-pointer"
                     style={{ height: `${Math.max(4, (value / maxRevenue) * 140)}px` }}
                   >
-                    <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600" style={{ height: '100%' }} />
+                    <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600" style={{ height: '60%' }} />
                     {value > 0 && (
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white bg-indigo-700/80 rounded px-1">
+                        <span className="text-xs font-bold text-indigo-700 bg-white/80 rounded px-1">
                           {value >= 1000 ? `₹${(value / 1000).toFixed(1)}K` : `₹${Math.round(value)}`}
                         </span>
                       </div>
