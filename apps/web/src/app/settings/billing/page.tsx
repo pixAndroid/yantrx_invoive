@@ -188,12 +188,13 @@ export default function BillingPage() {
     }
   };
 
-  const planAccents: Record<string, { border: string; badge: string; btn: string; glow: string; text: string; bg: string }> = {
-    daily:    { border: 'border-amber-300',   badge: 'bg-amber-100 text-amber-700',   btn: 'bg-amber-500 hover:bg-amber-600',   glow: 'shadow-amber-100',   text: 'text-amber-600',   bg: 'bg-amber-50' },
-    starter:  { border: 'border-blue-300',    badge: 'bg-blue-100 text-blue-700',     btn: 'bg-blue-600 hover:bg-blue-700',     glow: 'shadow-blue-100',    text: 'text-blue-600',    bg: 'bg-blue-50' },
-    pro:      { border: 'border-indigo-500',  badge: 'bg-indigo-600 text-white',      btn: 'bg-indigo-600 hover:bg-indigo-700', glow: 'shadow-indigo-200',  text: 'text-indigo-600',  bg: 'bg-indigo-50' },
-    business: { border: 'border-purple-400',  badge: 'bg-purple-100 text-purple-700', btn: 'bg-purple-600 hover:bg-purple-700', glow: 'shadow-purple-100',  text: 'text-purple-600',  bg: 'bg-purple-50' },
-    yearly:   { border: 'border-teal-400',    badge: 'bg-teal-100 text-teal-700',     btn: 'bg-teal-600 hover:bg-teal-700',     glow: 'shadow-teal-100',    text: 'text-teal-600',    bg: 'bg-teal-50' },
+  const defaultAccent = { border: 'border-indigo-300', badge: 'bg-indigo-100 text-indigo-700', btn: 'bg-indigo-600 hover:bg-indigo-700', stripe: 'bg-indigo-500', glow: 'shadow-indigo-100', text: 'text-indigo-600', bg: 'bg-indigo-50' };
+  const planAccents: Record<string, { border: string; badge: string; btn: string; stripe: string; glow: string; text: string; bg: string }> = {
+    daily:    { border: 'border-amber-300',   badge: 'bg-amber-100 text-amber-700',   btn: 'bg-amber-500 hover:bg-amber-600',   stripe: 'bg-amber-400',   glow: 'shadow-amber-100',   text: 'text-amber-600',   bg: 'bg-amber-50' },
+    starter:  { border: 'border-blue-300',    badge: 'bg-blue-100 text-blue-700',     btn: 'bg-blue-600 hover:bg-blue-700',     stripe: 'bg-blue-500',    glow: 'shadow-blue-100',    text: 'text-blue-600',    bg: 'bg-blue-50' },
+    pro:      { border: 'border-indigo-500',  badge: 'bg-indigo-600 text-white',      btn: 'bg-indigo-600 hover:bg-indigo-700', stripe: 'bg-indigo-500',  glow: 'shadow-indigo-200',  text: 'text-indigo-600',  bg: 'bg-indigo-50' },
+    business: { border: 'border-purple-400',  badge: 'bg-purple-100 text-purple-700', btn: 'bg-purple-600 hover:bg-purple-700', stripe: 'bg-purple-500',  glow: 'shadow-purple-100',  text: 'text-purple-600',  bg: 'bg-purple-50' },
+    yearly:   { border: 'border-teal-400',    badge: 'bg-teal-100 text-teal-700',     btn: 'bg-teal-600 hover:bg-teal-700',     stripe: 'bg-teal-500',    glow: 'shadow-teal-100',    text: 'text-teal-600',    bg: 'bg-teal-50' },
   };
 
   return (
@@ -335,11 +336,11 @@ export default function BillingPage() {
         <>
           {/* All plans in one row on large screens, scrollable on mobile */}
           <div className="overflow-x-auto -mx-1 px-1 pb-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" style={{ minWidth: 'min(100%, 900px)' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-0">
               {plans.filter(p => p.slug !== 'free').map(plan => {
                 const isCurrent = isActive && currentSub?.plan.id === plan.id;
                 const isUpgrading = upgrading === plan.id;
-                const accent = planAccents[plan.slug.toLowerCase()] || planAccents['starter'];
+                const accent = planAccents[plan.slug.toLowerCase()] ?? defaultAccent;
                 return (
                   <div
                     key={plan.id}
@@ -352,15 +353,19 @@ export default function BillingPage() {
                     }`}
                   >
                     {/* Colored top stripe */}
-                    <div className={`h-1.5 rounded-t-xl ${plan.isFeatured ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : isCurrent ? 'bg-gradient-to-r from-green-400 to-emerald-500' : accent.btn.split(' ')[0]}`} />
+                    <div className={`h-1.5 rounded-t-xl ${plan.isFeatured ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : isCurrent ? 'bg-gradient-to-r from-green-400 to-emerald-500' : accent.stripe}`} />
 
                     <div className="p-5 flex flex-col flex-1">
                       {/* Badge row */}
                       <div className="flex items-center justify-between mb-3 min-h-[24px]">
                         {plan.isFeatured ? (
-                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${accent.badge}`}>★ Most Popular</span>
+                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${accent.badge}`} aria-label="Most Popular plan">
+                            <span aria-hidden="true">★ </span>Most Popular
+                          </span>
                         ) : isCurrent ? (
-                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700">✓ Current</span>
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700" aria-label="Current plan">
+                            <span aria-hidden="true">✓ </span>Current
+                          </span>
                         ) : <span />}
                       </div>
 
