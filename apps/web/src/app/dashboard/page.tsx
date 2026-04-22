@@ -14,8 +14,19 @@ const STATUS_CONFIG = {
   PARTIALLY_PAID: { label: 'Partial', class: 'bg-amber-100 text-amber-700', icon: Clock },
 };
 
-const CHART_DATA = [65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88, 72];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Feature requirements for quick actions — mirrors NAV_FEATURE_REQUIREMENTS in DashboardLayout
+const QUICK_ACTION_FEATURE_REQUIREMENTS: Record<string, string[]> = {
+  '/customers/new': ['customer'],
+  '/products/new': ['product'],
+  '/reports': ['report', 'gst'],
+};
+
+interface MonthlyRevenue {
+  month: string;
+  revenue: number;
+}
 
 interface DashboardStats {
   totalRevenue: number;
@@ -35,6 +46,8 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenue[]>([]);
+  const [planFeatures, setPlanFeatures] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const userData = getUserData();
   const firstName = userData.name?.split(' ')[0] || 'there';
@@ -46,11 +59,20 @@ export default function DashboardPage() {
     return 'Good evening';
   };
 
+  const isQuickActionEnabled = (href: string): boolean => {
+    const required = QUICK_ACTION_FEATURE_REQUIREMENTS[href];
+    if (!required) return true;
+    if (planFeatures === null) return true; // still loading — show all
+    return required.some(kw => planFeatures.some(f => f.toLowerCase().includes(kw.toLowerCase())));
+  };
+
   useEffect(() => {
     Promise.all([
       apiFetch<{ data: { totalRevenue: number; invoicesThisMonth: number; activeCustomers: number; pendingAmount: number; pendingInvoicesCount: number } }>('/business/stats').catch(() => null),
       apiFetch<{ data: any[]; meta: object }>('/invoices?limit=5').catch(() => null),
-    ]).then(([statsRes, invoicesRes]) => {
+      apiFetch<{ data: { monthlyRevenue: MonthlyRevenue[] } }>('/reports/dashboard').catch(() => null),
+      apiFetch<{ data: any[] }>('/subscriptions').catch(() => null),
+    ]).then(async ([statsRes, invoicesRes, dashboardRes, subsRes]) => {
       setStats({
         totalRevenue: statsRes?.data?.totalRevenue ?? 0,
         invoicesThisMonth: statsRes?.data?.invoicesThisMonth ?? 0,
@@ -59,6 +81,28 @@ export default function DashboardPage() {
         pendingInvoicesCount: statsRes?.data?.pendingInvoicesCount ?? 0,
         recentInvoices: invoicesRes?.data ?? [],
       });
+
+      setMonthlyRevenue(dashboardRes?.data?.monthlyRevenue ?? []);
+
+      // Determine plan features for quick action gating
+      const subs: any[] = subsRes?.data ?? [];
+      const now = new Date();
+      const activeSub = subs.find((s: any) =>
+        (s.status === 'ACTIVE' || s.status === 'TRIAL') &&
+        s.endDate && new Date(s.endDate) >= now
+      );
+      if (activeSub?.plan?.features) {
+        setPlanFeatures(activeSub.plan.features);
+      } else {
+        // Expired or no subscription: fall back to free-plan features
+        const plansRes: any = await apiFetch('/plans').catch(() => null);
+        const plans: any[] = plansRes?.data ?? [];
+        const freePlan =
+          plans.find((p: any) => p.slug === 'free') ||
+          plans.find((p: any) => p.price === 0) ||
+          plans.slice().sort((a: any, b: any) => a.price - b.price)[0];
+        setPlanFeatures(freePlan?.features ?? []);
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -100,6 +144,20 @@ export default function DashboardPage() {
       iconColor: 'text-amber-600',
       sub: stats ? `${stats.pendingInvoicesCount} invoices due` : '',
     },
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const chartData = MONTHS.map(m => {
+    const found = monthlyRevenue.find(r => r.month === `${m} ${currentYear}`);
+    return found?.revenue ?? 0;
+  });
+  const maxRevenue = Math.max(...chartData, 1);
+
+  const QUICK_ACTIONS = [
+    { href: '/invoices/new', label: 'Create Invoice', icon: FileText, color: 'indigo' },
+    { href: '/customers/new', label: 'Add Customer', icon: Users, color: 'green' },
+    { href: '/products/new', label: 'Add Product', icon: TrendingUp, color: 'blue' },
+    { href: '/reports', label: 'GST Reports', icon: IndianRupee, color: 'amber' },
   ];
 
   return (
@@ -159,7 +217,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Revenue Overview</h2>
-              <p className="text-sm text-gray-500">Monthly revenue for 2024</p>
+              <p className="text-sm text-gray-500">Monthly revenue for {currentYear}</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-xs text-gray-500">
@@ -168,22 +226,37 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-end gap-2 h-40">
-            {CHART_DATA.map((value, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className="w-full rounded-t-sm bg-indigo-100 relative overflow-hidden group cursor-pointer"
-                  style={{ height: `${(value / 100) * 140}px` }}
-                >
-                  <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600" style={{ height: '60%' }} />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                    <span className="text-xs font-bold text-indigo-700 bg-white/80 rounded px-1">{value}K</span>
-                  </div>
+          {loading ? (
+            <div className="flex items-end gap-2 h-40">
+              {MONTHS.map((_, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full rounded-t-sm bg-gray-100 animate-pulse" style={{ height: `${40 + (idx % 4) * 20}px` }} />
+                  <span className="text-[10px] text-gray-300">{MONTHS[idx]}</span>
                 </div>
-                <span className="text-[10px] text-gray-400">{MONTHS[idx]}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-end gap-2 h-40">
+              {chartData.map((value, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    className="w-full rounded-t-sm bg-indigo-100 relative overflow-hidden group cursor-pointer"
+                    style={{ height: `${Math.max(4, (value / maxRevenue) * 140)}px` }}
+                  >
+                    <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600" style={{ height: '60%' }} />
+                    {value > 0 && (
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                        <span className="text-xs font-bold text-indigo-700 bg-white/80 rounded px-1">
+                          {value >= 1000 ? `₹${(value / 1000).toFixed(1)}K` : `₹${Math.round(value)}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-400">{MONTHS[idx]}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Quick Actions */}
@@ -195,12 +268,7 @@ export default function DashboardPage() {
         >
           <h2 className="text-base font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            {[
-              { href: '/invoices/new', label: 'Create Invoice', icon: FileText, color: 'indigo' },
-              { href: '/customers/new', label: 'Add Customer', icon: Users, color: 'green' },
-              { href: '/products/new', label: 'Add Product', icon: TrendingUp, color: 'blue' },
-              { href: '/reports', label: 'GST Reports', icon: IndianRupee, color: 'amber' },
-            ].map(action => (
+            {QUICK_ACTIONS.filter(action => isQuickActionEnabled(action.href)).map(action => (
               <Link
                 key={action.href}
                 href={action.href}
