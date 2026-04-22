@@ -18,25 +18,30 @@ async function revertInvoiceStock(
   items: Array<{ productId: string | null; quantity: number }>,
   createdById: string
 ): Promise<void> {
-  const stockItems = items.filter(i => i.productId);
+  const stockItems = items.filter((i): i is typeof i & { productId: string } => !!i.productId);
   if (stockItems.length === 0) return;
 
-  const trackedItems = (await Promise.all(
-    stockItems.map(async item => {
-      const product = await prisma.product.findUnique({ where: { id: item.productId! }, select: { stockCount: true } });
-      return product?.stockCount !== null && product?.stockCount !== undefined ? { item, prevQty: product.stockCount } : null;
-    })
-  )).filter((x): x is { item: typeof stockItems[0]; prevQty: number } => x !== null);
+  const products = await prisma.product.findMany({
+    where: { id: { in: stockItems.map(i => i.productId) } },
+    select: { id: true, stockCount: true },
+  });
+  const productMap = new Map(products.map(p => [p.id, p]));
+
+  const trackedItems = stockItems
+    .map(item => ({ item, product: productMap.get(item.productId) }))
+    .filter((x): x is { item: typeof stockItems[0]; product: { id: string; stockCount: number } } =>
+      x.product?.stockCount !== null && x.product?.stockCount !== undefined
+    );
 
   if (trackedItems.length === 0) return;
 
   await prisma.$transaction(
-    trackedItems.flatMap(({ item, prevQty }) => [
-      prisma.product.update({ where: { id: item.productId! }, data: { stockCount: { increment: item.quantity } } }),
+    trackedItems.flatMap(({ item, product }) => [
+      prisma.product.update({ where: { id: item.productId }, data: { stockCount: { increment: item.quantity } } }),
       prisma.stockMovement.create({
         data: {
-          businessId, productId: item.productId!, type: 'RETURN',
-          quantity: item.quantity, previousQty: prevQty, newQty: prevQty + item.quantity,
+          businessId, productId: item.productId, type: 'RETURN',
+          quantity: item.quantity, previousQty: product.stockCount, newQty: product.stockCount + item.quantity,
           reference: invoiceNumber, notes: `Cancelled invoice ${invoiceNumber}`,
           createdById,
         },
@@ -242,7 +247,7 @@ router.post('/', [
               price: item.price,
               gstRate: item.gstRate || 0,
               hsnSac: item.hsnSac || null,
-              unit: (item.unit as any) || 'PCS',
+          unit: (item.unit as import('@prisma/client').ProductUnit | undefined) || 'PCS',
             },
           });
           item.productId = newProduct.id;
@@ -463,24 +468,29 @@ router.post('/:id/send', async (req: AuthenticatedRequest, res: Response, next: 
     });
 
     // Deduct stock for items that have a linked product with stock tracking.
-    // Uses atomic decrement to avoid race conditions; all movements in one transaction.
-    const stockItems = invoice.items.filter(i => i.productId);
+    // Uses findMany for a single DB round-trip, atomic decrement, all movements in one transaction.
+    const stockItems = invoice.items.filter((i): i is typeof i & { productId: string } => !!i.productId);
     if (stockItems.length > 0) {
-      const trackedItems = (await Promise.all(
-        stockItems.map(async item => {
-          const product = await prisma.product.findUnique({ where: { id: item.productId! }, select: { stockCount: true } });
-          return product?.stockCount !== null && product?.stockCount !== undefined ? { item, prevQty: product.stockCount } : null;
-        })
-      )).filter((x): x is { item: typeof stockItems[0]; prevQty: number } => x !== null);
+      const products = await prisma.product.findMany({
+        where: { id: { in: stockItems.map(i => i.productId) } },
+        select: { id: true, stockCount: true },
+      });
+      const productMap = new Map(products.map(p => [p.id, p]));
+
+      const trackedItems = stockItems
+        .map(item => ({ item, product: productMap.get(item.productId) }))
+        .filter((x): x is { item: typeof stockItems[0]; product: { id: string; stockCount: number } } =>
+          x.product?.stockCount !== null && x.product?.stockCount !== undefined
+        );
 
       if (trackedItems.length > 0) {
         await prisma.$transaction(
-          trackedItems.flatMap(({ item, prevQty }) => [
-            prisma.product.update({ where: { id: item.productId! }, data: { stockCount: { decrement: item.quantity } } }),
+          trackedItems.flatMap(({ item, product }) => [
+            prisma.product.update({ where: { id: item.productId }, data: { stockCount: { decrement: item.quantity } } }),
             prisma.stockMovement.create({
               data: {
-                businessId, productId: item.productId!, type: 'SALE',
-                quantity: item.quantity, previousQty: prevQty, newQty: prevQty - item.quantity,
+                businessId, productId: item.productId, type: 'SALE',
+                quantity: item.quantity, previousQty: product.stockCount, newQty: product.stockCount - item.quantity,
                 reference: invoice.invoiceNumber, notes: `Invoice ${invoice.invoiceNumber}`,
                 createdById: req.user!.id,
               },

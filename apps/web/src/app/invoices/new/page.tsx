@@ -195,7 +195,6 @@ export default function NewInvoicePage() {
   const [productSuggestions, setProductSuggestions] = useState<Record<string, Product[]>>({});
   const [activeSuggestionItem, setActiveSuggestionItem] = useState<string | null>(null);
   const descSearchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const suggestionsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const tokenData = getUserData();
@@ -312,7 +311,8 @@ export default function NewInvoicePage() {
   // Close product suggestions on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+      const target = e.target as Element;
+      if (!target.closest('[data-product-suggestions]')) {
         setActiveSuggestionItem(null);
       }
     };
@@ -600,7 +600,7 @@ export default function NewInvoicePage() {
                   <tbody className="divide-y divide-gray-50">
                     {items.map((item, idx) => (
                       <tr key={item.id} className="group hover:bg-indigo-50/30 transition-colors">
-                        <td className="px-4 py-3 relative">
+                        <td className="px-4 py-3 relative" data-product-suggestions>
                           <input type="text" value={item.description}
                             onChange={e => handleDescriptionChange(item.id, e.target.value)}
                             onFocus={() => { if (productSuggestions[item.id]?.length) setActiveSuggestionItem(item.id); }}
@@ -609,7 +609,6 @@ export default function NewInvoicePage() {
                           <AnimatePresence>
                             {activeSuggestionItem === item.id && productSuggestions[item.id]?.length > 0 && (
                               <motion.div
-                                ref={suggestionsRef}
                                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
                                 className="absolute left-0 top-full mt-1 z-30 w-72 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden"
                               >
