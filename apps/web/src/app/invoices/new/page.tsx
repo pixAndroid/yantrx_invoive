@@ -403,7 +403,7 @@ export default function NewInvoicePage() {
                     <select value={formData.type} onChange={e => setFormData(p => ({ ...p, type: e.target.value }))} className={inputCls}>
                       <option value="INVOICE">Tax Invoice</option>
                       <option value="PROFORMA">Proforma Invoice</option>
-                      <option value="ESTIMATE">Estimate / Quote</option>
+                      <option value="ESTIMATE">Estimate/Quote</option>
                       <option value="CREDIT_NOTE">Credit Note</option>
                     </select>
                   </div>

@@ -196,7 +196,7 @@ export default function InvoicesPage() {
             </span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{overdueCount}</p>
-          <p className="text-xs text-gray-500 mt-1">{overdueCount === 1 ? 'overdue' : 'overdue'} · {draftCount} draft{draftCount !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-gray-500 mt-1">overdue · {draftCount} draft{draftCount !== 1 ? 's' : ''}</p>
         </motion.div>
       </div>
 
