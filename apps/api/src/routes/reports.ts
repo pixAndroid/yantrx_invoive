@@ -62,7 +62,7 @@ router.get('/dashboard', async (req: AuthenticatedRequest, res: Response, next: 
           COUNT(*)::bigint as invoices
         FROM invoices
         WHERE "businessId" = ${businessId}
-          AND "createdAt" >= NOW() - INTERVAL '6 months'
+          AND EXTRACT(YEAR FROM "createdAt") = EXTRACT(YEAR FROM NOW())
         GROUP BY DATE_TRUNC('month', "createdAt")
         ORDER BY DATE_TRUNC('month', "createdAt") ASC
       `,
