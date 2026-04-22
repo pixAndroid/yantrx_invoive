@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 
 interface Customer { id: string; name: string; email: string | null; phone: string | null; gstin: string | null; billingCity: string | null; billingState: string | null; }
 interface InvoiceItem { id: string; description: string; productId: string | null; hsnSac: string; quantity: number; unit: string; price: number; discount: number; gstRate: number; taxableAmount: number; cgst: number; sgst: number; igst: number; total: number; }
+interface Product { id: string; name: string; hsnSac: string | null; price: number; gstRate: number; unit: string; }
 
 const GST_RATES = [0, 5, 12, 18, 28];
 const INVOICE_WARNING_THRESHOLD = 2;
@@ -190,6 +191,11 @@ export default function NewInvoicePage() {
     dueDate: '', notes: '', terms: '', placeOfSupply: '',
   });
 
+  // Product suggestion state
+  const [productSuggestions, setProductSuggestions] = useState<Record<string, Product[]>>({});
+  const [activeSuggestionItem, setActiveSuggestionItem] = useState<string | null>(null);
+  const descSearchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   useEffect(() => {
     const tokenData = getUserData();
     const businessId = tokenData?.businessId;
@@ -264,6 +270,55 @@ export default function NewInvoicePage() {
     setItems(prev => prev.map(item => item.id === id ? calcItem({ ...item, [field]: value }, isInterState) : item));
   }, [isInterState]);
   useEffect(() => { setItems(prev => prev.map(i => calcItem(i, isInterState))); }, [isInterState]);
+
+  const handleDescriptionChange = useCallback((id: string, value: string) => {
+    updateItem(id, 'description', value);
+    // Clear previous timer for this item
+    if (descSearchTimers.current[id]) {
+      clearTimeout(descSearchTimers.current[id]);
+      delete descSearchTimers.current[id];
+    }
+    if (!value.trim()) {
+      setProductSuggestions(prev => { const next = { ...prev }; delete next[id]; return next; });
+      setActiveSuggestionItem(null);
+      return;
+    }
+    descSearchTimers.current[id] = setTimeout(async () => {
+      delete descSearchTimers.current[id];
+      try {
+        const res = await apiFetch<{ data: Product[] }>(`/products?search=${encodeURIComponent(value.trim())}&limit=8`);
+        if (res.data && res.data.length > 0) {
+          setProductSuggestions(prev => ({ ...prev, [id]: res.data }));
+          setActiveSuggestionItem(id);
+        } else {
+          setProductSuggestions(prev => { const next = { ...prev }; delete next[id]; return next; });
+          setActiveSuggestionItem(null);
+        }
+      } catch {}
+    }, 250);
+  }, [updateItem]);
+
+  const applyProductSuggestion = useCallback((itemId: string, product: Product) => {
+    setItems(prev => prev.map(item =>
+      item.id === itemId
+        ? calcItem({ ...item, description: product.name, productId: product.id, hsnSac: product.hsnSac || '', price: product.price, gstRate: product.gstRate, unit: product.unit }, isInterState)
+        : item
+    ));
+    setProductSuggestions(prev => { const next = { ...prev }; delete next[itemId]; return next; });
+    setActiveSuggestionItem(null);
+  }, [isInterState]);
+
+  // Close product suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest('[data-product-suggestions]')) {
+        setActiveSuggestionItem(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const totals = items.reduce((acc, item) => ({
     subtotal: acc.subtotal + item.quantity * item.price,
@@ -545,9 +600,31 @@ export default function NewInvoicePage() {
                   <tbody className="divide-y divide-gray-50">
                     {items.map((item, idx) => (
                       <tr key={item.id} className="group hover:bg-indigo-50/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <input type="text" value={item.description} onChange={e => updateItem(item.id, 'description', e.target.value)} placeholder={`Item ${idx + 1}`}
+                        <td className="px-4 py-3 relative" data-product-suggestions>
+                          <input type="text" value={item.description}
+                            onChange={e => handleDescriptionChange(item.id, e.target.value)}
+                            onFocus={() => { if (productSuggestions[item.id]?.length) setActiveSuggestionItem(item.id); }}
+                            placeholder={`Item ${idx + 1}`}
                             className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none" />
+                          <AnimatePresence>
+                            {activeSuggestionItem === item.id && productSuggestions[item.id]?.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                                className="absolute left-0 top-full mt-1 z-30 w-72 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden"
+                              >
+                                {productSuggestions[item.id].map(p => (
+                                  <button key={p.id} type="button"
+                                    onMouseDown={e => { e.preventDefault(); applyProductSuggestion(item.id, p); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-indigo-50 border-b border-gray-50 last:border-0 transition-colors">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                                      <p className="text-xs text-gray-400">&#8377;{p.price} · GST {p.gstRate}%{p.hsnSac ? ` · ${p.hsnSac}` : ''}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </td>
                         <td className="px-4 py-3">
                           <input type="text" value={item.hsnSac} onChange={e => updateItem(item.id, 'hsnSac', e.target.value)} placeholder="998314"
