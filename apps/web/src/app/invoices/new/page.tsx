@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Search, Save, Send, ArrowLeft, Calculator, UserPlus, X, Check, Lock, FileText, AlertTriangle } from 'lucide-react';
@@ -195,6 +196,8 @@ export default function NewInvoicePage() {
   const [productSuggestions, setProductSuggestions] = useState<Record<string, Product[]>>({});
   const [activeSuggestionItem, setActiveSuggestionItem] = useState<string | null>(null);
   const descSearchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const descInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     const tokenData = getUserData();
@@ -319,6 +322,28 @@ export default function NewInvoicePage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+  useEffect(() => {
+    if (activeSuggestionItem && descInputRefs.current[activeSuggestionItem]) {
+      const rect = descInputRefs.current[activeSuggestionItem]!.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(288, rect.width) });
+    } else {
+      setDropdownPos(null);
+    }
+  }, [activeSuggestionItem]);
+  useEffect(() => {
+    const update = () => {
+      if (activeSuggestionItem && descInputRefs.current[activeSuggestionItem]) {
+        const rect = descInputRefs.current[activeSuggestionItem]!.getBoundingClientRect();
+        setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(288, rect.width) });
+      }
+    };
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [activeSuggestionItem]);
 
   const totals = items.reduce((acc, item) => ({
     subtotal: acc.subtotal + item.quantity * item.price,
@@ -600,31 +625,13 @@ export default function NewInvoicePage() {
                   <tbody className="divide-y divide-gray-50">
                     {items.map((item, idx) => (
                       <tr key={item.id} className="group hover:bg-indigo-50/30 transition-colors">
-                        <td className="px-4 py-3 relative" data-product-suggestions>
+                        <td className="px-4 py-3" data-product-suggestions>
                           <input type="text" value={item.description}
+                            ref={el => { descInputRefs.current[item.id] = el; }}
                             onChange={e => handleDescriptionChange(item.id, e.target.value)}
                             onFocus={() => { if (productSuggestions[item.id]?.length) setActiveSuggestionItem(item.id); }}
                             placeholder={`Item ${idx + 1}`}
                             className="w-full border-0 bg-transparent text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none" />
-                          <AnimatePresence>
-                            {activeSuggestionItem === item.id && productSuggestions[item.id]?.length > 0 && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                                className="absolute left-0 top-full mt-1 z-30 w-72 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden"
-                              >
-                                {productSuggestions[item.id].map(p => (
-                                  <button key={p.id} type="button"
-                                    onMouseDown={e => { e.preventDefault(); applyProductSuggestion(item.id, p); }}
-                                    className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-indigo-50 border-b border-gray-50 last:border-0 transition-colors">
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
-                                      <p className="text-xs text-gray-400">&#8377;{p.price} · GST {p.gstRate}%{p.hsnSac ? ` · ${p.hsnSac}` : ''}</p>
-                                    </div>
-                                  </button>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </td>
                         <td className="px-4 py-3">
                           <input type="text" value={item.hsnSac} onChange={e => updateItem(item.id, 'hsnSac', e.target.value)} placeholder="998314"
@@ -784,6 +791,29 @@ export default function NewInvoicePage() {
           </div>
         </div>
       </div>
+      {typeof window !== 'undefined' && activeSuggestionItem && productSuggestions[activeSuggestionItem]?.length > 0 && dropdownPos && createPortal(
+        <AnimatePresence>
+          <motion.div
+            key={activeSuggestionItem}
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+            style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+            className="fixed z-[9999] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden"
+            data-product-suggestions
+          >
+            {productSuggestions[activeSuggestionItem].map(p => (
+              <button key={p.id} type="button"
+                onMouseDown={e => { e.preventDefault(); applyProductSuggestion(activeSuggestionItem, p); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-indigo-50 border-b border-gray-50 last:border-0 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                  <p className="text-xs text-gray-400">&#8377;{p.price} · GST {p.gstRate}%{p.hsnSac ? ` · ${p.hsnSac}` : ''}</p>
+                </div>
+              </button>
+            ))}
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }
