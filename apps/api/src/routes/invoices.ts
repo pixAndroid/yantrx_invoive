@@ -234,12 +234,13 @@ router.post('/', [
     // Auto-resolve or create products for items without a productId
     for (const item of processedItems) {
       if (!item.productId && item.description.trim()) {
-        const existing = await prisma.product.findFirst({
+        const existingProduct = await prisma.product.findFirst({
           where: { businessId, name: { equals: item.description.trim(), mode: 'insensitive' }, isActive: true },
         });
-        if (existing) {
-          item.productId = existing.id;
+        if (existingProduct) {
+          item.productId = existingProduct.id;
         } else {
+          // Create new product with initial stockCount equal to the invoiced quantity
           const newProduct = await prisma.product.create({
             data: {
               businessId,
@@ -247,10 +248,31 @@ router.post('/', [
               price: item.price,
               gstRate: item.gstRate || 0,
               hsnSac: item.hsnSac || null,
-          unit: (item.unit as import('@prisma/client').ProductUnit | undefined) || 'PCS',
+              unit: (item.unit as import('@prisma/client').ProductUnit | undefined) || 'PCS',
+              stockCount: item.quantity,
             },
           });
           item.productId = newProduct.id;
+          // Immediately stock out the newly created product (quantity received then sold)
+          await prisma.$transaction([
+            prisma.product.update({
+              where: { id: newProduct.id },
+              data: { stockCount: { decrement: item.quantity } },
+            }),
+            prisma.stockMovement.create({
+              data: {
+                businessId,
+                productId: newProduct.id,
+                type: 'SALE',
+                quantity: item.quantity,
+                previousQty: item.quantity,
+                newQty: 0,
+                reference: invoiceNumber,
+                notes: `Auto-created product stocked out for invoice ${invoiceNumber}`,
+                createdById: req.user!.id,
+              },
+            }),
+          ]);
         }
       }
     }
@@ -322,8 +344,10 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
 
 router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    const businessId = req.user!.businessId!;
     const existing = await prisma.invoice.findFirst({
-      where: { id: req.params.id, businessId: req.user!.businessId! },
+      where: { id: req.params.id, businessId },
+      include: { items: { select: { productId: true, quantity: true } } },
     });
     if (!existing) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
 
@@ -336,7 +360,7 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
 
     // Verify customer belongs to business
     if (customerId) {
-      const customer = await prisma.customer.findFirst({ where: { id: customerId, businessId: req.user!.businessId! } });
+      const customer = await prisma.customer.findFirst({ where: { id: customerId, businessId } });
       if (!customer) { res.status(404).json({ success: false, error: 'Customer not found' }); return; }
     }
 
@@ -387,6 +411,54 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
     const total = taxableAmount + gstTotal;
     const amountDue = Math.max(0, total - existing.amountPaid);
 
+    // Auto-resolve or create products for items without a productId
+    const newlyCreatedProductIds = new Set<string>();
+    for (const item of processedItems) {
+      if (!item.productId && item.description.trim()) {
+        const existingProduct = await prisma.product.findFirst({
+          where: { businessId, name: { equals: item.description.trim(), mode: 'insensitive' }, isActive: true },
+        });
+        if (existingProduct) {
+          item.productId = existingProduct.id;
+        } else {
+          // Create new product with initial stockCount equal to the invoiced quantity
+          const newProduct = await prisma.product.create({
+            data: {
+              businessId,
+              name: item.description.trim(),
+              price: item.price,
+              gstRate: item.gstRate || 0,
+              hsnSac: item.hsnSac || null,
+              unit: (item.unit as import('@prisma/client').ProductUnit | undefined) || 'PCS',
+              stockCount: item.quantity,
+            },
+          });
+          item.productId = newProduct.id;
+          newlyCreatedProductIds.add(newProduct.id);
+          // Immediately stock out the newly created product
+          await prisma.$transaction([
+            prisma.product.update({
+              where: { id: newProduct.id },
+              data: { stockCount: { decrement: item.quantity } },
+            }),
+            prisma.stockMovement.create({
+              data: {
+                businessId,
+                productId: newProduct.id,
+                type: 'SALE',
+                quantity: item.quantity,
+                previousQty: item.quantity,
+                newQty: 0,
+                reference: existing.invoiceNumber,
+                notes: `Auto-created product stocked out for invoice ${existing.invoiceNumber}`,
+                createdById: req.user!.id,
+              },
+            }),
+          ]);
+        }
+      }
+    }
+
     const invoice = await prisma.$transaction(async (tx) => {
       // Delete existing items and recreate
       await tx.invoiceItem.deleteMany({ where: { invoiceId: req.params.id } });
@@ -419,6 +491,70 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
         include: { customer: true, items: true },
       });
     });
+
+    // Apply stock adjustments for invoices where stock has already been deducted
+    if (STOCK_DEDUCTED_STATUSES.includes(existing.status)) {
+      // Build old quantity map from items fetched before this edit
+      const oldQtyMap = new Map<string, number>();
+      for (const item of existing.items) {
+        if (item.productId) {
+          oldQtyMap.set(item.productId, (oldQtyMap.get(item.productId) || 0) + item.quantity);
+        }
+      }
+
+      // Build new quantity map, skipping products that were just created (already stocked out)
+      const newQtyMap = new Map<string, number>();
+      for (const item of processedItems) {
+        if (item.productId && !newlyCreatedProductIds.has(item.productId)) {
+          newQtyMap.set(item.productId, (newQtyMap.get(item.productId) || 0) + item.quantity);
+        }
+      }
+
+      const allProductIds = new Set([...oldQtyMap.keys(), ...newQtyMap.keys()]);
+      if (allProductIds.size > 0) {
+        const products = await prisma.product.findMany({
+          where: { id: { in: [...allProductIds] } },
+          select: { id: true, stockCount: true },
+        });
+        const productStockMap = new Map(products.map(p => [p.id, p]));
+
+        const adjustments: Array<{ productId: string; diff: number; prevStock: number }> = [];
+        for (const productId of allProductIds) {
+          const product = productStockMap.get(productId);
+          if (product?.stockCount === null || product?.stockCount === undefined) continue;
+          const oldQty = oldQtyMap.get(productId) || 0;
+          const newQty = newQtyMap.get(productId) || 0;
+          const diff = newQty - oldQty; // positive = sold more, negative = sold less
+          if (diff !== 0) {
+            adjustments.push({ productId, diff, prevStock: product.stockCount });
+          }
+        }
+
+        if (adjustments.length > 0) {
+          await prisma.$transaction(
+            adjustments.flatMap(({ productId, diff, prevStock }) => [
+              prisma.product.update({
+                where: { id: productId },
+                data: { stockCount: { decrement: diff } },
+              }),
+              prisma.stockMovement.create({
+                data: {
+                  businessId,
+                  productId,
+                  type: diff > 0 ? 'SALE' : 'RETURN',
+                  quantity: Math.abs(diff),
+                  previousQty: prevStock,
+                  newQty: prevStock - diff,
+                  reference: existing.invoiceNumber,
+                  notes: `Invoice ${existing.invoiceNumber} edit adjustment`,
+                  createdById: req.user!.id,
+                },
+              }),
+            ])
+          );
+        }
+      }
+    }
 
     res.json({ success: true, data: invoice });
   } catch (error) { next(error); }
