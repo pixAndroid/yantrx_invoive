@@ -189,6 +189,30 @@ router.post('/', [
     const gstTotal = cgstTotal + sgstTotal + igstTotal + cessTotal;
     const total = taxableAmount + gstTotal;
 
+    // Auto-resolve or create products for items without a productId
+    for (const item of processedItems) {
+      if (!item.productId && item.description.trim()) {
+        const existing = await prisma.product.findFirst({
+          where: { businessId, name: { equals: item.description.trim(), mode: 'insensitive' }, isActive: true },
+        });
+        if (existing) {
+          item.productId = existing.id;
+        } else {
+          const newProduct = await prisma.product.create({
+            data: {
+              businessId,
+              name: item.description.trim(),
+              price: item.price,
+              gstRate: item.gstRate || 0,
+              hsnSac: item.hsnSac || null,
+              unit: (item.unit as any) || 'PCS',
+            },
+          });
+          item.productId = newProduct.id;
+        }
+      }
+    }
+
     const invoice = await prisma.$transaction(async (tx) => {
       const inv = await tx.invoice.create({
         data: {
@@ -360,8 +384,10 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFu
 
 router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    const businessId = req.user!.businessId!;
     const existing = await prisma.invoice.findFirst({
-      where: { id: req.params.id, businessId: req.user!.businessId! },
+      where: { id: req.params.id, businessId },
+      include: { items: true },
     });
     if (!existing) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
 
@@ -375,15 +401,43 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: Nex
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
 
+    // Revert stock if the invoice was already sent (stock was previously deducted)
+    const SENT_STATUSES = ['SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID'];
+    if (SENT_STATUSES.includes(existing.status)) {
+      for (const item of existing.items) {
+        if (!item.productId) continue;
+        const product = await prisma.product.findUnique({ where: { id: item.productId } });
+        if (!product || product.stockCount === null) continue;
+        const newQty = product.stockCount + item.quantity;
+        await prisma.$transaction([
+          prisma.product.update({ where: { id: item.productId }, data: { stockCount: newQty } }),
+          prisma.stockMovement.create({
+            data: {
+              businessId,
+              productId: item.productId,
+              type: 'RETURN',
+              quantity: item.quantity,
+              previousQty: product.stockCount,
+              newQty,
+              reference: existing.invoiceNumber,
+              notes: `Cancelled invoice ${existing.invoiceNumber}`,
+              createdById: req.user!.id,
+            },
+          }),
+        ]);
+      }
+    }
+
     res.json({ success: true, message: 'Invoice cancelled' });
   } catch (error) { next(error); }
 });
 
 router.post('/:id/send', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    const businessId = req.user!.businessId!;
     const invoice = await prisma.invoice.findFirst({
-      where: { id: req.params.id, businessId: req.user!.businessId! },
-      include: { customer: true },
+      where: { id: req.params.id, businessId },
+      include: { customer: true, items: true },
     });
     if (!invoice) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
 
@@ -392,6 +446,30 @@ router.post('/:id/send', async (req: AuthenticatedRequest, res: Response, next: 
       where: { id: req.params.id },
       data: { status: 'SENT', sentAt: new Date() },
     });
+
+    // Deduct stock for items that have a linked product with stock tracking
+    for (const item of invoice.items) {
+      if (!item.productId) continue;
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product || product.stockCount === null) continue;
+      const newQty = product.stockCount - item.quantity;
+      await prisma.$transaction([
+        prisma.product.update({ where: { id: item.productId }, data: { stockCount: newQty } }),
+        prisma.stockMovement.create({
+          data: {
+            businessId,
+            productId: item.productId,
+            type: 'SALE',
+            quantity: item.quantity,
+            previousQty: product.stockCount,
+            newQty,
+            reference: invoice.invoiceNumber,
+            notes: `Invoice ${invoice.invoiceNumber}`,
+            createdById: req.user!.id,
+          },
+        }),
+      ]);
+    }
 
     res.json({ success: true, message: 'Invoice sent successfully', data: updated });
   } catch (error) { next(error); }
@@ -444,8 +522,10 @@ router.post('/:id/mark-paid', async (req: AuthenticatedRequest, res: Response, n
 
 router.post('/:id/cancel', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    const businessId = req.user!.businessId!;
     const invoice = await prisma.invoice.findFirst({
-      where: { id: req.params.id, businessId: req.user!.businessId! },
+      where: { id: req.params.id, businessId },
+      include: { items: true },
     });
     if (!invoice) { res.status(404).json({ success: false, error: 'Invoice not found' }); return; }
     if (invoice.status === 'PAID') { res.status(400).json({ success: false, error: 'Cannot cancel a paid invoice' }); return; }
@@ -455,6 +535,34 @@ router.post('/:id/cancel', async (req: AuthenticatedRequest, res: Response, next
       where: { id: req.params.id },
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
+
+    // Revert stock if the invoice was already sent (stock was previously deducted)
+    const SENT_STATUSES = ['SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID'];
+    if (SENT_STATUSES.includes(invoice.status)) {
+      for (const item of invoice.items) {
+        if (!item.productId) continue;
+        const product = await prisma.product.findUnique({ where: { id: item.productId } });
+        if (!product || product.stockCount === null) continue;
+        const newQty = product.stockCount + item.quantity;
+        await prisma.$transaction([
+          prisma.product.update({ where: { id: item.productId }, data: { stockCount: newQty } }),
+          prisma.stockMovement.create({
+            data: {
+              businessId,
+              productId: item.productId,
+              type: 'RETURN',
+              quantity: item.quantity,
+              previousQty: product.stockCount,
+              newQty,
+              reference: invoice.invoiceNumber,
+              notes: `Cancelled invoice ${invoice.invoiceNumber}`,
+              createdById: req.user!.id,
+            },
+          }),
+        ]);
+      }
+    }
+
     res.json({ success: true, data: updated });
   } catch (error) { next(error); }
 });
