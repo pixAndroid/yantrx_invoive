@@ -314,7 +314,7 @@ export default function NewInvoicePage() {
           customerLimitReached={customerLimitReached}
           onCreated={(c) => { setSelectedCustomer(c); setCustomerSearch(c.name); setShowAddCustomer(false); }} />
       )}
-      <div className="p-4 lg:p-8 max-w-6xl mx-auto">
+      <div className="p-4 lg:p-6 xl:p-8 w-full max-w-full">
 
         {/* Page Header */}
         <div className="flex items-center gap-4 mb-6">
