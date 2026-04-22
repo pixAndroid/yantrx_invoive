@@ -514,7 +514,7 @@ export default function NewInvoicePage() {
             </div>
 
             {/* Bill To */}
-            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50">
                   <UserPlus className="h-3.5 w-3.5 text-violet-600" />
