@@ -63,13 +63,16 @@ function getPeriodProgress(sub: Subscription): { pct: number; daysLeft: number }
 
 /** Return a human-readable price label for a plan option */
 function planLabel(p: Plan): string {
-  if (p.dailyPrice !== null && p.dailyPrice !== undefined) {
+  if (p.dailyPrice != null && p.price === 0) {
     return `${p.name} — ${p.dailyPrice === 0 ? 'Free' : `₹${p.dailyPrice}/day`}`;
   }
-  if (p.yearlyPrice !== null && p.yearlyPrice !== undefined) {
-    return `${p.name} — ${p.yearlyPrice === 0 ? 'Free' : `₹${p.yearlyPrice}/yr`}`;
+  if (p.price > 0) {
+    return `${p.name} — ₹${p.price}/mo`;
   }
-  return `${p.name} — ${p.price === 0 ? 'Free' : `₹${p.price}/mo`}`;
+  if (p.yearlyPrice != null && p.yearlyPrice > 0) {
+    return `${p.name} — ₹${p.yearlyPrice}/yr`;
+  }
+  return `${p.name} — Free`;
 }
 
 /** Convert a Date string to the value expected by <input type="datetime-local"> */
