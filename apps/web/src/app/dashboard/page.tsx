@@ -282,15 +282,6 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
-
-          {/* GST Reminder */}
-          <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4">
-            <p className="text-sm font-semibold text-amber-800">📅 GST Filing Due</p>
-            <p className="text-xs text-amber-700 mt-1">GSTR-3B for Nov 2024 due in 5 days</p>
-            <Link href="/reports" className="mt-2 block text-xs font-medium text-amber-700 hover:text-amber-900 underline">
-              View GST Summary →
-            </Link>
-          </div>
         </motion.div>
       </div>
 
