@@ -20,6 +20,8 @@ interface Plan {
   id: string;
   name: string;
   price: number;
+  dailyPrice: number | null;
+  yearlyPrice: number | null;
   isActive: boolean;
 }
 
@@ -59,6 +61,17 @@ function getPeriodProgress(sub: Subscription): { pct: number; daysLeft: number }
   return { pct, daysLeft };
 }
 
+/** Return a human-readable price label for a plan option */
+function planLabel(p: Plan): string {
+  if (p.dailyPrice !== null && p.dailyPrice !== undefined) {
+    return `${p.name} — ${p.dailyPrice === 0 ? 'Free' : `₹${p.dailyPrice}/day`}`;
+  }
+  if (p.yearlyPrice !== null && p.yearlyPrice !== undefined) {
+    return `${p.name} — ${p.yearlyPrice === 0 ? 'Free' : `₹${p.yearlyPrice}/yr`}`;
+  }
+  return `${p.name} — ${p.price === 0 ? 'Free' : `₹${p.price}/mo`}`;
+}
+
 /** Convert a Date string to the value expected by <input type="datetime-local"> */
 function toDatetimeLocal(dateStr: string): string {
   const d = new Date(dateStr);
@@ -82,6 +95,7 @@ export default function AdminSubscriptionsPage() {
   const [assignModal, setAssignModal] = useState<Subscription | null>(null);
   const [selectedPlan, setSelectedPlan] = useState('');
   const [assigning, setAssigning] = useState(false);
+  const [confirmAssign, setConfirmAssign] = useState(false);
 
   // Edit-dates modal
   const [editModal, setEditModal] = useState<Subscription | null>(null);
@@ -128,6 +142,7 @@ export default function AdminSubscriptionsPage() {
         body: JSON.stringify({ planId: selectedPlan }),
       });
       setAssignModal(null);
+      setConfirmAssign(false);
       fetchSubs();
     } catch {} finally { setAssigning(false); }
   };
@@ -176,29 +191,50 @@ export default function AdminSubscriptionsPage() {
       {/* ── Assign Plan Modal ── */}
       {assignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setAssignModal(null)} />
+          <div className="absolute inset-0 bg-black/70" onClick={() => { setAssignModal(null); setConfirmAssign(false); }} />
           <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-5 z-10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Assign Plan</h3>
-              <button onClick={() => setAssignModal(null)}><X className="h-4 w-4 text-gray-400" /></button>
+              <button onClick={() => { setAssignModal(null); setConfirmAssign(false); }}><X className="h-4 w-4 text-gray-400" /></button>
             </div>
             <p className="text-xs text-gray-400 mb-3">Business: <span className="text-gray-200">{assignModal.business.name}</span></p>
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Select Plan</label>
-              <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)}
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none">
-                <option value="">Choose a plan...</option>
-                {plans.map(p => <option key={p.id} value={p.id}>{p.name} — ₹{p.price}/mo</option>)}
-              </select>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => setAssignModal(null)} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400">Cancel</button>
-              <button onClick={handleAssignPlan} disabled={assigning || !selectedPlan}
-                className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
-                {assigning ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
-                Assign
-              </button>
-            </div>
+
+            {confirmAssign ? (
+              /* ── Confirmation step ── */
+              <>
+                <p className="text-sm text-gray-300 mb-4">
+                  Are you sure you want to assign <span className="text-white font-semibold">{plans.find(p => p.id === selectedPlan)?.name ?? 'this plan'}</span> to <span className="text-white font-semibold">{assignModal.business.name}</span>?
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setConfirmAssign(false)} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400">No, go back</button>
+                  <button onClick={handleAssignPlan} disabled={assigning}
+                    className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                    {assigning ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Check className="h-4 w-4" />}
+                    Yes, Assign
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── Plan selection step ── */
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Select Plan</label>
+                  <select value={selectedPlan} onChange={e => setSelectedPlan(e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none">
+                    <option value="">Choose a plan...</option>
+                    {plans.map(p => <option key={p.id} value={p.id}>{planLabel(p)}</option>)}
+                  </select>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={() => { setAssignModal(null); setConfirmAssign(false); }} className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400">Cancel</button>
+                  <button onClick={() => setConfirmAssign(true)} disabled={!selectedPlan}
+                    className="flex-1 rounded-lg bg-orange-600 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                    <Check className="h-4 w-4" />
+                    Assign
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -401,7 +437,7 @@ export default function AdminSubscriptionsPage() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => { setAssignModal(sub); setSelectedPlan(sub.plan.id); }}
+                      <button onClick={() => { setAssignModal(sub); setSelectedPlan(sub.plan.id); setConfirmAssign(false); }}
                         className="inline-flex items-center gap-1 text-xs rounded-lg border border-orange-800 bg-orange-900/20 px-2 py-1 text-orange-400 hover:bg-orange-900/40">
                         <UserCheck className="h-3 w-3" /> Assign Plan
                       </button>
