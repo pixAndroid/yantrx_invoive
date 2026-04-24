@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
   LogOut, Bell, Menu, X,
   IndianRupee, Zap, Building2, ChevronRight, Lock,
-  Receipt, Boxes, UserCircle, Target
+  Receipt, Boxes, UserCircle, Target, Crown
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
@@ -365,7 +365,55 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* User section */}
       <div className="border-t border-gray-100 p-4">
         {planInfo && (() => {
+          const isPremium = !planInfo.isExpired && planInfo.name.toLowerCase() !== 'free';
           const invoiceLimitReached = planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit;
+
+          if (isPremium) {
+            return (
+              <div className="mb-3 rounded-xl p-3.5 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 border border-indigo-700 shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Crown className="h-3.5 w-3.5 text-amber-400" />
+                    <p className="text-xs font-bold text-white">{planInfo.name} Plan</p>
+                  </div>
+                  <span className="text-[10px] font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full tracking-wide">PREMIUM</span>
+                </div>
+                {planInfo.invoiceLimit > 0 && (
+                  <>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-[11px] text-indigo-200">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
+                      <p className="text-[11px] font-semibold text-amber-300">
+                        {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
+                      </p>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-indigo-700/60 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
+                        style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+                {planInfo.endDate && (
+                  <p className="text-[11px] text-indigo-300 mt-1.5">
+                    Expires {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                )}
+                {planInfo.customerLimit > 0 && (
+                  <p className="text-[11px] text-indigo-300 mt-0.5">
+                    {planInfo.customersUsed}/{planInfo.customerLimit} customers
+                  </p>
+                )}
+                <Link
+                  href="/settings/billing"
+                  className="mt-2.5 block text-center rounded-lg py-1.5 text-xs font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-amber-900 hover:from-amber-500 hover:to-amber-600 transition-all shadow-sm"
+                >
+                  Manage Plan
+                </Link>
+              </div>
+            );
+          }
+
           const invoiceBarColor = invoiceLimitReached ? 'bg-red-500' : planInfo.isExpired ? 'bg-orange-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= INVOICE_USAGE_WARNING_RATIO ? 'bg-amber-500' : 'bg-indigo-500';
           const invoiceTextColor = invoiceLimitReached ? 'text-red-600' : planInfo.isExpired ? 'text-orange-600' : 'text-indigo-600';
           return (
@@ -437,8 +485,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           );
         })()}
         <div className="flex items-center gap-2 mb-3 px-1">
-          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold">{initials}</span>
+          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {businessLogo ? (
+              <img src={businessLogo} alt={businessName || 'Business'} className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-white text-xs font-bold">{initials}</span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-gray-900 truncate">{displayName}</p>
