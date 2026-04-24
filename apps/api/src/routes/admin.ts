@@ -237,7 +237,25 @@ router.put('/modules/:id', async (req: AuthenticatedRequest, res: Response, next
   } catch (error) { next(error); }
 });
 
-const MS_THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+/** Returns endDate and amount based on the plan's billing period (daily / yearly / monthly). */
+function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
+  const now = new Date();
+  const slug = plan.slug.toLowerCase();
+  if (slug === 'daily') {
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 1);
+    return { endDate, amount: plan.dailyPrice ?? plan.price };
+  }
+  if (slug === 'yearly') {
+    const endDate = new Date(now);
+    endDate.setFullYear(endDate.getFullYear() + 1);
+    return { endDate, amount: plan.yearlyPrice ?? plan.price };
+  }
+  // default: monthly
+  const endDate = new Date(now);
+  endDate.setMonth(endDate.getMonth() + 1);
+  return { endDate, amount: plan.price };
+}
 
 router.delete('/plans/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -323,9 +341,10 @@ router.post('/subscriptions/:id/assign-plan', async (req: AuthenticatedRequest, 
     if (!planId) { res.status(400).json({ success: false, error: 'planId required' }); return; }
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
+    const { endDate: planEndDate, amount: planAmount } = getPlanBillingDetails(plan);
     const sub = await prisma.subscription.update({
       where: { id: req.params.id },
-      data: { planId, status: 'ACTIVE', startDate: new Date(), endDate: new Date(Date.now() + MS_THIRTY_DAYS), amount: plan.price },
+      data: { planId, status: 'ACTIVE', startDate: new Date(), endDate: planEndDate, amount: planAmount },
       include: { plan: true, business: { select: { id: true, name: true } } },
     });
     await prisma.business.update({ where: { id: sub.businessId }, data: { planId } });
