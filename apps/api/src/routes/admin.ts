@@ -241,12 +241,16 @@ router.put('/modules/:id', async (req: AuthenticatedRequest, res: Response, next
 function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
   const now = new Date();
   const slug = plan.slug.toLowerCase();
-  if (slug === 'daily') {
+  // A plan is treated as daily when its slug is 'daily' OR when it has a dailyPrice
+  // with no monthly base price (price === 0).
+  if (slug === 'daily' || (plan.dailyPrice != null && plan.price === 0)) {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 1);
     return { endDate, amount: plan.dailyPrice ?? plan.price };
   }
-  if (slug === 'yearly') {
+  // A plan is treated as yearly when its slug is 'yearly' OR when it has a yearlyPrice
+  // with no monthly base price (price === 0) and no daily price.
+  if (slug === 'yearly' || (plan.yearlyPrice != null && plan.price === 0 && plan.dailyPrice == null)) {
     const endDate = new Date(now);
     endDate.setFullYear(endDate.getFullYear() + 1);
     return { endDate, amount: plan.yearlyPrice ?? plan.price };
