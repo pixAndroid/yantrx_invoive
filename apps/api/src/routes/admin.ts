@@ -662,4 +662,75 @@ router.post('/tools/:id/duplicate', async (req: AuthenticatedRequest, res: Respo
   } catch (error) { next(error); }
 });
 
+// ─── Contact Enquiries ────────────────────────────────────────────────────
+
+router.get('/enquiries', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const page = parseInt(req.query.page as string || '1');
+    const limit = parseInt(req.query.limit as string || '20');
+    const status = req.query.status as string;
+    const search = req.query.search as string;
+
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+        { subject: { contains: search, mode: 'insensitive' as const } },
+        { message: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+
+    const [enquiries, total] = await Promise.all([
+      prisma.contactEnquiry.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.contactEnquiry.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: enquiries,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total, hasPrev: page > 1 },
+    });
+  } catch (error) { next(error); }
+});
+
+router.put('/enquiries/:id/read', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const enquiry = await prisma.contactEnquiry.findUnique({ where: { id: req.params.id } });
+    if (!enquiry) { res.status(404).json({ success: false, error: 'Enquiry not found' }); return; }
+    const updated = await prisma.contactEnquiry.update({
+      where: { id: req.params.id },
+      data: { status: 'READ' },
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+router.put('/enquiries/:id/replied', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const enquiry = await prisma.contactEnquiry.findUnique({ where: { id: req.params.id } });
+    if (!enquiry) { res.status(404).json({ success: false, error: 'Enquiry not found' }); return; }
+    const updated = await prisma.contactEnquiry.update({
+      where: { id: req.params.id },
+      data: { status: 'REPLIED' },
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+router.delete('/enquiries/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const enquiry = await prisma.contactEnquiry.findUnique({ where: { id: req.params.id } });
+    if (!enquiry) { res.status(404).json({ success: false, error: 'Enquiry not found' }); return; }
+    await prisma.contactEnquiry.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Enquiry deleted' });
+  } catch (error) { next(error); }
+});
+
 export default router;

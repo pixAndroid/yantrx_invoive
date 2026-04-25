@@ -1,8 +1,9 @@
 'use client';
 
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { Mail, Phone, MapPin, Clock, MessageCircle, Headphones, FileText, ChevronRight } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, MessageCircle, Headphones, FileText, ChevronRight, CheckCircle2, Building2, Globe } from 'lucide-react';
 import { useState } from 'react';
+import { API_URL } from '@/lib/api';
 
 const CONTACT_METHODS = [
   {
@@ -11,7 +12,10 @@ const CONTACT_METHODS = [
     description: 'Send us a detailed message and we\'ll respond within 2 hours on business days.',
     value: 'support@yantrix.in',
     href: 'mailto:support@yantrix.in',
-    color: 'bg-indigo-50 text-indigo-600',
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-600',
+    valueBg: 'bg-indigo-50',
+    valueColor: 'text-indigo-700',
   },
   {
     icon: Phone,
@@ -19,7 +23,10 @@ const CONTACT_METHODS = [
     description: 'Talk to a real person. Available Monday to Saturday, 9 AM – 6 PM IST.',
     value: '+91 80 4567 8900',
     href: 'tel:+918045678900',
-    color: 'bg-green-50 text-green-600',
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
+    valueBg: 'bg-emerald-50',
+    valueColor: 'text-emerald-700',
   },
   {
     icon: MessageCircle,
@@ -27,7 +34,10 @@ const CONTACT_METHODS = [
     description: 'Chat with our team directly in the app. Average response time under 5 minutes.',
     value: 'Available in-app',
     href: '/auth/login',
-    color: 'bg-purple-50 text-purple-600',
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    valueBg: 'bg-violet-50',
+    valueColor: 'text-violet-700',
   },
 ];
 
@@ -59,14 +69,36 @@ const FAQS = [
 ];
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real implementation, this would POST to an API endpoint
-    setSubmitted(true);
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const res = await fetch(`${API_URL}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          subject: formData.subject || undefined,
+          message: formData.message,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong');
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitError(err.message || 'Failed to send message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -79,85 +111,114 @@ export default function ContactPage() {
             We&apos;re here to help
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Contact Us
+            Get in Touch
           </h1>
           <p className="text-xl text-gray-600 leading-relaxed">
-            Have a question, facing an issue, or want to see a feature?
+            Have a question, facing an issue, or want to explore features?
             Our team responds to every message — usually within 2 hours.
           </p>
         </div>
       </section>
 
       {/* Contact Methods */}
-      <section className="py-16">
+      <section className="py-16 bg-white">
         <div className="container-wide">
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="grid md:grid-cols-3 gap-6 mb-20">
             {CONTACT_METHODS.map(method => (
               <a
                 key={method.title}
                 href={method.href}
-                className="group bg-white rounded-2xl border border-gray-100 p-6 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 text-left"
+                className="group relative bg-white rounded-2xl border border-gray-100 p-7 hover:border-indigo-200 hover:shadow-xl transition-all duration-300 text-left overflow-hidden"
               >
-                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${method.color} mb-4`}>
-                  <method.icon className="h-6 w-6" />
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 to-indigo-50/0 group-hover:from-indigo-50/30 group-hover:to-purple-50/20 transition-all duration-500 rounded-2xl" />
+                <div className={`relative inline-flex h-14 w-14 items-center justify-center rounded-2xl ${method.iconBg} mb-5`}>
+                  <method.icon className={`h-6 w-6 ${method.iconColor}`} />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{method.title}</h3>
-                <p className="text-sm text-gray-500 mb-3 leading-relaxed">{method.description}</p>
-                <span className="text-sm font-medium text-indigo-600 group-hover:underline">{method.value}</span>
+                <h3 className="relative font-bold text-gray-900 text-base mb-2">{method.title}</h3>
+                <p className="relative text-sm text-gray-500 mb-4 leading-relaxed">{method.description}</p>
+                <span className={`relative inline-flex items-center gap-1 text-sm font-semibold ${method.valueColor} ${method.valueBg} px-3 py-1 rounded-full`}>
+                  {method.value}
+                </span>
               </a>
             ))}
           </div>
 
-          {/* Contact Form + Office Info */}
-          <div className="grid lg:grid-cols-5 gap-10">
-            {/* Form */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a message</h2>
+          {/* Contact Form + Business Info */}
+          <div className="grid lg:grid-cols-5 gap-10 items-start">
+            {/* Form — LEFT */}
+            <div className="lg:col-span-3 order-2 lg:order-1">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-8 lg:p-10">
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Send us a message</h2>
+                  <p className="text-sm text-gray-500">Fill in the form and our team will respond within 2 business hours.</p>
+                </div>
 
                 {submitted ? (
                   <div className="text-center py-12">
-                    <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                      <Mail className="h-8 w-8 text-green-600" />
+                    <div className="h-20 w-20 rounded-full bg-green-50 border-4 border-green-100 flex items-center justify-center mx-auto mb-5">
+                      <CheckCircle2 className="h-10 w-10 text-green-500" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Message sent!</h3>
-                    <p className="text-gray-600">
-                      Thanks for reaching out. We&apos;ll get back to you at <strong>{formData.email}</strong> within 2 hours.
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Message sent!</h3>
+                    <p className="text-gray-500 text-sm max-w-xs mx-auto">
+                      Thanks for reaching out. We&apos;ll get back to you at{' '}
+                      <strong className="text-gray-700">{formData.email}</strong> within 2 hours.
                     </p>
+                    <button
+                      onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', subject: '', message: '' }); }}
+                      className="mt-6 text-sm font-medium text-indigo-600 hover:text-indigo-700 underline underline-offset-2"
+                    >
+                      Send another message
+                    </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid sm:grid-cols-2 gap-5">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name <span className="text-red-400">*</span></label>
                         <input
                           type="text"
                           required
                           value={formData.name}
                           onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
                           placeholder="Rajesh Kumar"
-                          className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address <span className="text-red-400">*</span></label>
                         <input
                           type="email"
                           required
                           value={formData.email}
                           onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
                           placeholder="rajesh@business.com"
-                          className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone Number</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))}
+                          placeholder="+91 98765 43210"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 py-3 text-sm focus:bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Subject</label>
                       <select
                         value={formData.subject}
                         onChange={e => setFormData(p => ({ ...p, subject: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition bg-white"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                       >
                         <option value="">Select a topic</option>
                         <option value="billing">Billing / Subscription</option>
@@ -170,73 +231,99 @@ export default function ContactPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Message <span className="text-red-400">*</span></label>
                       <textarea
                         required
                         rows={5}
                         value={formData.message}
                         onChange={e => setFormData(p => ({ ...p, message: e.target.value }))}
                         placeholder="Describe your question or issue in detail..."
-                        className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition resize-none"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition resize-none"
                       />
                     </div>
 
+                    {submitError && (
+                      <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+                        {submitError}
+                      </div>
+                    )}
+
                     <button
                       type="submit"
-                      className="w-full rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+                      disabled={submitting}
+                      className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-3.5 text-sm font-bold text-white hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-md hover:shadow-indigo-200 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Send Message
+                      {submitting ? 'Sending…' : 'Send Message →'}
                     </button>
+                    <p className="text-xs text-gray-400 text-center">We&apos;ll never share your information with third parties.</p>
                   </form>
                 )}
               </div>
             </div>
 
-            {/* Office Info */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-indigo-600" />
-                  Our Office
-                </h3>
-                <address className="not-italic text-sm text-gray-600 space-y-1">
-                  <p className="font-medium text-gray-900">Yantrix Technologies Pvt. Ltd.</p>
+            {/* Business Info — RIGHT */}
+            <div className="lg:col-span-2 order-1 lg:order-2 space-y-5">
+              {/* Office */}
+              <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-3xl p-7 text-white shadow-xl shadow-indigo-200">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="font-bold text-lg">Our Office</h3>
+                </div>
+                <address className="not-italic text-sm leading-relaxed space-y-1 text-indigo-100">
+                  <p className="font-bold text-white text-base">Yantrix Technologies Pvt. Ltd.</p>
                   <p>4th Floor, Innovate Hub</p>
                   <p>80 Feet Road, Koramangala</p>
                   <p>Bengaluru, Karnataka 560034</p>
                   <p>India</p>
                 </address>
+                <div className="mt-5 pt-5 border-t border-white/20 flex items-center gap-2 text-sm text-indigo-200">
+                  <Globe className="h-4 w-4 flex-shrink-0" />
+                  <a href="https://yantrix.in" className="hover:text-white transition-colors">yantrix.in</a>
+                </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-indigo-600" />
-                  Support Hours
-                </h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex justify-between">
-                    <span>Monday – Friday</span>
-                    <span className="font-medium text-gray-900">9 AM – 8 PM IST</span>
+              {/* Support Hours */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-7">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <div className="flex justify-between">
-                    <span>Saturday</span>
-                    <span className="font-medium text-gray-900">10 AM – 6 PM IST</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Sunday</span>
-                    <span className="font-medium text-gray-500">Email only</span>
-                  </div>
+                  <h3 className="font-bold text-gray-900">Support Hours</h3>
+                </div>
+                <div className="space-y-3 text-sm">
+                  {[
+                    { day: 'Monday – Friday', hours: '9 AM – 8 PM IST', highlight: true },
+                    { day: 'Saturday', hours: '10 AM – 6 PM IST', highlight: false },
+                    { day: 'Sunday', hours: 'Email only', highlight: false },
+                  ].map(row => (
+                    <div key={row.day} className="flex items-center justify-between">
+                      <span className="text-gray-500">{row.day}</span>
+                      <span className={`font-semibold px-2.5 py-0.5 rounded-full text-xs ${row.highlight ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700'}`}>
+                        {row.hours}
+                      </span>
+                    </div>
+                  ))}
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">Extended support hours available during GST filing deadlines (20th – 22nd of each month).</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">Extended support hours during GST filing deadlines (20th – 22nd of each month).</p>
                 </div>
               </div>
 
-              <div className="bg-indigo-50 rounded-2xl border border-indigo-100 p-6">
-                <FileText className="h-6 w-6 text-indigo-600 mb-3" />
-                <h3 className="font-semibold text-gray-900 mb-2">Looking for help docs?</h3>
-                <p className="text-sm text-gray-600 mb-4">Browse our knowledge base for step-by-step guides and video tutorials.</p>
-                <a href="#" className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+              {/* Help Docs */}
+              <div className="bg-indigo-50 rounded-3xl border border-indigo-100 p-7">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900">Looking for help docs?</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Browse our knowledge base for step-by-step guides and video tutorials.</p>
+                <a
+                  href="#"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold px-5 py-2.5 hover:bg-indigo-700 transition-colors"
+                >
                   Visit Help Center <ChevronRight className="h-4 w-4" />
                 </a>
               </div>
