@@ -407,7 +407,7 @@ export default function HomePage() {
                 className={`group bg-white rounded-2xl border border-gray-100 p-6 ${getBorderForIndex(idx)} hover:shadow-lg transition-all duration-300 flex flex-col`}
               >
                 <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden ${getColorForIndex(idx)} mb-4`}>
-                  {tool.logoUrl
+                  {tool.logoUrl && isSafeImageUrl(tool.logoUrl)
                     ? <img src={tool.logoUrl} alt={tool.title} className="h-full w-full object-cover" />
                     : <Wrench className="h-6 w-6" />
                   }
