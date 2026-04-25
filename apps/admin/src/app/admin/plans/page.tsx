@@ -97,6 +97,13 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
     }));
   };
 
+  const diffDays = (startStr: string, endStr: string): number => {
+    // Parse as UTC midnight to avoid DST-induced off-by-one errors
+    const start = new Date(startStr + 'T00:00:00Z');
+    const end = new Date(endStr + 'T00:00:00Z');
+    return Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
   const resolveDurationDays = (): number | null => {
     if (form.durationMode === 'preset') {
       return form.durationPreset === 'daily' ? 1 : form.durationPreset === 'monthly' ? 30 : 365;
@@ -106,9 +113,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
       return d > 0 ? d : null;
     }
     if (form.durationMode === 'range' && form.durationStart && form.durationEnd) {
-      const start = new Date(form.durationStart);
-      const end = new Date(form.durationEnd);
-      const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      const diff = diffDays(form.durationStart, form.durationEnd);
       return diff > 0 ? diff : null;
     }
     return null;
@@ -267,7 +272,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
                   />
                 </div>
                 {form.durationStart && form.durationEnd && (() => {
-                  const days = Math.round((new Date(form.durationEnd).getTime() - new Date(form.durationStart).getTime()) / (1000 * 60 * 60 * 24));
+                  const days = diffDays(form.durationStart, form.durationEnd);
                   return days > 0 ? (
                     <p className="col-span-2 text-xs text-orange-400">{days} day{days !== 1 ? 's' : ''} selected</p>
                   ) : days <= 0 ? (
