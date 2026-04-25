@@ -88,6 +88,7 @@ export default function EditToolPage() {
     seoTitle: tool.seoTitle || '',
     seoDescription: tool.seoDescription || '',
     sortOrder: String(tool.sortOrder),
+    screenshots: (tool.screenshots || []).join('\n'),
   };
 
   return <ToolForm mode="edit" toolId={tool.id} initialData={initialData} />;

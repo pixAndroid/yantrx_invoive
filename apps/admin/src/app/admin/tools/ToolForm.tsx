@@ -34,6 +34,7 @@ interface ToolFormData {
   seoTitle: string;
   seoDescription: string;
   sortOrder: string;
+  screenshots: string;
 }
 
 const DEFAULT_FORM: ToolFormData = {
@@ -44,6 +45,7 @@ const DEFAULT_FORM: ToolFormData = {
   customHtml: '', customCss: '', customJs: '',
   ctaText: 'Launch Tool', ctaUrl: '',
   pricingType: 'FREE', seoTitle: '', seoDescription: '', sortOrder: '0',
+  screenshots: '',
 };
 
 function generateSlug(title: string) {
@@ -94,6 +96,7 @@ export default function ToolForm({ initialData, toolId, mode }: ToolFormProps) {
     try {
       const payload = {
         ...form,
+        screenshots: form.screenshots ? form.screenshots.split('\n').map(u => u.trim()).filter(Boolean) : [],
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         sortOrder: parseInt(form.sortOrder) || 0,
         status: publishNow ? 'PUBLISHED' : form.status,
@@ -393,8 +396,8 @@ export default function ToolForm({ initialData, toolId, mode }: ToolFormProps) {
                   <textarea
                     rows={4}
                     placeholder="https://cdn.example.com/screenshot1.jpg&#10;https://cdn.example.com/screenshot2.jpg"
-                    value={Array.isArray(form.bannerUrl) ? (form as any).screenshots?.join('\n') : ''}
-                    onChange={e => (form as any).screenshots = e.target.value.split('\n')}
+                    value={form.screenshots}
+                    onChange={e => set('screenshots', e.target.value)}
                     className={`${inputClass} resize-y`}
                   />
                   <p className="text-xs text-gray-600 mt-1">Enter one URL per line</p>

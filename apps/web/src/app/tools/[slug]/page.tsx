@@ -200,7 +200,7 @@ export default function ToolSlugPage() {
         {/* Sandboxed tool */}
         <section className="bg-gray-50 min-h-[600px]">
           <iframe
-            sandbox="allow-scripts allow-forms"
+            sandbox="allow-scripts"
             className="w-full min-h-[600px] border-0"
             srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${tool.customCss || ''}</style></head><body>${tool.customHtml || ''}<script>${tool.customJs || ''}<\/script></body></html>`}
             title={tool.title}
