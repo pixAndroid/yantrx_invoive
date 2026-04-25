@@ -599,6 +599,22 @@ router.put('/tools/:id', async (req: AuthenticatedRequest, res: Response, next: 
     }
     if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder);
 
+    // System tools: prevent slug changes, unpublishing, or making private
+    if (existing.isSystem) {
+      if (data.slug && data.slug !== existing.slug) {
+        res.status(403).json({ success: false, error: 'Cannot change slug of a system tool' });
+        return;
+      }
+      if (data.status && data.status !== 'PUBLISHED') {
+        res.status(403).json({ success: false, error: 'System tools must remain published' });
+        return;
+      }
+      if (data.visibility && data.visibility !== 'PUBLIC') {
+        res.status(403).json({ success: false, error: 'System tools must remain public' });
+        return;
+      }
+    }
+
     // If slug is being changed, check for uniqueness
     if (data.slug && data.slug !== existing.slug) {
       const slugConflict = await prisma.tool.findUnique({ where: { slug: data.slug } });
@@ -614,6 +630,7 @@ router.delete('/tools/:id', async (req: AuthenticatedRequest, res: Response, nex
   try {
     const existing = await prisma.tool.findUnique({ where: { id: req.params.id } });
     if (!existing) { res.status(404).json({ success: false, error: 'Tool not found' }); return; }
+    if (existing.isSystem) { res.status(403).json({ success: false, error: 'System tools cannot be deleted' }); return; }
     await prisma.tool.delete({ where: { id: req.params.id } });
     res.json({ success: true, message: 'Tool deleted' });
   } catch (error) { next(error); }
