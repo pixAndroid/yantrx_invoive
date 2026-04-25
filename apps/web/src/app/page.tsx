@@ -131,6 +131,22 @@ function getCmsToolHref(tool: CMSTool): string {
   return `/tools/${tool.slug}`;
 }
 
+const HOME_HEADER_DEFAULTS = {
+  badgeText: 'Trusted by 500+ businesses across India',
+  titleLine1: 'We Build Tools That',
+  titleGradientText: 'Power Modern Businesses',
+  description:
+    'From invoicing to booking platforms, tracking systems to SaaS products — we design software that helps companies grow faster.',
+  primaryBtnLabel: 'Explore Tools',
+  secondaryBtnLabel: 'Start a Project',
+  stat1Value: '10+',
+  stat1Label: 'Products Built',
+  stat2Value: '500+',
+  stat2Label: 'Businesses Served',
+  stat3Value: '5+',
+  stat3Label: 'Industries',
+};
+
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -138,11 +154,26 @@ export default function HomePage() {
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [cmsTools, setCmsTools] = useState<CMSTool[]>([]);
+  const [homeHeader, setHomeHeader] = useState(HOME_HEADER_DEFAULTS);
 
   useEffect(() => {
     fetch(`${API_URL}/tools?limit=12`)
       .then(r => r.json())
       .then(d => { if (d.success && Array.isArray(d.data) && d.data.length > 0) setCmsTools(d.data); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_URL}/settings/home-header`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data) {
+          setHomeHeader(prev => ({
+            ...prev,
+            ...Object.fromEntries(Object.entries(d.data).filter(([, v]) => v != null && v !== '')),
+          }));
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -272,17 +303,16 @@ export default function HomePage() {
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 mb-6">
               <Zap className="h-3.5 w-3.5" />
-              Trusted by 500+ businesses across India
+              {homeHeader.badgeText}
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight leading-[1.1] mb-6">
-              We Build Tools That
-              <span className="block gradient-text">Power Modern Businesses</span>
+              {homeHeader.titleLine1}
+              <span className="block gradient-text">{homeHeader.titleGradientText}</span>
             </h1>
 
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-              From invoicing to booking platforms, tracking systems to SaaS products —
-              we design software that helps companies grow faster.
+              {homeHeader.description}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -290,23 +320,23 @@ export default function HomePage() {
                 href="/tools"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white hover:bg-indigo-700 transition-all active:scale-[0.98] shadow-lg shadow-indigo-200"
               >
-                Explore Tools
+                {homeHeader.primaryBtnLabel}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/contact"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-8 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-all"
               >
-                Start a Project
+                {homeHeader.secondaryBtnLabel}
               </Link>
             </div>
 
             {/* Stat cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
               {[
-                { value: '10+', label: 'Products Built' },
-                { value: '500+', label: 'Businesses Served' },
-                { value: '5+', label: 'Industries' },
+                { value: homeHeader.stat1Value, label: homeHeader.stat1Label },
+                { value: homeHeader.stat2Value, label: homeHeader.stat2Label },
+                { value: homeHeader.stat3Value, label: homeHeader.stat3Label },
               ].map((stat, i) => (
                 <motion.div
                   key={stat.label}

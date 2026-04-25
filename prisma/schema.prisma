@@ -1062,3 +1062,23 @@ model InvoiceTemplate {
 
   @@map("invoice_templates")
 }
+
+model SiteConfig {
+  id                 String   @id @default(cuid())
+  key                String   @unique
+  badgeText          String?
+  titleLine1         String?
+  titleGradientText  String?
+  description        String?  @db.Text
+  primaryBtnLabel    String?
+  secondaryBtnLabel  String?
+  stat1Value         String?
+  stat1Label         String?
+  stat2Value         String?
+  stat2Label         String?
+  stat3Value         String?
+  stat3Label         String?
+  updatedAt          DateTime @updatedAt
+
+  @@map("site_configs")
+}

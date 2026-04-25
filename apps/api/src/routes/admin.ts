@@ -733,4 +733,45 @@ router.delete('/enquiries/:id', async (req: AuthenticatedRequest, res: Response,
   } catch (error) { next(error); }
 });
 
+// ─── Home Page Header Config ──────────────────────────────────────────────
+
+const HOME_HEADER_KEY = 'home_header';
+
+router.get('/settings/home-header', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const config = await prisma.siteConfig.findUnique({ where: { key: HOME_HEADER_KEY } });
+    res.json({ success: true, data: config ?? { key: HOME_HEADER_KEY } });
+  } catch (error) { next(error); }
+});
+
+router.put('/settings/home-header', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const {
+      badgeText, titleLine1, titleGradientText, description,
+      primaryBtnLabel, secondaryBtnLabel,
+      stat1Value, stat1Label, stat2Value, stat2Label, stat3Value, stat3Label,
+    } = req.body;
+
+    const data: Record<string, string | null> = {};
+    const fields = [
+      'badgeText', 'titleLine1', 'titleGradientText', 'description',
+      'primaryBtnLabel', 'secondaryBtnLabel',
+      'stat1Value', 'stat1Label', 'stat2Value', 'stat2Label', 'stat3Value', 'stat3Label',
+    ];
+    const values = [
+      badgeText, titleLine1, titleGradientText, description,
+      primaryBtnLabel, secondaryBtnLabel,
+      stat1Value, stat1Label, stat2Value, stat2Label, stat3Value, stat3Label,
+    ];
+    fields.forEach((f, i) => { if (values[i] !== undefined) data[f] = values[i] ?? null; });
+
+    const config = await prisma.siteConfig.upsert({
+      where: { key: HOME_HEADER_KEY },
+      create: { key: HOME_HEADER_KEY, ...data },
+      update: data,
+    });
+    res.json({ success: true, data: config });
+  } catch (error) { next(error); }
+});
+
 export default router;
