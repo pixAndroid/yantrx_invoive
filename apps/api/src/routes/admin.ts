@@ -228,10 +228,13 @@ router.get('/modules', async (_req: AuthenticatedRequest, res: Response, next: N
 
 router.put('/modules/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { isActive } = req.body;
+    const { isActive, sortOrder } = req.body;
+    const data: { isActive?: boolean; sortOrder?: number } = {};
+    if (isActive !== undefined) data.isActive = isActive;
+    if (sortOrder !== undefined) data.sortOrder = sortOrder;
     const mod = await prisma.module.update({
       where: { id: req.params.id },
-      data: { isActive },
+      data,
     });
     res.json({ success: true, data: mod });
   } catch (error) { next(error); }

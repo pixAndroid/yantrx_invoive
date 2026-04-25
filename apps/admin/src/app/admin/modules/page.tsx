@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, AlertCircle, RefreshCw, Lock, Plus, Trash2, X, Check } from 'lucide-react';
+import { Zap, AlertCircle, RefreshCw, Lock, Plus, Trash2, X, Check, ChevronUp, ChevronDown } from 'lucide-react';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 
 interface Module {
@@ -81,6 +81,38 @@ export default function AdminModulesPage() {
     } catch {} finally { setDeletingId(null); }
   };
 
+  const moveModule = async (id: string, direction: 'up' | 'down') => {
+    const sorted = [...modules].sort((a, b) => a.sortOrder - b.sortOrder);
+    const idx = sorted.findIndex(m => m.id === id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+
+    const current = sorted[idx];
+    const neighbor = sorted[swapIdx];
+    const newCurrentOrder = neighbor.sortOrder;
+    const newNeighborOrder = current.sortOrder;
+
+    try {
+      await Promise.all([
+        adminFetch(`/admin/modules/${current.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ sortOrder: newCurrentOrder }),
+        }),
+        adminFetch(`/admin/modules/${neighbor.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ sortOrder: newNeighborOrder }),
+        }),
+      ]);
+      setModules(prev => prev.map(m => {
+        if (m.id === current.id) return { ...m, sortOrder: newCurrentOrder };
+        if (m.id === neighbor.id) return { ...m, sortOrder: newNeighborOrder };
+        return m;
+      }));
+    } catch (err: any) {
+      setError(err.message || 'Failed to reorder modules');
+    }
+  };
+
   const planBadge: Record<string, string> = {
     starter: 'bg-blue-900/30 text-blue-400 border-blue-800',
     pro: 'bg-indigo-900/30 text-indigo-400 border-indigo-800',
@@ -143,7 +175,7 @@ export default function AdminModulesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {modules.map(mod => (
+          {[...modules].sort((a, b) => a.sortOrder - b.sortOrder).map((mod, idx, sorted) => (
             <div key={mod.id} className={`rounded-2xl border ${mod.isActive ? 'border-gray-700' : 'border-gray-800 opacity-60'} bg-gray-900 p-5`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -161,14 +193,34 @@ export default function AdminModulesPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => toggleModule(mod.id, mod.isActive)}
-                  disabled={togglingId === mod.id || mod.isCore}
-                  title={mod.isCore ? 'Core modules cannot be disabled' : (mod.isActive ? 'Disable module' : 'Enable module')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${mod.isActive ? 'bg-orange-500' : 'bg-gray-700'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${mod.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <div className="flex flex-col">
+                    <button
+                      onClick={() => moveModule(mod.id, 'up')}
+                      disabled={idx === 0}
+                      title="Move up in sidebar"
+                      className="p-0.5 rounded text-gray-500 hover:text-gray-200 disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => moveModule(mod.id, 'down')}
+                      disabled={idx === sorted.length - 1}
+                      title="Move down in sidebar"
+                      className="p-0.5 rounded text-gray-500 hover:text-gray-200 disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => toggleModule(mod.id, mod.isActive)}
+                    disabled={togglingId === mod.id || mod.isCore}
+                    title={mod.isCore ? 'Core modules cannot be disabled' : (mod.isActive ? 'Disable module' : 'Enable module')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${mod.isActive ? 'bg-orange-500' : 'bg-gray-700'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${mod.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
               </div>
 
               {mod.requiredPlan && (
@@ -194,7 +246,7 @@ export default function AdminModulesPage() {
 
       <div className="mt-6 rounded-2xl border border-amber-800/50 bg-amber-900/10 p-4">
         <p className="text-sm text-amber-300">
-          <strong>Note:</strong> Core modules are always enabled and cannot be disabled. Non-core modules can be toggled on/off globally.
+          <strong>Note:</strong> Core modules are always enabled and cannot be disabled. Use the ↑↓ arrows to reorder the client sidebar menu.
         </p>
       </div>
     </div>
