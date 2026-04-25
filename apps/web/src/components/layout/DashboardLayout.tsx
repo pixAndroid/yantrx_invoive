@@ -8,12 +8,13 @@ import {
   LogOut, Bell, Menu, X,
   IndianRupee, Zap, Building2, ChevronRight, Lock,
   Receipt, Boxes, UserCircle, Target, Crown,
-  Search, Settings, PanelLeftClose, PanelLeft,
+  Settings, PanelLeftClose, PanelLeft,
   Plus
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
 import { BusinessProfileSetupModal, type BusinessSettings as BizSettings } from '@/components/ui/BusinessProfileSetupModal';
+import { GlobalSearch } from '@/components/ui/GlobalSearch';
 
 const INVOICE_USAGE_WARNING_RATIO = 0.8;
 
@@ -626,20 +627,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
 
           {/* Global Search */}
-          <div className="flex-1 max-w-md hidden sm:block">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search invoices, customers…"
-                readOnly
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-500 placeholder-gray-400 cursor-pointer focus:outline-none focus:border-indigo-300 focus:bg-white transition-all duration-150 hover:border-gray-300 hover:bg-white"
-              />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400 shadow-xs">
-                ⌘K
-              </kbd>
-            </div>
-          </div>
+          <GlobalSearch />
 
           <div className="flex-1" />
 
