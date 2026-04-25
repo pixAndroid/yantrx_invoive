@@ -113,7 +113,10 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
       return;
     }
 
-    const plan = await prisma.plan.findUnique({ where: { id: planId } });
+    const [plan, business] = await Promise.all([
+      prisma.plan.findUnique({ where: { id: planId } }),
+      prisma.business.findUnique({ where: { id: businessId }, select: { name: true, email: true, phone: true } }),
+    ]);
     if (!plan) { res.status(404).json({ success: false, error: 'Plan not found' }); return; }
 
     const { amount: planAmount } = getPlanBillingDetails(plan);
@@ -126,6 +129,12 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
       notes: { businessId, planId, planName: plan.name },
     });
 
+    const prefill = {
+      name: req.user!.name || business?.name || '',
+      email: req.user!.email || business?.email || '',
+      contact: req.user!.phone || business?.phone || '',
+    };
+
     res.json({
       success: true,
       data: {
@@ -133,6 +142,7 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
         amount: order.amount,
         currency: order.currency,
         keyId,
+        prefill,
       },
     });
   } catch (error) { next(error); }
