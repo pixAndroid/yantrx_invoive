@@ -314,16 +314,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className={`flex h-full flex-col ${mobile ? '' : collapsed ? 'w-16' : 'w-64'} transition-all duration-300`}>
         {/* Logo */}
         <div className={`flex h-16 items-center border-b border-gray-100 ${collapsed ? 'justify-center px-3' : 'px-5'} flex-shrink-0`}>
-          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0">
             <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
               {businessLogo ? (
                 <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
               ) : (
-                <span className="text-white font-bold text-sm">{businessName ? businessName.charAt(0).toUpperCase() : 'Y'}</span>
+                <img src="/yeantrix-labs-logo.svg" alt="Yeantrix Labs" className="h-full w-full object-contain" />
               )}
             </div>
             {!collapsed && (
-              <span className="text-base font-bold text-gray-900 truncate">{businessName || 'Yantrix'}</span>
+              <span className="text-base font-bold text-gray-900 truncate">{businessName || 'Yeantrix Labs'}</span>
             )}
           </Link>
         </div>
