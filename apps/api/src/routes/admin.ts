@@ -237,9 +237,15 @@ router.put('/modules/:id', async (req: AuthenticatedRequest, res: Response, next
   } catch (error) { next(error); }
 });
 
-/** Returns endDate and amount based on the plan's billing period (daily / yearly / monthly). */
-function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
+/** Returns endDate and amount based on the plan's billing period. */
+function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null; durationDays: number | null }) {
   const now = new Date();
+  // If the plan has an explicit durationDays, always use that.
+  if (plan.durationDays !== null && plan.durationDays > 0) {
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + plan.durationDays);
+    return { endDate, amount: plan.price };
+  }
   const slug = plan.slug.toLowerCase();
   // A plan is treated as daily when its slug is 'daily' OR when it has a dailyPrice
   // with no monthly base price (price === 0).
