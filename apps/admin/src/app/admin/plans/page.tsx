@@ -16,6 +16,7 @@ interface Plan {
   customerLimit: number;
   userLimit: number;
   storageLimit: number;
+  durationDays: number | null;
   features: string[];
   isActive: boolean;
   isFeatured: boolean;
@@ -35,6 +36,11 @@ const DEFAULT_FORM = {
   invoiceLimit: '100', customerLimit: '500', userLimit: '2', storageLimit: '500',
   features: [] as string[],
   isActive: true, isFeatured: false, sortOrder: '0',
+  durationMode: 'preset' as 'preset' | 'days' | 'range',
+  durationPreset: 'monthly' as 'daily' | 'monthly' | 'yearly',
+  durationDays: '',
+  durationStart: '',
+  durationEnd: '',
 };
 
 function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () => void; onSaved: () => void }) {
@@ -45,6 +51,11 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
     userLimit: String(plan.userLimit), storageLimit: String(plan.storageLimit),
     features: plan.features || [],
     isActive: plan.isActive, isFeatured: plan.isFeatured, sortOrder: String(plan.sortOrder),
+    durationMode: 'days' as 'preset' | 'days' | 'range',
+    durationPreset: 'monthly' as 'daily' | 'monthly' | 'yearly',
+    durationDays: plan.durationDays != null ? String(plan.durationDays) : '',
+    durationStart: '',
+    durationEnd: '',
   } : { ...DEFAULT_FORM, features: [] as string[] });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -86,8 +97,33 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
     }));
   };
 
+  const resolveDurationDays = (): number | null => {
+    if (form.durationMode === 'preset') {
+      return form.durationPreset === 'daily' ? 1 : form.durationPreset === 'monthly' ? 30 : 365;
+    }
+    if (form.durationMode === 'days') {
+      const d = parseInt(form.durationDays);
+      return d > 0 ? d : null;
+    }
+    if (form.durationMode === 'range' && form.durationStart && form.durationEnd) {
+      const start = new Date(form.durationStart);
+      const end = new Date(form.durationEnd);
+      const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return diff > 0 ? diff : null;
+    }
+    return null;
+  };
+
   const handleSave = async () => {
     if (!form.name || !form.slug) { setErr('Name and slug are required'); return; }
+    const durationDays = resolveDurationDays();
+    if (form.durationMode === 'days' && form.durationDays && durationDays === null) {
+      setErr('Duration days must be a positive number'); return;
+    }
+    if (form.durationMode === 'range') {
+      if (!form.durationStart || !form.durationEnd) { setErr('Please select both start and end dates'); return; }
+      if (durationDays === null) { setErr('End date must be after start date'); return; }
+    }
     setSaving(true); setErr('');
     try {
       const token = getAdminToken();
@@ -103,6 +139,7 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
         features: form.features,
         isActive: form.isActive, isFeatured: form.isFeatured,
         sortOrder: parseInt(form.sortOrder) || 0,
+        durationDays,
       };
       const url = plan ? `${API_URL}/admin/plans/${plan.id}` : `${API_URL}/admin/plans`;
       const method = plan ? 'PUT' : 'POST';
@@ -157,6 +194,88 @@ function PlanModal({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () 
               <input type="checkbox" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} className="rounded border-gray-600" />
               Featured
             </label>
+          </div>
+
+          {/* ── Plan Duration Section ── */}
+          <div className="col-span-2 mt-1">
+            <label className="block text-xs font-medium text-gray-400 mb-2">Plan Duration</label>
+            {/* Mode tabs */}
+            <div className="flex gap-1 mb-3 rounded-lg bg-gray-800 p-1">
+              {(['preset', 'days', 'range'] as const).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => set('durationMode', mode)}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${
+                    form.durationMode === mode
+                      ? 'bg-orange-600 text-white'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  {mode === 'preset' ? 'Preset' : mode === 'days' ? 'Total Days' : 'Date Range'}
+                </button>
+              ))}
+            </div>
+
+            {form.durationMode === 'preset' && (
+              <select
+                value={form.durationPreset}
+                onChange={e => set('durationPreset', e.target.value)}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+              >
+                <option value="daily">Daily (1 day)</option>
+                <option value="monthly">Monthly (30 days)</option>
+                <option value="yearly">Yearly (365 days)</option>
+              </select>
+            )}
+
+            {form.durationMode === 'days' && (
+              <div>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.durationDays}
+                  onChange={e => set('durationDays', e.target.value)}
+                  placeholder="e.g. 90"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+                />
+                {form.durationDays && parseInt(form.durationDays) > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">≈ {(parseInt(form.durationDays) / 30).toFixed(1)} months</p>
+                )}
+              </div>
+            )}
+
+            {form.durationMode === 'range' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={form.durationStart}
+                    onChange={e => set('durationStart', e.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={form.durationEnd}
+                    onChange={e => set('durationEnd', e.target.value)}
+                    min={form.durationStart || undefined}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+                {form.durationStart && form.durationEnd && (() => {
+                  const days = Math.round((new Date(form.durationEnd).getTime() - new Date(form.durationStart).getTime()) / (1000 * 60 * 60 * 24));
+                  return days > 0 ? (
+                    <p className="col-span-2 text-xs text-orange-400">{days} day{days !== 1 ? 's' : ''} selected</p>
+                  ) : days <= 0 ? (
+                    <p className="col-span-2 text-xs text-red-400">End date must be after start date</p>
+                  ) : null;
+                })()}
+              </div>
+            )}
           </div>
 
           {/* ── Features Section ── */}
@@ -453,6 +572,11 @@ export default function AdminPlansPage() {
                     <p className="text-xs text-gray-500">{plan.customerLimit >= 999999 ? 'Unlimited' : plan.customerLimit} customers</p>
                     <p className="text-xs text-gray-500">{plan.userLimit} team member{plan.userLimit !== 1 ? 's' : ''}</p>
                     <p className="text-xs text-gray-500">{plan.storageLimit}MB storage</p>
+                    {plan.durationDays != null && (
+                      <p className="text-xs text-orange-400">
+                        {plan.durationDays === 1 ? 'Daily (1 day)' : plan.durationDays === 30 ? 'Monthly (30 days)' : plan.durationDays === 365 ? 'Yearly (365 days)' : `${plan.durationDays} days`}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     {plan.features.slice(0, 4).map((f, i) => (

@@ -260,6 +260,7 @@ model Plan {
   isActive       Boolean @default(true)
   isFeatured     Boolean @default(false)
   sortOrder      Int     @default(0)
+  durationDays   Int?
   razorpayPlanId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
