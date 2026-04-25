@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
   IndianRupee, Receipt, Boxes, UserCircle, Target,
   ChevronUp, ChevronDown, Eye, EyeOff, RefreshCw,
-  AlertCircle, Lock, LayoutList,
+  AlertCircle, Lock, LayoutList, GripVertical,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/api';
 
