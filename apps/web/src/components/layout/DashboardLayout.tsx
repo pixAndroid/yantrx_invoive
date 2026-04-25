@@ -127,11 +127,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .catch(() => {});
 
     apiFetch('/modules')
-      .then((res: any) => {
-        const slugs = new Set<string>((res.data || []).map((m: any) => m.slug as string));
+      .then((res: { data?: Array<{ slug: string }> }) => {
+        const slugs = new Set<string>((res.data || []).map(m => m.slug));
         setActiveModuleSlugs(slugs);
       })
-      .catch(() => setActiveModuleSlugs(new Set()));
+      .catch(() => {
+        // On failure keep null so all nav items remain visible (fail-open)
+        setActiveModuleSlugs(null);
+      });
 
     apiFetch('/subscriptions')
       .then(async (res: any) => {
