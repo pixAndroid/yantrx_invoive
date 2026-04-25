@@ -769,7 +769,7 @@ export default function NewInvoicePage() {
 
               {/* Total hero block */}
               <div className="mx-4 mb-5 rounded-2xl bg-gradient-to-br from-[#5B4BFF] via-indigo-600 to-[#4338ca] px-5 py-5 text-white shadow-[0_8px_24px_-4px_rgba(91,75,255,0.40),0_4px_12px_-4px_rgba(91,75,255,0.25)] ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-200 mb-2">Invoice Total</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200 mb-2">Invoice Total</p>
                 <p className="text-[2.25rem] font-bold tracking-tight leading-none tabular-nums">&#8377;{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                 <p className="text-[11px] text-indigo-300/90 mt-2.5 font-medium">Includes all applicable taxes</p>
               </div>
