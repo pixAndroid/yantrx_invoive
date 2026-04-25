@@ -1078,6 +1078,22 @@ model SiteConfig {
   stat2Label         String?
   stat3Value         String?
   stat3Label         String?
+  // Contact Details
+  contactEmail       String?
+  contactPhone       String?
+  contactPhoneHref   String?
+  officeCompanyName  String?
+  officeFloor        String?
+  officeStreet       String?
+  officeCity         String?
+  officeState        String?
+  officePinCode      String?
+  officeCountry      String?
+  officeWebsite      String?
+  hoursMondayFriday  String?
+  hoursSaturday      String?
+  hoursSunday        String?
+  hoursNote          String?  @db.Text
   updatedAt          DateTime @updatedAt
 
   @@map("site_configs")

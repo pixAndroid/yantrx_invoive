@@ -28,4 +28,31 @@ router.get('/home-header', async (_req: Request, res: Response, next: NextFuncti
   } catch (error) { next(error); }
 });
 
+const CONTACT_DETAILS_KEY = 'contact_details';
+
+const CONTACT_DETAILS_DEFAULTS = {
+  contactEmail: 'support@yantrix.in',
+  contactPhone: '+91 80 4567 8900',
+  contactPhoneHref: 'tel:+918045678900',
+  officeCompanyName: 'Yantrix Technologies Pvt. Ltd.',
+  officeFloor: '4th Floor, Innovate Hub',
+  officeStreet: '80 Feet Road, Koramangala',
+  officeCity: 'Bengaluru',
+  officeState: 'Karnataka 560034',
+  officePinCode: '',
+  officeCountry: 'India',
+  officeWebsite: 'yantrix.in',
+  hoursMondayFriday: '9 AM – 8 PM IST',
+  hoursSaturday: '10 AM – 6 PM IST',
+  hoursSunday: 'Email only',
+  hoursNote: 'Extended support hours during GST filing deadlines (20th – 22nd of each month).',
+};
+
+router.get('/contact-details', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const config = await prisma.siteConfig.findUnique({ where: { key: CONTACT_DETAILS_KEY } });
+    res.json({ success: true, data: config ?? { key: CONTACT_DETAILS_KEY, ...CONTACT_DETAILS_DEFAULTS } });
+  } catch (error) { next(error); }
+});
+
 export default router;

@@ -1,45 +1,27 @@
 'use client';
 
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { Mail, Phone, MapPin, Clock, MessageCircle, Headphones, FileText, ChevronRight, CheckCircle2, Building2, Globe } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Phone, Clock, MessageCircle, Headphones, FileText, ChevronRight, CheckCircle2, Building2, Globe } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { API_URL } from '@/lib/api';
 
-const CONTACT_METHODS = [
-  {
-    icon: Mail,
-    title: 'Email Support',
-    description: 'Send us a detailed message and we\'ll respond within 2 hours on business days.',
-    value: 'support@yantrix.in',
-    href: 'mailto:support@yantrix.in',
-    iconBg: 'bg-indigo-100',
-    iconColor: 'text-indigo-600',
-    valueBg: 'bg-indigo-50',
-    valueColor: 'text-indigo-700',
-  },
-  {
-    icon: Phone,
-    title: 'Phone Support',
-    description: 'Talk to a real person. Available Monday to Saturday, 9 AM – 6 PM IST.',
-    value: '+91 80 4567 8900',
-    href: 'tel:+918045678900',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    valueBg: 'bg-emerald-50',
-    valueColor: 'text-emerald-700',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Live Chat',
-    description: 'Chat with our team directly in the app. Average response time under 5 minutes.',
-    value: 'Available in-app',
-    href: '/auth/login',
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
-    valueBg: 'bg-violet-50',
-    valueColor: 'text-violet-700',
-  },
-];
+const CONTACT_DEFAULTS = {
+  contactEmail: 'support@yantrix.in',
+  contactPhone: '+91 80 4567 8900',
+  contactPhoneHref: 'tel:+918045678900',
+  officeCompanyName: 'Yantrix Technologies Pvt. Ltd.',
+  officeFloor: '4th Floor, Innovate Hub',
+  officeStreet: '80 Feet Road, Koramangala',
+  officeCity: 'Bengaluru',
+  officeState: 'Karnataka 560034',
+  officePinCode: '',
+  officeCountry: 'India',
+  officeWebsite: 'yantrix.in',
+  hoursMondayFriday: '9 AM – 8 PM IST',
+  hoursSaturday: '10 AM – 6 PM IST',
+  hoursSunday: 'Email only',
+  hoursNote: 'Extended support hours during GST filing deadlines (20th – 22nd of each month).',
+};
 
 const FAQS = [
   {
@@ -74,6 +56,57 @@ export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [contact, setContact] = useState(CONTACT_DEFAULTS);
+
+  useEffect(() => {
+    fetch(`${API_URL}/settings/contact-details`)
+      .then(r => r.json())
+      .then((res: any) => {
+        if (res.success && res.data) {
+          setContact(prev => ({
+            ...prev,
+            ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null && v !== '')),
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const contactMethods = [
+    {
+      icon: Mail,
+      title: 'Email Support',
+      description: "Send us a detailed message and we'll respond within 2 hours on business days.",
+      value: contact.contactEmail,
+      href: `mailto:${contact.contactEmail}`,
+      iconBg: 'bg-indigo-100',
+      iconColor: 'text-indigo-600',
+      valueBg: 'bg-indigo-50',
+      valueColor: 'text-indigo-700',
+    },
+    {
+      icon: Phone,
+      title: 'Phone Support',
+      description: 'Talk to a real person. Available Monday to Saturday, 9 AM – 6 PM IST.',
+      value: contact.contactPhone,
+      href: contact.contactPhoneHref,
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+      valueBg: 'bg-emerald-50',
+      valueColor: 'text-emerald-700',
+    },
+    {
+      icon: MessageCircle,
+      title: 'Live Chat',
+      description: 'Chat with our team directly in the app. Average response time under 5 minutes.',
+      value: 'Available in-app',
+      href: '/auth/login',
+      iconBg: 'bg-violet-100',
+      iconColor: 'text-violet-600',
+      valueBg: 'bg-violet-50',
+      valueColor: 'text-violet-700',
+    },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +157,7 @@ export default function ContactPage() {
       <section className="py-16 bg-white">
         <div className="container-wide">
           <div className="grid md:grid-cols-3 gap-6 mb-20">
-            {CONTACT_METHODS.map(method => (
+            {contactMethods.map(method => (
               <a
                 key={method.title}
                 href={method.href}
@@ -272,15 +305,15 @@ export default function ContactPage() {
                   <h3 className="font-bold text-lg">Our Office</h3>
                 </div>
                 <address className="not-italic text-sm leading-relaxed space-y-1 text-indigo-100">
-                  <p className="font-bold text-white text-base">Yantrix Technologies Pvt. Ltd.</p>
-                  <p>4th Floor, Innovate Hub</p>
-                  <p>80 Feet Road, Koramangala</p>
-                  <p>Bengaluru, Karnataka 560034</p>
-                  <p>India</p>
+                  <p className="font-bold text-white text-base">{contact.officeCompanyName}</p>
+                  {contact.officeFloor && <p>{contact.officeFloor}</p>}
+                  {contact.officeStreet && <p>{contact.officeStreet}</p>}
+                  {contact.officeCity && <p>{contact.officeCity}{contact.officeState ? `, ${contact.officeState}` : ''}</p>}
+                  {contact.officeCountry && <p>{contact.officeCountry}</p>}
                 </address>
                 <div className="mt-5 pt-5 border-t border-white/20 flex items-center gap-2 text-sm text-indigo-200">
                   <Globe className="h-4 w-4 flex-shrink-0" />
-                  <a href="https://yantrix.in" className="hover:text-white transition-colors">yantrix.in</a>
+                  <a href={`https://${contact.officeWebsite}`} className="hover:text-white transition-colors">{contact.officeWebsite}</a>
                 </div>
               </div>
 
@@ -294,9 +327,9 @@ export default function ContactPage() {
                 </div>
                 <div className="space-y-3 text-sm">
                   {[
-                    { day: 'Monday – Friday', hours: '9 AM – 8 PM IST', highlight: true },
-                    { day: 'Saturday', hours: '10 AM – 6 PM IST', highlight: false },
-                    { day: 'Sunday', hours: 'Email only', highlight: false },
+                    { day: 'Monday – Friday', hours: contact.hoursMondayFriday, highlight: true },
+                    { day: 'Saturday', hours: contact.hoursSaturday, highlight: false },
+                    { day: 'Sunday', hours: contact.hoursSunday, highlight: false },
                   ].map(row => (
                     <div key={row.day} className="flex items-center justify-between">
                       <span className="text-gray-500">{row.day}</span>
@@ -307,7 +340,7 @@ export default function ContactPage() {
                   ))}
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-400 leading-relaxed">Extended support hours during GST filing deadlines (20th – 22nd of each month).</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">{contact.hoursNote}</p>
                 </div>
               </div>
 

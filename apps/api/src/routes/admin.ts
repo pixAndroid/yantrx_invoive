@@ -768,4 +768,58 @@ router.put('/settings/home-header', async (req: AuthenticatedRequest, res: Respo
   } catch (error) { next(error); }
 });
 
+// ─── Contact Details Settings ─────────────────────────────────────────────
+
+const CONTACT_DETAILS_KEY = 'contact_details';
+
+const CONTACT_DETAILS_DEFAULTS = {
+  contactEmail: 'support@yantrix.in',
+  contactPhone: '+91 80 4567 8900',
+  contactPhoneHref: 'tel:+918045678900',
+  officeCompanyName: 'Yantrix Technologies Pvt. Ltd.',
+  officeFloor: '4th Floor, Innovate Hub',
+  officeStreet: '80 Feet Road, Koramangala',
+  officeCity: 'Bengaluru',
+  officeState: 'Karnataka 560034',
+  officePinCode: '',
+  officeCountry: 'India',
+  officeWebsite: 'yantrix.in',
+  hoursMondayFriday: '9 AM – 8 PM IST',
+  hoursSaturday: '10 AM – 6 PM IST',
+  hoursSunday: 'Email only',
+  hoursNote: 'Extended support hours during GST filing deadlines (20th – 22nd of each month).',
+};
+
+router.get('/settings/contact', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const config = await prisma.siteConfig.findUnique({ where: { key: CONTACT_DETAILS_KEY } });
+    res.json({ success: true, data: config ?? { key: CONTACT_DETAILS_KEY, ...CONTACT_DETAILS_DEFAULTS } });
+  } catch (error) { next(error); }
+});
+
+router.put('/settings/contact', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const ALLOWED_FIELDS = [
+      'contactEmail', 'contactPhone', 'contactPhoneHref',
+      'officeCompanyName', 'officeFloor', 'officeStreet', 'officeCity',
+      'officeState', 'officePinCode', 'officeCountry', 'officeWebsite',
+      'hoursMondayFriday', 'hoursSaturday', 'hoursSunday', 'hoursNote',
+    ];
+
+    const data: Record<string, string | null> = {};
+    for (const field of ALLOWED_FIELDS) {
+      if (req.body[field] !== undefined) {
+        data[field] = req.body[field] ?? null;
+      }
+    }
+
+    const config = await prisma.siteConfig.upsert({
+      where: { key: CONTACT_DETAILS_KEY },
+      create: { key: CONTACT_DETAILS_KEY, ...data },
+      update: data,
+    });
+    res.json({ success: true, data: config });
+  } catch (error) { next(error); }
+});
+
 export default router;
