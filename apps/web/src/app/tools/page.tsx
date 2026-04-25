@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Link from 'next/link';
 import {
@@ -47,8 +47,47 @@ const GST_SLABS = [
   { rate: '28%', items: 'Luxury goods, tobacco, automobiles, cement, aerated drinks, casinos' },
 ];
 
-const CATEGORY_COLORS = ['bg-indigo-50 text-indigo-600','bg-green-50 text-green-600','bg-amber-50 text-amber-600','bg-blue-50 text-blue-600','bg-rose-50 text-rose-600','bg-purple-50 text-purple-600','bg-cyan-50 text-cyan-600','bg-orange-50 text-orange-600','bg-pink-50 text-pink-600','bg-violet-50 text-violet-600'];
+const CATEGORY_COLORS = ['text-indigo-600','text-emerald-600','text-amber-600','text-blue-600','text-rose-600','text-purple-600','text-cyan-600','text-orange-600','text-pink-600','text-violet-600'];
+const ICON_GRADIENTS = [
+  'linear-gradient(135deg,#eef2ff 0%,#c7d2fe 100%)',
+  'linear-gradient(135deg,#f0fdf4 0%,#bbf7d0 100%)',
+  'linear-gradient(135deg,#fffbeb 0%,#fde68a 100%)',
+  'linear-gradient(135deg,#eff6ff 0%,#bfdbfe 100%)',
+  'linear-gradient(135deg,#fff1f2 0%,#fecdd3 100%)',
+  'linear-gradient(135deg,#faf5ff 0%,#e9d5ff 100%)',
+  'linear-gradient(135deg,#ecfeff 0%,#a5f3fc 100%)',
+  'linear-gradient(135deg,#fff7ed 0%,#fed7aa 100%)',
+  'linear-gradient(135deg,#fdf2f8 0%,#fbcfe8 100%)',
+  'linear-gradient(135deg,#f5f3ff 0%,#ddd6fe 100%)',
+];
+const CARD_GRADIENTS = [
+  'linear-gradient(135deg,#ffffff 0%,#f8f7ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f5f8ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f7fff9 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f5f8ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#fff7f8 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#faf5ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f0fdff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#fff8f0 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#fff5fb 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f5f3ff 100%)',
+];
 function getColorForIndex(idx: number) { return CATEGORY_COLORS[idx % CATEGORY_COLORS.length]; }
+function getIconGradient(idx: number) { return ICON_GRADIENTS[idx % ICON_GRADIENTS.length]; }
+function getCardGradient(idx: number) { return CARD_GRADIENTS[idx % CARD_GRADIENTS.length]; }
+
+function getFallbackBadgeClass(badgeColor: string): string {
+  if (badgeColor.includes('green')) return 'border-emerald-200/80 text-emerald-700';
+  if (badgeColor.includes('indigo')) return 'border-indigo-200/80 text-indigo-700';
+  if (badgeColor.includes('violet')) return 'border-violet-200/80 text-violet-700';
+  return 'border-gray-200/80 text-gray-500';
+}
+function getFallbackBadgeStyle(badgeColor: string): React.CSSProperties {
+  if (badgeColor.includes('green')) return { background: 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
+  if (badgeColor.includes('indigo')) return { background: 'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
+  if (badgeColor.includes('violet')) return { background: 'linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
+  return { background: '#f9fafb' };
+}
 
 function getToolHref(tool: CMSTool): string {
   if (tool.ctaUrl) return tool.ctaUrl;
@@ -203,22 +242,61 @@ export default function ToolsPage() {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {cmsTools.map((tool, idx) => (
-                  <div key={tool.id} className="group bg-white rounded-2xl border border-gray-100 p-6 hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden ${getColorForIndex(idx)}`}>
-                        {tool.logoUrl ? <img src={tool.logoUrl} alt={tool.title} className="h-full w-full object-cover" /> : <Wrench className="h-6 w-6" />}
+                  <div
+                    key={tool.id}
+                    className="group relative flex flex-col rounded-2xl border border-gray-100/80 p-6 overflow-hidden transition-all duration-[220ms] ease-out hover:-translate-y-1.5 hover:shadow-xl hover:border-indigo-100/80"
+                    style={{ background: getCardGradient(idx), boxShadow: '0 1px 4px 0 rgb(0 0 0/0.06),0 1px 2px -1px rgb(0 0 0/0.04)' }}
+                  >
+                    {/* Top highlight line */}
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-200/50 to-transparent" />
+                    {/* Corner radial glow */}
+                    <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-[220ms]" style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.10) 0%,transparent 70%)' }} />
+
+                    {/* Header: icon + badges */}
+                    <div className="flex items-start justify-between mb-5">
+                      <div
+                        className={`relative inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden flex-shrink-0 transition-transform duration-[220ms] group-hover:scale-105 ${getColorForIndex(idx)}`}
+                        style={{ background: getIconGradient(idx), boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.06)' }}
+                      >
+                        {tool.logoUrl ? <img src={tool.logoUrl} alt={tool.title} className="h-full w-full object-cover" /> : <Wrench className="h-5 w-5" />}
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        {tool.featured && <span className="bg-yellow-50 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full">★ Featured</span>}
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${tool.toolType === 'COMING_SOON' ? 'bg-gray-100 text-gray-600' : tool.pricingType === 'FREE' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {tool.featured && (
+                          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200/80 text-amber-600" style={{ background: 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>★ Featured</span>
+                        )}
+                        <span
+                          className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border ${
+                            tool.toolType === 'COMING_SOON'
+                              ? 'bg-gray-50 border-gray-200/80 text-gray-500'
+                              : tool.pricingType === 'FREE'
+                              ? 'border-emerald-200/80 text-emerald-700'
+                              : 'border-indigo-200/80 text-indigo-700'
+                          }`}
+                          style={
+                            tool.toolType !== 'COMING_SOON'
+                              ? tool.pricingType === 'FREE'
+                                ? { background: 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+                                : { background: 'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+                              : {}
+                          }
+                        >
                           {tool.toolType === 'COMING_SOON' ? 'Coming Soon' : tool.pricingType}
                         </span>
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{tool.title}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-5">{tool.shortDescription || ''}</p>
-                    <Link href={getToolHref(tool)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 group-hover:gap-2.5 transition-all">
-                      {tool.toolType === 'COMING_SOON' ? 'Get Notified' : (tool.ctaText || 'Launch Tool')} <ArrowRight className="h-4 w-4" />
+
+                    {/* Title */}
+                    <h3 className="text-[18px] font-bold text-gray-900 mb-2 leading-snug tracking-tight">{tool.title}</h3>
+                    {/* Subtitle */}
+                    <p className="text-gray-500 text-[13.5px] leading-relaxed flex-1 mb-5">{tool.shortDescription || ''}</p>
+
+                    {/* CTA */}
+                    <Link
+                      href={getToolHref(tool)}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors duration-[220ms]"
+                    >
+                      {tool.toolType === 'COMING_SOON' ? 'Get Notified' : (tool.ctaText || 'Launch Tool')}
+                      <ArrowRight className="h-4 w-4 transition-transform duration-[220ms] group-hover:translate-x-1" />
                     </Link>
                   </div>
                 ))}
@@ -233,16 +311,45 @@ export default function ToolsPage() {
         <section className="py-20">
           <div className="container-wide">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {FALLBACK_PRODUCTS.map(product => (
-                <div key={product.title} className="group bg-white rounded-2xl border border-gray-100 p-6 hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${product.color}`}><product.icon className="h-6 w-6" /></div>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${product.badgeColor}`}>{product.badge}</span>
+              {FALLBACK_PRODUCTS.map((product, idx) => (
+                <div
+                  key={product.title}
+                  className="group relative flex flex-col rounded-2xl border border-gray-100/80 p-6 overflow-hidden transition-all duration-[220ms] ease-out hover:-translate-y-1.5 hover:shadow-xl hover:border-indigo-100/80"
+                  style={{ background: getCardGradient(idx), boxShadow: '0 1px 4px 0 rgb(0 0 0/0.06),0 1px 2px -1px rgb(0 0 0/0.04)' }}
+                >
+                  {/* Top highlight line */}
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-200/50 to-transparent" />
+                  {/* Corner radial glow */}
+                  <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-[220ms]" style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.10) 0%,transparent 70%)' }} />
+
+                  {/* Header: icon + badge */}
+                  <div className="flex items-start justify-between mb-5">
+                    <div
+                      className={`relative inline-flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 transition-transform duration-[220ms] group-hover:scale-105 ${product.color}`}
+                      style={{ background: getIconGradient(idx), boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.06)' }}
+                    >
+                      <product.icon className="h-5 w-5" />
+                    </div>
+                    <span
+                      className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border ${getFallbackBadgeClass(product.badgeColor)}`}
+                      style={getFallbackBadgeStyle(product.badgeColor)}
+                    >
+                      {product.badge}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-5">{product.description}</p>
-                  <Link href={product.href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 group-hover:gap-2.5 transition-all">
-                    {product.badge === 'Live' ? 'View Product' : product.badge === 'Custom Build' ? 'Build Custom' : 'Get Notified'} <ArrowRight className="h-4 w-4" />
+
+                  {/* Title */}
+                  <h3 className="text-[18px] font-bold text-gray-900 mb-2 leading-snug tracking-tight">{product.title}</h3>
+                  {/* Subtitle */}
+                  <p className="text-gray-500 text-[13.5px] leading-relaxed flex-1 mb-5">{product.description}</p>
+
+                  {/* CTA */}
+                  <Link
+                    href={product.href}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors duration-[220ms]"
+                  >
+                    {product.badge === 'Live' ? 'View Product' : product.badge === 'Custom Build' ? 'Build Custom' : 'Get Notified'}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-[220ms] group-hover:translate-x-1" />
                   </Link>
                 </div>
               ))}
