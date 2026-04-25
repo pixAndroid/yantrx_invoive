@@ -9,27 +9,38 @@ router.use(authenticate);
 /** Returns endDate and amount to charge based on plan billing period. */
 function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null; durationDays: number | null }) {
   const now = new Date();
-  // If the plan has an explicit durationDays, always use that.
+  const slug = plan.slug.toLowerCase();
+
+  // Determine the correct price based on the plan slug
+  let amount: number;
+  if (slug === 'daily') {
+    amount = plan.dailyPrice ?? plan.price;
+  } else if (slug === 'yearly') {
+    amount = plan.yearlyPrice ?? plan.price;
+  } else {
+    amount = plan.price;
+  }
+
+  // If the plan has an explicit durationDays, use that for the end date.
   if (plan.durationDays !== null && plan.durationDays > 0) {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + plan.durationDays);
-    return { endDate, amount: plan.price };
+    return { endDate, amount };
   }
-  const slug = plan.slug.toLowerCase();
   if (slug === 'daily') {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 1);
-    return { endDate, amount: plan.dailyPrice ?? plan.price };
+    return { endDate, amount };
   }
   if (slug === 'yearly') {
     const endDate = new Date(now);
     endDate.setFullYear(endDate.getFullYear() + 1);
-    return { endDate, amount: plan.yearlyPrice ?? plan.price };
+    return { endDate, amount };
   }
   // default: monthly
   const endDate = new Date(now);
   endDate.setMonth(endDate.getMonth() + 1);
-  return { endDate, amount: plan.price };
+  return { endDate, amount };
 }
 
 router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
