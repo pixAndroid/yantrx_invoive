@@ -116,8 +116,12 @@ export function GlobalSearch() {
     } finally {
       setLoading(false);
     }
-    setActiveIndex(-1);
   }, []);
+
+  // Reset active index whenever results change
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [results]);
 
   useEffect(() => {
     if (!open) return;
@@ -138,7 +142,7 @@ export function GlobalSearch() {
       setActiveIndex(i => Math.min(i + 1, allItems.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIndex(i => Math.max(i - 1, 0));
+      setActiveIndex(i => Math.max(i - 1, -1));
     } else if (e.key === 'Enter' && activeIndex >= 0 && allItems[activeIndex]) {
       e.preventDefault();
       navigate(allItems[activeIndex].href);
@@ -299,7 +303,7 @@ export function GlobalSearch() {
                       itemIndex++;
                       const idx = itemIndex;
                       const isActive = activeIndex === idx;
-                      const initials = cust.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+                      const initials = cust.name.split(' ').filter((w: string) => w).map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
                       return (
                         <button
                           key={cust.id}
