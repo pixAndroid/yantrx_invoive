@@ -9,7 +9,7 @@ import {
   IndianRupee, Zap, Building2, ChevronRight, Lock,
   Receipt, Boxes, UserCircle, Target, Crown
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
 import { BusinessProfileSetupModal, type BusinessSettings as BizSettings } from '@/components/ui/BusinessProfileSetupModal';
 
@@ -302,7 +302,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // NAV_ITEMS sorted by the admin-defined module order.
   // Items with no module slug (e.g. /dashboard) always come first.
   // Items whose module slug appears in the ordered list are sorted by that order.
-  const sortedNavItems = (() => {
+  const sortedNavItems = useMemo(() => {
     if (moduleOrder.length === 0) return NAV_ITEMS;
     const noSlug = NAV_ITEMS.filter(item => !NAV_MODULE_SLUG[item.href]);
     const withSlug = NAV_ITEMS.filter(item => NAV_MODULE_SLUG[item.href]);
@@ -314,7 +314,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       return aPos - bPos;
     });
     return [...noSlug, ...withSlug];
-  })();
+  }, [moduleOrder]);
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');

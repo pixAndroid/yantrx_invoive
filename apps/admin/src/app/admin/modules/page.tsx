@@ -93,16 +93,13 @@ export default function AdminModulesPage() {
     const newNeighborOrder = current.sortOrder;
 
     try {
-      const token = getAdminToken();
       await Promise.all([
-        fetch(`${API_URL}/admin/modules/${current.id}`, {
+        adminFetch(`/admin/modules/${current.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ sortOrder: newCurrentOrder }),
         }),
-        fetch(`${API_URL}/admin/modules/${neighbor.id}`, {
+        adminFetch(`/admin/modules/${neighbor.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ sortOrder: newNeighborOrder }),
         }),
       ]);
@@ -111,7 +108,9 @@ export default function AdminModulesPage() {
         if (m.id === neighbor.id) return { ...m, sortOrder: newNeighborOrder };
         return m;
       }));
-    } catch {}
+    } catch (err: any) {
+      setError(err.message || 'Failed to reorder modules');
+    }
   };
 
   const planBadge: Record<string, string> = {
