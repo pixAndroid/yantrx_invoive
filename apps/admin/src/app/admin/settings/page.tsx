@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate } from 'lucide-react';
+import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate, Phone } from 'lucide-react';
 import { adminFetch } from '@/lib/api';
 
 const SETTING_SECTIONS = [
@@ -55,6 +55,24 @@ const HOME_HEADER_DEFAULTS = {
   stat3Label: 'Industries',
 };
 
+const CONTACT_DEFAULTS = {
+  contactEmail: 'support@yantrix.in',
+  contactPhone: '+91 80 4567 8900',
+  contactPhoneHref: 'tel:+918045678900',
+  officeCompanyName: 'Yantrix Technologies Pvt. Ltd.',
+  officeFloor: '4th Floor, Innovate Hub',
+  officeStreet: '80 Feet Road, Koramangala',
+  officeCity: 'Bengaluru',
+  officeState: 'Karnataka 560034',
+  officePinCode: '',
+  officeCountry: 'India',
+  officeWebsite: 'yantrix.in',
+  hoursMondayFriday: '9 AM – 8 PM IST',
+  hoursSaturday: '10 AM – 6 PM IST',
+  hoursSunday: 'Email only',
+  hoursNote: 'Extended support hours during GST filing deadlines (20th – 22nd of each month).',
+};
+
 export default function AdminSettingsPage() {
   const [formData, setFormData] = useState<Record<string, string>>({
     platformName: 'Yantrix',
@@ -76,6 +94,9 @@ export default function AdminSettingsPage() {
   const [homeHeader, setHomeHeader] = useState<Record<string, string>>(HOME_HEADER_DEFAULTS);
   const [headerLoading, setHeaderLoading] = useState(true);
 
+  const [contactDetails, setContactDetails] = useState<Record<string, string>>(CONTACT_DEFAULTS);
+  const [contactLoading, setContactLoading] = useState(true);
+
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -90,13 +111,31 @@ export default function AdminSettingsPage() {
       })
       .catch(() => {})
       .finally(() => setHeaderLoading(false));
+
+    adminFetch('/admin/settings/contact')
+      .then((res: any) => {
+        if (res.success && res.data) {
+          setContactDetails(prev => ({
+            ...prev,
+            ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null)),
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setContactLoading(false));
   }, []);
 
   const handleSave = async () => {
-    await adminFetch('/admin/settings/home-header', {
-      method: 'PUT',
-      body: JSON.stringify(homeHeader),
-    })
+    await Promise.all([
+      adminFetch('/admin/settings/home-header', {
+        method: 'PUT',
+        body: JSON.stringify(homeHeader),
+      }),
+      adminFetch('/admin/settings/contact', {
+        method: 'PUT',
+        body: JSON.stringify(contactDetails),
+      }),
+    ])
       .then(() => {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
@@ -257,6 +296,175 @@ export default function AdminSettingsPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Contact Details Config */}
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-800 bg-gray-800/50">
+            <Phone className="h-5 w-5 text-orange-400" />
+            <h2 className="text-base font-semibold text-white">Contact Details</h2>
+          </div>
+          <div className="p-6 space-y-6">
+            {contactLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : (
+              <>
+                {/* Support Channels */}
+                <div>
+                  <p className="text-sm font-medium text-gray-400 mb-3">Support Channels</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Support Email</label>
+                      <input
+                        type="email"
+                        value={contactDetails.contactEmail}
+                        onChange={e => setContactDetails(prev => ({ ...prev, contactEmail: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Phone Number (Display)</label>
+                      <input
+                        type="text"
+                        value={contactDetails.contactPhone}
+                        onChange={e => setContactDetails(prev => ({ ...prev, contactPhone: e.target.value }))}
+                        placeholder="+91 80 4567 8900"
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Phone Href (tel: link)</label>
+                      <input
+                        type="text"
+                        value={contactDetails.contactPhoneHref}
+                        onChange={e => setContactDetails(prev => ({ ...prev, contactPhoneHref: e.target.value }))}
+                        placeholder="tel:+918045678900"
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Office Address */}
+                <div>
+                  <p className="text-sm font-medium text-gray-400 mb-3">Office Address</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Company Name</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeCompanyName}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeCompanyName: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Floor / Building</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeFloor}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeFloor: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Street</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeStreet}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeStreet: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">City</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeCity}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeCity: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">State &amp; Postal Code</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeState}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeState: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Country</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeCountry}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeCountry: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Website</label>
+                      <input
+                        type="text"
+                        value={contactDetails.officeWebsite}
+                        onChange={e => setContactDetails(prev => ({ ...prev, officeWebsite: e.target.value }))}
+                        placeholder="yantrix.in"
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Support Hours */}
+                <div>
+                  <p className="text-sm font-medium text-gray-400 mb-3">Support Hours</p>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Monday – Friday</label>
+                      <input
+                        type="text"
+                        value={contactDetails.hoursMondayFriday}
+                        onChange={e => setContactDetails(prev => ({ ...prev, hoursMondayFriday: e.target.value }))}
+                        placeholder="9 AM – 8 PM IST"
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Saturday</label>
+                      <input
+                        type="text"
+                        value={contactDetails.hoursSaturday}
+                        onChange={e => setContactDetails(prev => ({ ...prev, hoursSaturday: e.target.value }))}
+                        placeholder="10 AM – 6 PM IST"
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Sunday</label>
+                      <input
+                        type="text"
+                        value={contactDetails.hoursSunday}
+                        onChange={e => setContactDetails(prev => ({ ...prev, hoursSunday: e.target.value }))}
+                        placeholder="Email only"
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Hours Note</label>
+                    <textarea
+                      rows={2}
+                      value={contactDetails.hoursNote}
+                      onChange={e => setContactDetails(prev => ({ ...prev, hoursNote: e.target.value }))}
+                      placeholder="Extended support hours during GST filing deadlines..."
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none"
+                    />
                   </div>
                 </div>
               </>

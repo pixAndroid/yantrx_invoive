@@ -1,0 +1,16 @@
+-- AlterTable: add contact detail columns to site_configs
+ALTER TABLE "site_configs" ADD COLUMN "contactEmail"      TEXT,
+                           ADD COLUMN "contactPhone"      TEXT,
+                           ADD COLUMN "contactPhoneHref"  TEXT,
+                           ADD COLUMN "officeCompanyName" TEXT,
+                           ADD COLUMN "officeFloor"       TEXT,
+                           ADD COLUMN "officeStreet"      TEXT,
+                           ADD COLUMN "officeCity"        TEXT,
+                           ADD COLUMN "officeState"       TEXT,
+                           ADD COLUMN "officePinCode"     TEXT,
+                           ADD COLUMN "officeCountry"     TEXT,
+                           ADD COLUMN "officeWebsite"     TEXT,
+                           ADD COLUMN "hoursMondayFriday" TEXT,
+                           ADD COLUMN "hoursSaturday"     TEXT,
+                           ADD COLUMN "hoursSunday"       TEXT,
+                           ADD COLUMN "hoursNote"         TEXT;
