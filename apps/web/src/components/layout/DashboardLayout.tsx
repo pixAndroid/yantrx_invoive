@@ -83,6 +83,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [setupSettings, setSetupSettings] = useState<BizSettings | null>(null);
   const [setupRequired, setSetupRequired] = useState(false);
   const [activeModuleSlugs, setActiveModuleSlugs] = useState<Set<string> | null>(null);
+  const [moduleOrder, setModuleOrder] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -128,8 +129,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     apiFetch('/modules')
       .then((res: { data?: Array<{ slug: string }> }) => {
-        const slugs = new Set<string>((res.data || []).map(m => m.slug));
+        const modules = res.data || [];
+        const slugs = new Set<string>(modules.map(m => m.slug));
         setActiveModuleSlugs(slugs);
+        setModuleOrder(modules.map(m => m.slug));
       })
       .catch(() => {
         // On failure keep null so all nav items remain visible (fail-open)
@@ -296,6 +299,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return activeModuleSlugs.has(slug);
   };
 
+  // NAV_ITEMS sorted by the admin-defined module order.
+  // Items with no module slug (e.g. /dashboard) always come first.
+  // Items whose module slug appears in the ordered list are sorted by that order.
+  const sortedNavItems = (() => {
+    if (moduleOrder.length === 0) return NAV_ITEMS;
+    const noSlug = NAV_ITEMS.filter(item => !NAV_MODULE_SLUG[item.href]);
+    const withSlug = NAV_ITEMS.filter(item => NAV_MODULE_SLUG[item.href]);
+    withSlug.sort((a, b) => {
+      const ai = moduleOrder.indexOf(NAV_MODULE_SLUG[a.href]);
+      const bi = moduleOrder.indexOf(NAV_MODULE_SLUG[b.href]);
+      const aPos = ai === -1 ? Infinity : ai;
+      const bPos = bi === -1 ? Infinity : bi;
+      return aPos - bPos;
+    });
+    return [...noSlug, ...withSlug];
+  })();
+
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -330,7 +350,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
-          {NAV_ITEMS.map(item => {
+          {sortedNavItems.map(item => {
             if (!isModuleGloballyActive(item.href)) return null;
             const enabled = isNavEnabled(item.href);
             if (!enabled) {
