@@ -7,7 +7,9 @@ import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
   LogOut, Bell, Menu, X,
   IndianRupee, Zap, Building2, ChevronRight, Lock,
-  Receipt, Boxes, UserCircle, Target, Crown
+  Receipt, Boxes, UserCircle, Target, Crown,
+  Search, Settings, PanelLeftClose, PanelLeft,
+  Plus
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
@@ -28,12 +30,6 @@ const NAV_ITEMS = [
   { href: '/crm', label: 'CRM', icon: Target },
 ];
 
-// Keywords that must appear (case-insensitive) in plan.features to enable a nav item.
-// Items with no entry here are always enabled for active plans.
-// Multiple keywords per route use OR logic — the item is enabled if ANY keyword matches.
-// When a plan is expired the client falls back to the free-plan feature set, so routes
-// whose keywords are absent from the free plan (e.g. expense, inventory, hrm, crm)
-// become automatically locked.
 const NAV_FEATURE_REQUIREMENTS: Record<string, string[]> = {
   '/customers': ['customer'],
   '/products': ['product'],
@@ -45,9 +41,6 @@ const NAV_FEATURE_REQUIREMENTS: Record<string, string[]> = {
   '/crm': ['crm'],
 };
 
-// Maps each nav route to its corresponding module slug as defined in the DB.
-// Nav items whose slug is absent from the globally-active modules list will be hidden.
-// Routes with no entry (e.g. /dashboard) are always shown.
 const NAV_MODULE_SLUG: Record<string, string> = {
   '/invoices': 'invoicing',
   '/customers': 'customers',
@@ -75,6 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userData, setUserData] = useState<{ name?: string; email?: string; role?: string }>({});
   const [planInfo, setPlanInfo] = useState<{ name: string; invoicesUsed: number; invoiceLimit: number; customersUsed: number; customerLimit: number; features: string[]; isExpired?: boolean; endDate?: string } | null>(null);
@@ -104,7 +98,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         if (biz?.name) setBusinessName(biz.name);
 
-        // Check if business profile setup is required
         const bizId = biz?.id || getUserData().businessId;
         if (bizId) {
           apiFetch(`/business/${bizId}`)
@@ -135,7 +128,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setModuleOrder(modules.map(m => m.slug));
       })
       .catch(() => {
-        // On failure keep null so all nav items remain visible (fail-open)
         setActiveModuleSlugs(null);
       });
 
@@ -143,7 +135,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .then(async (res: any) => {
         const subs = res.data || [];
 
-        // Helper to fetch free-plan limits/features (used for expired subs and no-sub fallback)
         const fetchFreePlanInfo = async (): Promise<{ features: string[]; invoiceLimit: number; customerLimit: number }> => {
           try {
             const plansRes: any = await apiFetch('/plans');
@@ -165,7 +156,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           return { features: [], invoiceLimit: 5, customerLimit: 10 };
         };
 
-        // Client-side expiry check: treat ACTIVE/TRIAL sub as expired if endDate is in the past
         const activeSub = subs.find(
           (s: any) =>
             (s.status === 'ACTIVE' || s.status === 'TRIAL') &&
@@ -181,17 +171,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const sub = activeSub || clientExpiredSub;
 
         if (sub) {
-          // Treat as expired if the subscription is EXPIRED in DB, or endDate is in the past
           const isExpired =
             sub.status === 'EXPIRED' ||
             ((sub.status === 'ACTIVE' || sub.status === 'TRIAL') && new Date(sub.endDate) <= new Date());
 
           if (isExpired) {
-            // Fetch the free/lowest-tier plan to determine fallback features and limits
             const { features: freePlanFeatures, invoiceLimit: freePlanInvoiceLimit, customerLimit: freePlanCustomerLimit } =
               await fetchFreePlanInfo();
 
-            // Fetch usage stats so the sidebar widget shows real counts
             apiFetch('/business/stats')
               .then((statsRes: any) => {
                 setPlanInfo({
@@ -218,7 +205,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 });
               });
           } else {
-            // Active subscription — use the plan's own features (Free plan users are gated by their plan's features list)
             apiFetch('/business/stats')
               .then((statsRes: any) => {
                 setPlanInfo({
@@ -246,7 +232,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               });
           }
         } else {
-          // No subscription at all — fall back to free-plan feature restrictions
           const { features: freePlanFeatures, invoiceLimit: freePlanInvoiceLimit, customerLimit: freePlanCustomerLimit } =
             await fetchFreePlanInfo();
           apiFetch('/business/stats')
@@ -281,27 +266,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const isNavEnabled = (href: string): boolean => {
     const requiredKeywords = NAV_FEATURE_REQUIREMENTS[href];
-    if (!requiredKeywords) return true; // No requirement — always accessible
-    if (!planInfo) return true; // Still loading — show as enabled to avoid flicker
-    // When expired, planInfo.features contains free-plan features, so routes whose
-    // keywords are absent from the free plan will be naturally locked here.
+    if (!requiredKeywords) return true;
+    if (!planInfo) return true;
     return requiredKeywords.some(keyword =>
       planInfo.features.some(f => f.toLowerCase().includes(keyword.toLowerCase()))
     );
   };
 
-  // Returns false when the admin has globally disabled the module for this nav route.
-  // While the modules list is still loading (null), we show all items to avoid flicker.
   const isModuleGloballyActive = (href: string): boolean => {
     const slug = NAV_MODULE_SLUG[href];
-    if (!slug) return true; // No module mapping (e.g. /dashboard) — always show
-    if (activeModuleSlugs === null) return true; // Still loading
+    if (!slug) return true;
+    if (activeModuleSlugs === null) return true;
     return activeModuleSlugs.has(slug);
   };
 
-  // NAV_ITEMS sorted by the admin-defined module order.
-  // Items with no module slug (e.g. /dashboard) always come first.
-  // Items whose module slug appears in the ordered list are sorted by that order.
   const sortedNavItems = useMemo(() => {
     if (moduleOrder.length === 0) return NAV_ITEMS;
     const noSlug = NAV_ITEMS.filter(item => !NAV_MODULE_SLUG[item.href]);
@@ -331,244 +309,276 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const displayName = userData.name || 'User';
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
-  const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className={`flex h-full flex-col ${mobile ? '' : 'w-64'}`}>
-      {/* Logo */}
-      <div className="flex h-16 items-center border-b border-gray-100 px-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-            {businessLogo ? (
-              <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-white font-bold text-sm">{businessName ? businessName.charAt(0).toUpperCase() : 'Y'}</span>
+  const Sidebar = ({ mobile = false }: { mobile?: boolean }) => {
+    const collapsed = !mobile && sidebarCollapsed;
+    return (
+      <div className={`flex h-full flex-col ${mobile ? '' : collapsed ? 'w-16' : 'w-64'} transition-all duration-300`}>
+        {/* Logo */}
+        <div className={`flex h-16 items-center border-b border-gray-100 ${collapsed ? 'justify-center px-3' : 'px-5'} flex-shrink-0`}>
+          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
+              {businessLogo ? (
+                <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-white font-bold text-sm">{businessName ? businessName.charAt(0).toUpperCase() : 'Y'}</span>
+              )}
+            </div>
+            {!collapsed && (
+              <span className="text-base font-bold text-gray-900 truncate">{businessName || 'Yantrix'}</span>
             )}
-          </div>
-          <span className="text-lg font-bold text-gray-900">{businessName || 'Yantrix'}</span>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-1">
-          {sortedNavItems.map(item => {
-            if (!isModuleGloballyActive(item.href)) return null;
-            const enabled = isNavEnabled(item.href);
-            if (!enabled) {
-              return (
-                <Link
-                  key={item.href}
-                  href="/settings/billing"
-                  onClick={() => mobile && setSidebarOpen(false)}
-                  title={`Upgrade your plan to unlock ${item.label}`}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-50 hover:text-gray-400 transition-colors"
-                >
-                  <item.icon className="h-4 w-4 text-gray-300" />
-                  <span>{item.label}</span>
-                  <Lock className="ml-auto h-3.5 w-3.5 text-gray-300" />
-                </Link>
-              );
-            }
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => mobile && setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive(item.href)
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className={`h-4 w-4 ${isActive(item.href) ? 'text-indigo-600' : 'text-gray-400'}`} />
-                {item.label}
-                {isActive(item.href) && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-600" />}
-              </Link>
-            );
-          })}
+          </Link>
         </div>
 
-        {/* Settings section */}
-        <div className="mt-8">
-          <button
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-600"
-          >
-            Settings
-            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${settingsOpen ? 'rotate-90' : ''}`} />
-          </button>
-          {settingsOpen && (
-            <div className="mt-1 space-y-1">
-              {SETTINGS_ITEMS.map(item => (
+        {/* Navigation */}
+        <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-4 ${collapsed ? 'px-2' : 'px-3'}`}>
+          {!collapsed && <p className="section-label px-3 mb-2">Main</p>}
+
+          <div className="space-y-0.5">
+            {sortedNavItems.map(item => {
+              if (!isModuleGloballyActive(item.href)) return null;
+              const enabled = isNavEnabled(item.href);
+              const active = isActive(item.href);
+
+              if (!enabled) {
+                return (
+                  <Link
+                    key={item.href}
+                    href="/settings/billing"
+                    onClick={() => mobile && setSidebarOpen(false)}
+                    title={`Upgrade to unlock ${item.label}`}
+                    className={`nav-item ${collapsed ? 'justify-center' : ''} text-gray-300 hover:bg-gray-50/60`}
+                  >
+                    <item.icon className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        <Lock className="h-3 w-3 text-gray-300" />
+                      </>
+                    )}
+                  </Link>
+                );
+              }
+              return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => mobile && setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive(item.href)
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  title={collapsed ? item.label : undefined}
+                  className={`nav-item relative ${collapsed ? 'justify-center' : ''} ${
+                    active ? 'nav-item-active' : 'nav-item-inactive'
                   }`}
                 >
-                  <item.icon className="h-4 w-4 text-gray-400" />
-                  {item.label}
+                  <item.icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-indigo-600' : 'text-gray-400'}`} />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1">{item.label}</span>
+                      {active && <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />}
+                    </>
+                  )}
+                  {collapsed && active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-indigo-500" />
+                  )}
                 </Link>
-              ))}
+              );
+            })}
+          </div>
+
+          {/* Settings section */}
+          <div className="mt-6">
+            {!collapsed && <p className="section-label px-3 mb-2">Settings</p>}
+            {collapsed && <div className="my-3 border-t border-gray-100" />}
+            <div className="space-y-0.5">
+              {collapsed ? (
+                <Link
+                  href="/settings"
+                  title="Settings"
+                  className={`nav-item justify-center ${isActive('/settings') ? 'nav-item-active' : 'nav-item-inactive'}`}
+                >
+                  <Settings className={`h-4 w-4 flex-shrink-0 ${isActive('/settings') ? 'text-indigo-600' : 'text-gray-400'}`} />
+                </Link>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setSettingsOpen(!settingsOpen)}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-150"
+                  >
+                    <Settings className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span className="flex-1 text-left">Settings</span>
+                    <ChevronRight className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-200 ${settingsOpen ? 'rotate-90' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {settingsOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden pl-3 space-y-0.5"
+                      >
+                        {SETTINGS_ITEMS.map(item => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => mobile && setSidebarOpen(false)}
+                            className={`nav-item ${isActive(item.href) ? 'nav-item-active' : 'nav-item-inactive'}`}
+                          >
+                            <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive(item.href) ? 'text-indigo-600' : 'text-gray-400'}`} />
+                            <span className="flex-1">{item.label}</span>
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
             </div>
-          )}
-        </div>
-      </nav>
+          </div>
+        </nav>
 
-      {/* User section */}
-      <div className="border-t border-gray-100 p-4">
-        {planInfo && (() => {
-          const isPremium = !planInfo.isExpired && planInfo.name.toLowerCase() !== 'free';
-          const invoiceLimitReached = planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit;
+        {/* User / Plan section */}
+        <div className={`border-t border-gray-100 ${collapsed ? 'p-2' : 'p-3'} flex-shrink-0`}>
+          {!collapsed && planInfo && (() => {
+            const isPremium = !planInfo.isExpired && planInfo.name.toLowerCase() !== 'free';
+            const invoiceLimitReached = planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit;
 
-          if (isPremium) {
-            return (
-              <div className="mb-3 rounded-xl p-3.5 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 border border-indigo-700 shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Crown className="h-3.5 w-3.5 text-amber-400" />
-                    <p className="text-xs font-bold text-white">{planInfo.name} Plan</p>
+            if (isPremium) {
+              return (
+                <div className="mb-3 rounded-2xl p-3.5 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 border border-indigo-800/60 shadow-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Crown className="h-3.5 w-3.5 text-amber-400" />
+                      <p className="text-xs font-bold text-white">{planInfo.name} Plan</p>
+                    </div>
+                    <span className="text-[10px] font-bold bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded-full tracking-wide">PRO</span>
                   </div>
-                  <span className="text-[10px] font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full tracking-wide">PREMIUM</span>
+                  {planInfo.invoiceLimit > 0 && (
+                    <>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <p className="text-[11px] text-indigo-300">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices</p>
+                        <p className="text-[11px] font-semibold text-amber-300">{Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left</p>
+                      </div>
+                      <div className="mt-1.5 h-1.5 w-full rounded-full bg-indigo-800/60 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
+                          style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {planInfo.endDate && (
+                    <p className="text-[11px] text-indigo-400 mt-1.5">
+                      Expires {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+                  <Link href="/settings/billing" className="mt-2.5 block text-center rounded-xl py-1.5 text-xs font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 hover:from-amber-500 hover:to-amber-600 transition-all shadow-sm">
+                    Manage Plan
+                  </Link>
                 </div>
+              );
+            }
+
+            const invoiceBarColor = invoiceLimitReached ? 'bg-red-500' : planInfo.isExpired ? 'bg-orange-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= INVOICE_USAGE_WARNING_RATIO ? 'bg-amber-500' : 'bg-indigo-500';
+            const invoiceTextColor = invoiceLimitReached ? 'text-red-600' : planInfo.isExpired ? 'text-orange-600' : 'text-indigo-600';
+
+            return (
+              <div className={`mb-3 rounded-xl p-3 border ${planInfo.isExpired ? 'bg-red-50 border-red-200/80' : invoiceLimitReached ? 'bg-red-50 border-red-200/80' : 'bg-amber-50 border-amber-200/80'}`}>
+                <p className="text-xs font-semibold text-gray-800">{planInfo.name} Plan</p>
+                {planInfo.isExpired ? (
+                  <>
+                    <p className="text-xs text-red-600 font-medium mt-1">Expired — free tier active</p>
+                    {planInfo.endDate && (
+                      <p className="text-xs text-red-500 mt-0.5">
+                        Expired {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                  </>
+                ) : null}
                 {planInfo.invoiceLimit > 0 && (
                   <>
                     <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-[11px] text-indigo-200">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
-                      <p className="text-[11px] font-semibold text-amber-300">
-                        {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
-                      </p>
+                      <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices</p>
+                      <p className={`text-xs font-semibold ${invoiceTextColor}`}>{Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left</p>
                     </div>
-                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-indigo-700/60 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
-                        style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
-                      />
+                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${invoiceBarColor}`} style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }} />
                     </div>
                   </>
                 )}
-                {planInfo.endDate && (
-                  <p className="text-[11px] text-indigo-300 mt-1.5">
-                    Expires {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
+                {!planInfo.isExpired && planInfo.endDate && (
+                  <p className="text-xs text-gray-400 mt-1">Expires {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                 )}
-                {planInfo.customerLimit > 0 && (
-                  <p className="text-[11px] text-indigo-300 mt-0.5">
-                    {planInfo.customersUsed}/{planInfo.customerLimit} customers
-                  </p>
+                {!planInfo.isExpired && planInfo.customerLimit > 0 && (
+                  <p className="text-xs text-gray-500 mt-0.5">{planInfo.customersUsed}/{planInfo.customerLimit} customers</p>
                 )}
                 <Link
                   href="/settings/billing"
-                  className="mt-2.5 block text-center rounded-lg py-1.5 text-xs font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-amber-900 hover:from-amber-500 hover:to-amber-600 transition-all shadow-sm"
+                  className={`mt-2 block text-center rounded-lg py-1.5 text-xs font-semibold text-white transition-colors ${planInfo.isExpired ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}`}
                 >
-                  Manage Plan
+                  {planInfo.isExpired ? 'Renew Plan' : 'Upgrade'}
                 </Link>
               </div>
             );
-          }
+          })()}
 
-          const invoiceBarColor = invoiceLimitReached ? 'bg-red-500' : planInfo.isExpired ? 'bg-orange-500' : planInfo.invoicesUsed / planInfo.invoiceLimit >= INVOICE_USAGE_WARNING_RATIO ? 'bg-amber-500' : 'bg-indigo-500';
-          const invoiceTextColor = invoiceLimitReached ? 'text-red-600' : planInfo.isExpired ? 'text-orange-600' : 'text-indigo-600';
-          return (
-          <div className={`mb-3 rounded-lg p-3 border ${planInfo.isExpired ? 'bg-red-50 border-red-300' : invoiceLimitReached ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-            <p className="text-xs font-semibold text-gray-800">{planInfo.name} Plan</p>
-            {planInfo.isExpired ? (
-              <>
-                <p className="text-xs text-red-600 font-medium mt-1">Plan expired — free tier active</p>
-                {planInfo.endDate && (
-                  <p className="text-xs text-red-500 mt-0.5">
-                    Expired on {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                )}
-                {planInfo.invoiceLimit > 0 && (
-                  <>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
-                      <p className={`text-xs font-semibold ${invoiceTextColor}`}>
-                        {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
-                      </p>
-                    </div>
-                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${invoiceBarColor}`}
-                        style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
-                      />
-                    </div>
-                  </>
-                )}
-                {planInfo.customerLimit > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {planInfo.customersUsed}/{planInfo.customerLimit} customers
-                  </p>
-                )}
-              </>
-            ) : planInfo.invoiceLimit > 0 ? (
-              <>
-                <div className="flex items-center justify-between mt-1.5">
-                  <p className="text-xs text-gray-600">{planInfo.invoicesUsed}/{planInfo.invoiceLimit} invoices used</p>
-                  <p className={`text-xs font-semibold ${invoiceTextColor}`}>
-                    {Math.max(0, planInfo.invoiceLimit - planInfo.invoicesUsed)} left
-                  </p>
-                </div>
-                <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${invoiceBarColor}`}
-                    style={{ width: `${Math.min(100, (planInfo.invoicesUsed / planInfo.invoiceLimit) * 100)}%` }}
-                  />
-                </div>
-                {planInfo.endDate && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Expires {new Date(planInfo.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                )}
-              </>
-            ) : null}
-            {!planInfo.isExpired && planInfo.customerLimit > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                {planInfo.customersUsed}/{planInfo.customerLimit} customers
-              </p>
+          {/* User row */}
+          <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : 'px-1 mb-2'}`}>
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 overflow-hidden ring-2 ring-white">
+              {businessLogo ? (
+                <img src={businessLogo} alt={businessName || 'Business'} className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-white text-xs font-bold">{initials}</span>
+              )}
+            </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-gray-900 truncate">{displayName}</p>
+                {userData.email && <p className="text-[11px] text-gray-400 truncate">{userData.email}</p>}
+              </div>
             )}
-            <Link
-              href="/settings/billing"
-              className={`mt-2 block text-center rounded-md py-1 text-xs font-semibold text-white ${planInfo.isExpired ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+          </div>
+
+          {!collapsed && (
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all duration-150"
             >
-              {planInfo.isExpired ? 'Renew Plan' : 'Upgrade'}
-            </Link>
-          </div>
-          );
-        })()}
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {businessLogo ? (
-              <img src={businessLogo} alt={businessName || 'Business'} className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-white text-xs font-bold">{initials}</span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-900 truncate">{displayName}</p>
-            {userData.email && <p className="text-xs text-gray-400 truncate">{userData.email}</p>}
-          </div>
+              <LogOut className="h-4 w-4" />
+              <span>Log out</span>
+            </button>
+          )}
+          {collapsed && (
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              className="flex items-center justify-center rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-all w-full mt-1"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-        >
-          <LogOut className="h-4 w-4" />
-          Log out
-        </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white">
+    <div className="flex h-screen bg-gray-50/80 overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-gray-200 bg-white print:hidden">
+      <aside
+        className={`hidden lg:flex flex-col border-r border-gray-100 bg-white print:hidden transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'} relative`}
+        style={{ flexShrink: 0 }}
+      >
         <Sidebar />
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setSidebarCollapsed(c => !c)}
+          className="absolute -right-3 top-20 z-10 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm text-gray-400 hover:text-gray-600 hover:shadow-md transition-all duration-150"
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed
+            ? <PanelLeft className="h-3 w-3" />
+            : <PanelLeftClose className="h-3 w-3" />
+          }
+        </button>
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -580,17 +590,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 z-40 bg-gray-900/50 lg:hidden"
+              className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ type: 'tween', duration: 0.2 }}
+              transition={{ type: 'tween', duration: 0.22 }}
               className="fixed left-0 top-0 bottom-0 z-50 w-72 bg-white shadow-xl lg:hidden"
             >
               <div className="absolute right-3 top-3">
-                <button onClick={() => setSidebarOpen(false)} className="rounded-lg p-2 hover:bg-gray-100">
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -603,25 +616,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
         {/* Top bar */}
-        <header className="flex h-16 items-center border-b border-gray-200 bg-white px-4 lg:px-6 gap-4 print:hidden">
+        <header className="flex h-16 items-center border-b border-gray-100 bg-white px-4 lg:px-6 gap-3 print:hidden flex-shrink-0" style={{ boxShadow: '0 1px 0 0 rgb(0 0 0 / 0.04)' }}>
+          {/* Mobile menu toggle */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden rounded-lg p-2 hover:bg-gray-100"
+            className="lg:hidden rounded-xl p-2 text-gray-500 hover:bg-gray-100 transition-colors"
           >
             <Menu className="h-5 w-5" />
           </button>
 
+          {/* Global Search */}
+          <div className="flex-1 max-w-md hidden sm:block">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search invoices, customers…"
+                readOnly
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-500 placeholder-gray-400 cursor-pointer focus:outline-none focus:border-indigo-300 focus:bg-white transition-all duration-150 hover:border-gray-300 hover:bg-white"
+              />
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400 shadow-xs">
+                ⌘K
+              </kbd>
+            </div>
+          </div>
+
           <div className="flex-1" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {(() => {
-              const invoiceBlocked = planInfo?.isExpired || (planInfo?.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit);
+              const invoiceBlocked = planInfo?.isExpired || (planInfo?.invoiceLimit != null && planInfo.invoiceLimit > 0 && planInfo.invoicesUsed >= planInfo.invoiceLimit);
               return invoiceBlocked ? (
                 <Link
                   href="/settings/billing"
                   aria-disabled="true"
-                  title={planInfo?.isExpired ? 'Plan expired — renew to create invoices' : 'Invoice limit reached — upgrade to create more invoices'}
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gray-300 px-3.5 py-2 text-sm font-semibold text-gray-500 pointer-events-none"
+                  title={planInfo?.isExpired ? 'Plan expired — renew to create invoices' : 'Invoice limit reached — upgrade to create more'}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-gray-100 px-3.5 py-2 text-sm font-semibold text-gray-400 pointer-events-none"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   New Invoice
@@ -629,20 +659,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               ) : (
                 <Link
                   href="/invoices/new"
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-150 active:scale-95"
                 >
-                  <FileText className="h-3.5 w-3.5" />
+                  <Plus className="h-3.5 w-3.5" />
                   New Invoice
                 </Link>
               );
             })()}
 
-            <button className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+            <button className="relative rounded-xl p-2.5 text-gray-500 hover:bg-gray-100 transition-colors">
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
             </button>
 
-            <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 ring-2 ring-gray-100 cursor-pointer hover:ring-indigo-200 transition-all">
               {businessLogo ? (
                 <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
               ) : (

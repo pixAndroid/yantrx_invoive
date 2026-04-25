@@ -128,20 +128,20 @@ export default function InvoicesPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchInvoices}
-            className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all"
+            className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all duration-150 active:scale-95"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
             onClick={handleExport}
-            className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all"
+            className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all duration-150 active:scale-95"
           >
             <Download className="h-4 w-4" />
             Export
           </button>
           <Link
             href="/invoices/new"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-indigo-800 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-150 active:scale-95"
           >
             <Plus className="h-4 w-4" />
             New Invoice

@@ -2,21 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Users, IndianRupee, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Users, IndianRupee, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, Clock, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { apiFetch, getUserData } from '@/lib/api';
 
 const STATUS_CONFIG = {
-  PAID: { label: 'Paid', class: 'bg-green-100 text-green-700', icon: CheckCircle },
-  SENT: { label: 'Sent', class: 'bg-blue-100 text-blue-700', icon: Clock },
-  OVERDUE: { label: 'Overdue', class: 'bg-red-100 text-red-700', icon: AlertCircle },
-  DRAFT: { label: 'Draft', class: 'bg-gray-100 text-gray-600', icon: FileText },
-  PARTIALLY_PAID: { label: 'Partial', class: 'bg-amber-100 text-amber-700', icon: Clock },
+  PAID: { label: 'Paid', class: 'badge badge-success', icon: CheckCircle },
+  SENT: { label: 'Sent', class: 'badge badge-info', icon: Clock },
+  OVERDUE: { label: 'Overdue', class: 'badge badge-danger', icon: AlertCircle },
+  DRAFT: { label: 'Draft', class: 'badge badge-neutral', icon: FileText },
+  PARTIALLY_PAID: { label: 'Partial', class: 'badge badge-warning', icon: Clock },
 };
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Feature requirements for quick actions — mirrors NAV_FEATURE_REQUIREMENTS in DashboardLayout
 const QUICK_ACTION_FEATURE_REQUIREMENTS: Record<string, string[]> = {
   '/customers/new': ['customer'],
   '/products/new': ['product'],
@@ -62,7 +61,7 @@ export default function DashboardPage() {
   const isQuickActionEnabled = (href: string): boolean => {
     const required = QUICK_ACTION_FEATURE_REQUIREMENTS[href];
     if (!required) return true;
-    if (planFeatures === null) return true; // still loading — show all
+    if (planFeatures === null) return true;
     return required.some(kw => planFeatures.some(f => f.toLowerCase().includes(kw.toLowerCase())));
   };
 
@@ -81,10 +80,8 @@ export default function DashboardPage() {
         pendingInvoicesCount: statsRes?.data?.pendingInvoicesCount ?? 0,
         recentInvoices: invoicesRes?.data ?? [],
       });
-
       setMonthlyRevenue(dashboardRes?.data?.monthlyRevenue ?? []);
 
-      // Determine plan features for quick action gating
       const subs: any[] = subsRes?.data ?? [];
       const now = new Date();
       const activeSub = subs.find((s: any) =>
@@ -94,7 +91,6 @@ export default function DashboardPage() {
       if (activeSub?.plan?.features) {
         setPlanFeatures(activeSub.plan.features);
       } else {
-        // Expired or no subscription: fall back to free-plan features
         const plansRes: any = await apiFetch('/plans').catch(() => null);
         const plans: any[] = plansRes?.data ?? [];
         const freePlan =
@@ -113,7 +109,7 @@ export default function DashboardPage() {
       change: '+12.5%',
       trend: 'up' as const,
       icon: IndianRupee,
-      bg: 'bg-indigo-50',
+      iconBg: 'bg-indigo-50',
       iconColor: 'text-indigo-600',
     },
     {
@@ -122,8 +118,8 @@ export default function DashboardPage() {
       change: '+8.3%',
       trend: 'up' as const,
       icon: FileText,
-      bg: 'bg-green-50',
-      iconColor: 'text-green-600',
+      iconBg: 'bg-emerald-50',
+      iconColor: 'text-emerald-600',
     },
     {
       label: 'Active Customers',
@@ -131,7 +127,7 @@ export default function DashboardPage() {
       change: '+5.2%',
       trend: 'up' as const,
       icon: Users,
-      bg: 'bg-blue-50',
+      iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
     },
     {
@@ -140,7 +136,7 @@ export default function DashboardPage() {
       change: '-3.1%',
       trend: 'down' as const,
       icon: Clock,
-      bg: 'bg-amber-50',
+      iconBg: 'bg-amber-50',
       iconColor: 'text-amber-600',
       sub: stats ? `${stats.pendingInvoicesCount} invoices due` : '',
     },
@@ -152,133 +148,177 @@ export default function DashboardPage() {
     return found?.revenue ?? 0;
   });
   const maxRevenue = Math.max(...chartData, 1);
+  const currentMonth = new Date().getMonth();
 
   const QUICK_ACTIONS = [
-    { href: '/invoices/new', label: 'Create Invoice', icon: FileText, color: 'indigo' },
-    { href: '/customers/new', label: 'Add Customer', icon: Users, color: 'green' },
-    { href: '/products/new', label: 'Add Product', icon: TrendingUp, color: 'blue' },
-    { href: '/reports', label: 'GST Reports', icon: IndianRupee, color: 'amber' },
+    { href: '/invoices/new', label: 'Create Invoice', icon: FileText, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', hoverBg: 'hover:bg-indigo-50', hoverBorder: 'hover:border-indigo-200' },
+    { href: '/customers/new', label: 'Add Customer', icon: Users, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', hoverBg: 'hover:bg-emerald-50', hoverBorder: 'hover:border-emerald-200' },
+    { href: '/products/new', label: 'Add Product', icon: TrendingUp, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', hoverBg: 'hover:bg-blue-50', hoverBorder: 'hover:border-blue-200' },
+    { href: '/reports', label: 'GST Reports', icon: IndianRupee, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', hoverBg: 'hover:bg-amber-50', hoverBorder: 'hover:border-amber-200' },
   ];
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-8 flex items-center justify-between"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{getGreeting()}, {firstName}! 👋</h1>
-          <p className="text-gray-500 mt-1">Here&apos;s what&apos;s happening with your business today.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-gray-900">{getGreeting()}, {firstName}!</h1>
+            <span className="text-2xl">👋</span>
+          </div>
+          <p className="text-sm text-gray-500">Here&apos;s your business overview for today.</p>
         </div>
         <Link
           href="/invoices/new"
-          className="hidden md:inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+          className="hidden md:inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-150 active:scale-95"
         >
           <Plus className="h-4 w-4" />
           New Invoice
         </Link>
-      </div>
+      </motion.div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statCards.map((stat, idx) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+            transition={{ delay: idx * 0.07, duration: 0.3 }}
+            className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default"
           >
-            <div className="flex items-start justify-between mb-3">
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.bg}`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.iconBg} transition-transform duration-200 group-hover:scale-110`}>
                 <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
               </div>
-              <span className={`flex items-center gap-0.5 text-xs font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {stat.trend === 'up' ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+              <span className={`flex items-center gap-0.5 text-xs font-semibold rounded-full px-2 py-0.5 ${
+                stat.trend === 'up'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-red-50 text-red-600'
+              }`}>
+                {stat.trend === 'up'
+                  ? <ArrowUpRight className="h-3 w-3" />
+                  : <ArrowDownRight className="h-3 w-3" />
+                }
                 {stat.change}
               </span>
             </div>
             {loading ? (
-              <div className="h-8 bg-gray-100 rounded animate-pulse mb-1" />
+              <div className="h-7 bg-gray-100 rounded-lg animate-pulse mb-2 w-3/4" />
             ) : (
-              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
+              <p className="text-2xl font-bold text-gray-900 mb-1 leading-none">{stat.value}</p>
             )}
-            <p className="text-xs text-gray-500">{stat.label}</p>
+            <p className="text-xs font-medium text-gray-500">{stat.label}</p>
+            {stat.sub && !loading && (
+              <p className="text-xs text-amber-600 mt-0.5 font-medium">{stat.sub}</p>
+            )}
           </motion.div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-5">
         {/* Revenue Chart */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.28, duration: 0.3 }}
           className="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Revenue Overview</h2>
-              <p className="text-sm text-gray-500">Monthly revenue for {currentYear}</p>
+              <h2 className="text-base font-bold text-gray-900">Revenue Overview</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Monthly revenue — {currentYear}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs text-gray-500">
-                <span className="h-2 w-2 rounded-full bg-indigo-500" /> Revenue
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="h-2.5 w-2.5 rounded-sm bg-gradient-to-r from-indigo-500 to-violet-500" />
+                Revenue
               </span>
             </div>
           </div>
 
           {loading ? (
-            <div className="flex items-end gap-2 h-40">
+            <div className="flex items-end gap-1.5 h-44 px-1">
               {MONTHS.map((_, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full rounded-t-sm bg-gray-100 animate-pulse" style={{ height: `${40 + (idx % 4) * 20}px` }} />
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5">
+                  <div className="w-full rounded-t-md skeleton" style={{ height: `${30 + (idx % 5) * 14}px` }} />
                   <span className="text-[10px] text-gray-300">{MONTHS[idx]}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-end gap-2 h-40">
-              {chartData.map((value, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                  <div
-                    className="w-full rounded-t-sm bg-indigo-100 relative overflow-hidden group cursor-pointer"
-                    style={{ height: `${Math.max(4, (value / maxRevenue) * 140)}px` }}
-                  >
-                    <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm transition-all group-hover:bg-indigo-600" style={{ height: '60%' }} />
-                    {value > 0 && (
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                        <span className="text-xs font-bold text-indigo-700 bg-white/80 rounded px-1">
-                          {value >= 1000 ? `₹${(value / 1000).toFixed(1)}K` : `₹${Math.round(value)}`}
-                        </span>
-                      </div>
-                    )}
+            <div className="flex items-end gap-1.5 h-44 px-1">
+              {chartData.map((value, idx) => {
+                const height = Math.max(4, (value / maxRevenue) * 160);
+                const isCurrentMonth = idx === currentMonth;
+                const hasValue = value > 0;
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group/bar">
+                    <div
+                      className="w-full rounded-t-md relative overflow-hidden cursor-pointer transition-all duration-200 group-hover/bar:brightness-95"
+                      style={{ height: `${height}px` }}
+                    >
+                      <div className="absolute inset-0 bg-gray-100/80 rounded-t-md" />
+                      {hasValue && (
+                        <div
+                          className={`absolute bottom-0 left-0 right-0 rounded-t-md transition-all duration-300 ${
+                            isCurrentMonth
+                              ? 'bg-gradient-to-t from-indigo-600 to-violet-500'
+                              : 'bg-gradient-to-t from-indigo-400 to-indigo-300'
+                          }`}
+                          style={{ height: '100%' }}
+                        />
+                      )}
+                      {hasValue && (
+                        <div className="absolute inset-x-0 -top-8 flex justify-center opacity-0 group-hover/bar:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
+                          <span className="text-[10px] font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-md whitespace-nowrap">
+                            {value >= 100000
+                              ? `₹${(value / 100000).toFixed(1)}L`
+                              : value >= 1000
+                              ? `₹${(value / 1000).toFixed(1)}K`
+                              : `₹${Math.round(value)}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-medium transition-colors ${isCurrentMonth ? 'text-indigo-600' : 'text-gray-400'}`}>
+                      {MONTHS[idx]}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-gray-400">{MONTHS[idx]}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </motion.div>
 
         {/* Quick Actions */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.35, duration: 0.3 }}
           className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
         >
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-5">
+            <Sparkles className="h-4 w-4 text-indigo-500" />
+            <h2 className="text-base font-bold text-gray-900">Quick Actions</h2>
+          </div>
+          <div className="space-y-2">
             {QUICK_ACTIONS.filter(action => isQuickActionEnabled(action.href)).map(action => (
               <Link
                 key={action.href}
                 href={action.href}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 hover:border-indigo-200 hover:bg-indigo-50 transition-all group"
+                className={`flex items-center gap-3 rounded-xl border border-gray-100 p-3 transition-all duration-150 ${action.hoverBg} ${action.hoverBorder} hover:shadow-sm group`}
               >
-                <div className={`h-8 w-8 rounded-lg bg-${action.color}-50 flex items-center justify-center group-hover:bg-${action.color}-100`}>
-                  <action.icon className={`h-4 w-4 text-${action.color}-600`} />
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${action.iconBg} transition-transform duration-150 group-hover:scale-110`}>
+                  <action.icon className={`h-4 w-4 ${action.iconColor}`} />
                 </div>
-                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{action.label}</span>
-                <ChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 flex-1">{action.label}</span>
+                <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
               </Link>
             ))}
           </div>
@@ -287,14 +327,14 @@ export default function DashboardPage() {
 
       {/* Recent Invoices */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="mt-6 rounded-2xl border border-gray-100 bg-white shadow-sm"
+        transition={{ delay: 0.42, duration: 0.3 }}
+        className="mt-5 rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden"
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Recent Invoices</h2>
-          <Link href="/invoices" className="flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">Recent Invoices</h2>
+          <Link href="/invoices" className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
             View all <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
@@ -302,15 +342,25 @@ export default function DashboardPage() {
         <div className="divide-y divide-gray-50">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="px-6 py-4">
-                <div className="h-8 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="px-6 py-4 flex items-center gap-4">
+                <div className="skeleton h-4 rounded w-24" />
+                <div className="skeleton h-4 rounded flex-1" />
+                <div className="skeleton h-6 rounded-full w-16" />
+                <div className="skeleton h-4 rounded w-16" />
               </div>
             ))
           ) : (stats?.recentInvoices ?? []).length === 0 ? (
-            <div className="px-6 py-8 text-center">
-              <p className="text-gray-500 text-sm">No invoices yet.</p>
-              <Link href="/invoices/new" className="mt-2 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
-                <Plus className="h-4 w-4" /> Create your first invoice
+            <div className="px-6 py-12 text-center">
+              <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-indigo-400" />
+              </div>
+              <p className="text-sm font-semibold text-gray-700 mb-1">No invoices yet</p>
+              <p className="text-xs text-gray-400 mb-4">Create your first invoice to get started</p>
+              <Link
+                href="/invoices/new"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+              >
+                <Plus className="h-4 w-4" /> Create Invoice
               </Link>
             </div>
           ) : (stats?.recentInvoices ?? []).map(invoice => {
@@ -319,20 +369,20 @@ export default function DashboardPage() {
               <Link
                 key={invoice.id}
                 href={`/invoices/${invoice.id}`}
-                className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50/80 transition-colors group"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{invoice.invoiceNumber}</p>
-                  <p className="text-xs text-gray-500 truncate">{invoice.customer?.name || 'Unknown'}</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{invoice.invoiceNumber}</p>
+                  <p className="text-xs text-gray-400 truncate mt-0.5">{invoice.customer?.name || 'Unknown'}</p>
                 </div>
-                <div className="hidden sm:block text-xs text-gray-400">
+                <div className="hidden sm:block text-xs text-gray-400 tabular-nums">
                   {new Date(invoice.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                 </div>
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig.class}`}>
+                <span className={statusConfig.class}>
                   <statusConfig.icon className="h-3 w-3" />
                   {statusConfig.label}
                 </span>
-                <span className="text-sm font-semibold text-gray-900">₹{invoice.total.toLocaleString('en-IN')}</span>
+                <span className="text-sm font-bold text-gray-900 tabular-nums">₹{invoice.total.toLocaleString('en-IN')}</span>
               </Link>
             );
           })}
