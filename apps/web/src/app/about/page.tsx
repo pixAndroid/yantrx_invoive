@@ -47,8 +47,8 @@ const VALUES = [
   },
   {
     icon: Award,
-    title: 'Compliance Without Worry',
-    description: 'We stay on top of every GST update so you don\'t have to. Our platform updates automatically when regulations change.',
+    title: 'Quality Without Compromise',
+    description: 'We obsess over code quality, performance, and UX. Every product we ship is something we are proud to put our name on.',
     color: 'bg-amber-50 text-amber-600',
   },
   {
@@ -60,11 +60,11 @@ const VALUES = [
 ];
 
 const MILESTONES = [
-  { year: '2021', event: 'Yantrix founded in Bengaluru by two CAs and a fintech engineer.' },
-  { year: '2022', event: 'Launched beta with 500 businesses. Processed our first ₹1 crore in invoices.' },
-  { year: '2023', event: 'Reached 10,000 businesses. Launched GST filing integration. Series A funding.' },
-  { year: '2024', event: 'Crossed 50,000 active businesses. Launched multi-branch and team collaboration features.' },
-  { year: '2025', event: 'Expanding to international GST regimes. 100k businesses milestone.' },
+  { year: '2021', event: 'Yantrix Labs founded in Bengaluru. Started with GST billing software for local businesses.' },
+  { year: '2022', event: 'Launched beta GST Invoice Tool. Served first 100 businesses. Built our first custom web app for a logistics company.' },
+  { year: '2023', event: 'Expanded product line. Launched Attendance System and CRM. Started custom software development services.' },
+  { year: '2024', event: 'Crossed 500+ businesses. Delivered 10+ custom software projects across retail, hospitality, and logistics.' },
+  { year: '2025', event: 'Scaling product suite — GPS tracking, Hotel Booking, Restaurant POS, and HRMS. Building for every industry.' },
 ];
 
 export default function AboutPage() {
@@ -78,12 +78,12 @@ export default function AboutPage() {
             Our Story
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            We&apos;re on a mission to make GST billing
-            <span className="block gradient-text">ridiculously simple</span>
+            We build software that
+            <span className="block gradient-text">powers modern businesses</span>
           </h1>
           <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
-            Yantrix was born out of frustration — watching small business owners spend hours on invoices
-            and GST returns that should take minutes. We built the software we wished existed.
+            Yantrix Labs was built to help Indian businesses grow faster with smart software.
+            From GST tools to full-scale enterprise systems — we create products that work.
           </p>
         </div>
       </section>
@@ -93,10 +93,10 @@ export default function AboutPage() {
         <div className="container-wide">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: '50,000+', label: 'Active Businesses' },
-              { value: '₹500 Cr+', label: 'Invoices Processed' },
-              { value: '4.9/5', label: 'Customer Rating' },
-              { value: '3 Years', label: 'Building for India' },
+              { value: '10+', label: 'Products Built' },
+              { value: '500+', label: 'Businesses Served' },
+              { value: '5+', label: 'Industries Covered' },
+              { value: '3+', label: 'Years Building' },
             ].map(stat => (
               <div key={stat.label}>
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
@@ -114,24 +114,23 @@ export default function AboutPage() {
           <div className="prose prose-gray max-w-none text-gray-600 space-y-4 leading-relaxed">
             <p>
               In 2021, our co-founder Arjun was working as a Chartered Accountant in Bengaluru.
-              He watched his clients — restaurant owners, textile traders, freelancers — struggle with
-              existing billing software that was either too complex, too expensive, or designed for
-              a different era of Indian business.
+              He watched his clients — restaurant owners, textile traders, logistics companies — struggle with
+              software that was either too complex, too expensive, or not built for Indian workflows.
             </p>
             <p>
-              GST had changed everything in 2017, but the software hadn&apos;t caught up.
-              Businesses were using clunky desktop tools, juggling multiple Excel sheets,
-              or paying large fees to consultants just to file monthly returns.
+              The problem wasn&apos;t just billing. It was everything — attendance, customer management,
+              booking systems, delivery tracking. Businesses were using a patchwork of tools,
+              Excel sheets, and manual processes that cost them time and money every single day.
             </p>
             <p>
               Arjun teamed up with Sneha, an engineer who had built payment infrastructure at Razorpay,
-              and together they set out to build something different — a billing platform that was
-              modern, mobile-friendly, and made compliance feel easy rather than terrifying.
+              and together they founded Yantrix Labs — a software company focused on building smart,
+              affordable digital products for Indian businesses.
             </p>
             <p>
-              Today, Yantrix serves over 50,000 businesses across India — from street-level kirana stores
-              to multi-branch enterprises — helping them invoice faster, stay GST compliant,
-              and understand their business finances at a glance.
+              Today, Yantrix Labs builds and maintains a growing suite of products — from GST invoicing
+              to custom enterprise systems — serving businesses across retail, logistics, hospitality,
+              and more. Our mission: every Indian business deserves great software.
             </p>
           </div>
         </div>
@@ -206,13 +205,13 @@ export default function AboutPage() {
       <section className="py-20 bg-gradient-to-br from-indigo-600 to-purple-700 text-center">
         <div className="container-wide max-w-2xl mx-auto">
           <TrendingUp className="h-12 w-12 text-indigo-300 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-white mb-4">Join 50,000+ businesses growing with Yantrix</h2>
-          <p className="text-indigo-200 mb-8">Start free. No credit card needed. Setup in 5 minutes.</p>
+          <h2 className="text-3xl font-bold text-white mb-4">Let&apos;s build something together</h2>
+          <p className="text-indigo-200 mb-8">We work with startups, SMEs, and enterprises to create software that drives growth.</p>
           <a
-            href="/auth/register"
+            href="/contact"
             className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-600 hover:bg-indigo-50 transition-all shadow-lg"
           >
-            Get Started Free
+            Get in Touch
           </a>
         </div>
       </section>
