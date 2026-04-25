@@ -6,9 +6,15 @@ import prisma from '../utils/prisma';
 const router = Router();
 router.use(authenticate);
 
-/** Returns endDate and amount to charge based on plan billing period (daily / yearly / monthly). */
-function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }) {
+/** Returns endDate and amount to charge based on plan billing period. */
+function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null; durationDays: number | null }) {
   const now = new Date();
+  // If the plan has an explicit durationDays, always use that.
+  if (plan.durationDays !== null && plan.durationDays > 0) {
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + plan.durationDays);
+    return { endDate, amount: plan.price };
+  }
   const slug = plan.slug.toLowerCase();
   if (slug === 'daily') {
     const endDate = new Date(now);
