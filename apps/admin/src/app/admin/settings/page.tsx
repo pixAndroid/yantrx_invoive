@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate } from 'lucide-react';
+import { adminFetch } from '@/lib/api';
 
 const SETTING_SECTIONS = [
   {
@@ -38,6 +39,22 @@ const SETTING_SECTIONS = [
   },
 ];
 
+const HOME_HEADER_DEFAULTS = {
+  badgeText: 'Trusted by 500+ businesses across India',
+  titleLine1: 'We Build Tools That',
+  titleGradientText: 'Power Modern Businesses',
+  description:
+    'From invoicing to booking platforms, tracking systems to SaaS products — we design software that helps companies grow faster.',
+  primaryBtnLabel: 'Explore Tools',
+  secondaryBtnLabel: 'Start a Project',
+  stat1Value: '10+',
+  stat1Label: 'Products Built',
+  stat2Value: '500+',
+  stat2Label: 'Businesses Served',
+  stat3Value: '5+',
+  stat3Label: 'Industries',
+};
+
 export default function AdminSettingsPage() {
   const [formData, setFormData] = useState<Record<string, string>>({
     platformName: 'Yantrix',
@@ -56,11 +73,35 @@ export default function AdminSettingsPage() {
     paymentAlerts: true,
   });
 
+  const [homeHeader, setHomeHeader] = useState<Record<string, string>>(HOME_HEADER_DEFAULTS);
+  const [headerLoading, setHeaderLoading] = useState(true);
+
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => {
+    adminFetch('/admin/settings/home-header')
+      .then((res: any) => {
+        if (res.success && res.data) {
+          setHomeHeader(prev => ({
+            ...prev,
+            ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null && v !== '')),
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHeaderLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    await adminFetch('/admin/settings/home-header', {
+      method: 'PUT',
+      body: JSON.stringify(homeHeader),
+    })
+      .then(() => {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      })
+      .catch(() => {});
   };
 
   return (
@@ -119,6 +160,109 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         ))}
+
+        {/* Home Page Header Config */}
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-800 bg-gray-800/50">
+            <LayoutTemplate className="h-5 w-5 text-orange-400" />
+            <h2 className="text-base font-semibold text-white">Home Page Header Config</h2>
+          </div>
+          <div className="p-6 space-y-6">
+            {headerLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : (
+              <>
+                {/* Badge & Title */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Badge Text</label>
+                    <input
+                      type="text"
+                      value={homeHeader.badgeText}
+                      onChange={e => setHomeHeader(prev => ({ ...prev, badgeText: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Title Line 1</label>
+                    <input
+                      type="text"
+                      value={homeHeader.titleLine1}
+                      onChange={e => setHomeHeader(prev => ({ ...prev, titleLine1: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Title Gradient Text</label>
+                    <input
+                      type="text"
+                      value={homeHeader.titleGradientText}
+                      onChange={e => setHomeHeader(prev => ({ ...prev, titleGradientText: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Description</label>
+                    <textarea
+                      rows={3}
+                      value={homeHeader.description}
+                      onChange={e => setHomeHeader(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Primary Button Label</label>
+                    <input
+                      type="text"
+                      value={homeHeader.primaryBtnLabel}
+                      onChange={e => setHomeHeader(prev => ({ ...prev, primaryBtnLabel: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Secondary Button Label</label>
+                    <input
+                      type="text"
+                      value={homeHeader.secondaryBtnLabel}
+                      onChange={e => setHomeHeader(prev => ({ ...prev, secondaryBtnLabel: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div>
+                  <p className="text-sm font-medium text-gray-400 mb-3">Hero Stats</p>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    {([1, 2, 3] as const).map(n => (
+                      <div key={n} className="rounded-xl border border-gray-700 bg-gray-800/50 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Stat {n}</p>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">Value</label>
+                          <input
+                            type="text"
+                            value={homeHeader[`stat${n}Value`]}
+                            onChange={e => setHomeHeader(prev => ({ ...prev, [`stat${n}Value`]: e.target.value }))}
+                            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">Label</label>
+                          <input
+                            type="text"
+                            value={homeHeader[`stat${n}Label`]}
+                            onChange={e => setHomeHeader(prev => ({ ...prev, [`stat${n}Label`]: e.target.value }))}
+                            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Danger Zone */}
         <div className="rounded-2xl border border-red-900/50 bg-gray-900 overflow-hidden">
