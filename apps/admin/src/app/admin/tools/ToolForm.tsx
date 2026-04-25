@@ -38,20 +38,32 @@ interface ToolFormData {
 }
 
 const DEFAULT_FORM: ToolFormData = {
+  title: '', slug: '', shortDescription: '', fullDescription: '',
+  logoUrl: '', bannerUrl: '', category: '', tags: '',
+  status: 'DRAFT', visibility: 'PUBLIC', featured: false,
+  toolType: 'INTERNAL_APP', internalRoute: '', externalUrl: '',
+  customHtml: '', customCss: '', customJs: '',
+  ctaText: 'Launch Tool', ctaUrl: '',
+  pricingType: 'FREE', seoTitle: '', seoDescription: '', sortOrder: '0',
+  screenshots: '',
+};
+
+const GST_INVOICE_PRESET: Partial<ToolFormData> = {
   title: 'GST Invoice Tool',
   slug: 'gst-invoice',
   shortDescription: 'Professional GST billing, invoicing, and compliance. Auto-calculate CGST, SGST, IGST. Generate GSTR-1 and GSTR-3B reports. Built for Indian businesses.',
-  fullDescription: '',
-  logoUrl: '', bannerUrl: '', category: 'Invoice', tags: 'GST, Invoice, Billing, India',
-  status: 'PUBLISHED', visibility: 'PUBLIC', featured: true,
-  toolType: 'INTERNAL_APP', internalRoute: '/tools/gst-invoice', externalUrl: '',
-  customHtml: '', customCss: '', customJs: '',
-  ctaText: 'Launch Tool', ctaUrl: '',
+  category: 'Invoice',
+  tags: 'GST, Invoice, Billing, India',
+  status: 'PUBLISHED',
+  visibility: 'PUBLIC',
+  featured: true,
+  toolType: 'INTERNAL_APP',
+  internalRoute: '/tools/gst-invoice',
+  ctaText: 'Launch Tool',
   pricingType: 'FREE',
   seoTitle: 'GST Invoice Tool — Professional GST Billing for Indian Businesses',
   seoDescription: 'Create GST-compliant invoices in 30 seconds. Auto-calculate CGST, SGST, IGST. Generate GSTR-1 and GSTR-3B reports. Built for Indian SMEs.',
   sortOrder: '0',
-  screenshots: '',
 };
 
 function generateSlug(title: string) {
@@ -88,6 +100,11 @@ export default function ToolForm({ initialData, toolId, mode }: ToolFormProps) {
   const [previewTab, setPreviewTab] = useState<'html' | 'css' | 'js' | 'preview'>('html');
 
   const set = (k: keyof ToolFormData, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const loadGstInvoicePreset = () => {
+    setForm(p => ({ ...p, ...GST_INVOICE_PRESET }));
+    setSlugManual(true);
+  };
 
   const handleTitleChange = (v: string) => {
     set('title', v);
@@ -158,6 +175,16 @@ export default function ToolForm({ initialData, toolId, mode }: ToolFormProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {mode === 'create' && (
+            <button
+              type="button"
+              onClick={loadGstInvoicePreset}
+              className="flex items-center gap-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-sm font-medium text-orange-400 hover:bg-orange-500/20 transition-colors"
+            >
+              <Wrench className="h-4 w-4" />
+              Load GST Invoice Default
+            </button>
+          )}
           {toolId && (
             <Link
               href={`/admin/tools/${toolId}/preview`}
