@@ -186,7 +186,7 @@ export default function SettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving || !settings}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:pointer-events-none"
         >
           {saved ? <><CheckCircle className="h-4 w-4" /> Saved!</> : saving ? 'Saving...' : <><Save className="h-4 w-4" /> Save Changes</>}
         </button>

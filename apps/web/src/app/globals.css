@@ -2,10 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
+    /* Brand */
+    --brand-50: 238 242 255;
+    --brand-100: 224 231 255;
+    --brand-200: 199 210 254;
+    --brand-300: 165 180 252;
+    --brand-400: 129 140 248;
+    --brand-500: 99 102 241;
+    --brand-600: 79 70 229;
+    --brand-700: 67 56 202;
+    --brand-800: 55 48 163;
+    --brand-900: 49 46 129;
+
+    /* Neutral */
+    --neutral-0: 255 255 255;
+    --neutral-50: 249 250 251;
+    --neutral-100: 243 244 246;
+    --neutral-200: 229 231 235;
+    --neutral-300: 209 213 219;
+    --neutral-400: 156 163 175;
+    --neutral-500: 107 114 128;
+    --neutral-600: 75 85 99;
+    --neutral-700: 55 65 81;
+    --neutral-800: 31 41 55;
+    --neutral-900: 17 24 39;
+
+    /* Semantic */
+    --success: 16 185 129;
+    --warning: 245 158 11;
+    --danger: 239 68 68;
+    --info: 59 130 246;
+
+    /* Surface */
+    --surface: 255 255 255;
+    --surface-subtle: 249 250 251;
+    --surface-raised: 255 255 255;
+
+    /* Border */
+    --border: 229 231 235;
+    --border-subtle: 243 244 246;
+
+    /* Radius tokens */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.25rem;
+    --radius-3xl: 1.5rem;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+    --shadow-float: 0 8px 30px rgb(0 0 0 / 0.12);
+    --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+    /* Transitions */
+    --ease-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-default: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-slow: 320ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* shadcn compat */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -33,46 +96,161 @@
   }
 
   body {
-    @apply bg-white text-gray-900 antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    @apply bg-gray-50 text-gray-900 antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer components {
+  /* Layout */
   .container-wide {
     @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
+  /* Typography helpers */
   .gradient-text {
-    @apply bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent;
   }
 
-  .card-shadow {
-    @apply shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)];
+  .display {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    @apply text-4xl font-extrabold tracking-tight leading-tight;
+  }
+
+  /* Premium cards */
+  .card {
+    @apply rounded-2xl border border-gray-100 bg-white shadow-sm;
   }
 
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-gray-200;
+  }
+
+  .card-shadow {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  }
+
+  /* Premium buttons */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-indigo-700 hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all duration-150 hover:bg-gray-50 hover:border-gray-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition-all duration-150 hover:bg-gray-100 hover:text-gray-900 active:scale-95;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-red-700 active:scale-95;
+  }
+
+  /* Premium inputs */
+  .input-premium {
+    @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition-all duration-150 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20;
+  }
+
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .badge-success { @apply bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80; }
+  .badge-warning { @apply bg-amber-50 text-amber-700 ring-1 ring-amber-200/80; }
+  .badge-danger  { @apply bg-red-50 text-red-700 ring-1 ring-red-200/80; }
+  .badge-info    { @apply bg-blue-50 text-blue-700 ring-1 ring-blue-200/80; }
+  .badge-neutral { @apply bg-gray-100 text-gray-600 ring-1 ring-gray-200/80; }
+  .badge-purple  { @apply bg-violet-50 text-violet-700 ring-1 ring-violet-200/80; }
+
+  /* Table */
+  .table-header {
+    @apply border-b border-gray-100 bg-gray-50/80;
+  }
+
+  .table-th {
+    @apply px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-400;
+  }
+
+  .table-row {
+    @apply transition-colors duration-100 hover:bg-gray-50/80;
+  }
+
+  .table-td {
+    @apply px-5 py-4;
+  }
+
+  /* Sidebar nav items */
+  .nav-item {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150;
+  }
+
+  .nav-item-active {
+    @apply bg-indigo-50 text-indigo-700;
+  }
+
+  .nav-item-inactive {
+    @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900;
+  }
+
+  /* Section label */
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-widest text-gray-400;
+  }
+
+  /* Stat card */
+  .stat-icon-wrap {
+    @apply h-10 w-10 rounded-xl flex items-center justify-center;
   }
 }
 
-/* Scrollbar */
+/* Premium scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+  @apply bg-gray-200 rounded-full;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply bg-gray-300;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  @apply rounded-lg;
+}
+
+/* Chart bar gradient */
+.chart-bar {
+  @apply relative rounded-t-md overflow-hidden cursor-pointer transition-all duration-200;
+}
+
+.chart-bar::after {
+  content: '';
+  @apply absolute inset-0 opacity-0 transition-opacity duration-150;
+  background: rgb(255 255 255 / 0.15);
+}
+
+.chart-bar:hover::after {
+  @apply opacity-100;
 }
 
 /* Print styles */
@@ -97,13 +275,10 @@
     display: none !important;
   }
 
-  nav,
-  aside,
-  header.no-print {
+  nav, aside, header.no-print {
     display: none !important;
   }
 
-  /* Invoice document: remove scrollable container constraints */
   .invoice-document {
     height: auto !important;
     max-height: none !important;
@@ -113,19 +288,11 @@
     border-radius: 0 !important;
   }
 
-  /* Avoid page breaks inside table rows and totals card */
-  tr,
-  .inv-totals-card {
+  tr, .inv-totals-card {
     page-break-inside: avoid;
     break-inside: avoid;
   }
 
-  /* Keep table header visible across pages */
-  thead {
-    display: table-header-group;
-  }
-
-  tfoot {
-    display: table-footer-group;
-  }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
 }
