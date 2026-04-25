@@ -647,9 +647,19 @@ async function main() {
   await prisma.tool.upsert({
     where: { slug: 'gst-invoice' },
     update: {
-      isSystem: true,
+      title: 'GST Invoice Tool',
+      shortDescription: 'Professional GST billing, invoicing, and compliance. Auto-calculate CGST, SGST, IGST. Generate GSTR-1 and GSTR-3B reports. Built for Indian businesses.',
+      category: 'Invoice',
+      tags: ['GST', 'Invoice', 'Billing', 'India'],
       status: 'PUBLISHED',
       visibility: 'PUBLIC',
+      featured: true,
+      toolType: 'INTERNAL_APP',
+      internalRoute: '/tools/gst-invoice',
+      ctaText: 'Launch Tool',
+      pricingType: 'FREE',
+      isSystem: true,
+      sortOrder: 0,
     },
     create: {
       id: 'tool_gst_invoice',
