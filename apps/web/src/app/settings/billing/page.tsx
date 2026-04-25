@@ -117,7 +117,7 @@ export default function BillingPage() {
     setError('');
     try {
       // Create Razorpay order
-      const orderRes = await apiFetch<{ data: { orderId: string; amount: number; currency: string; keyId: string } }>(
+      const orderRes = await apiFetch<{ data: { orderId: string; amount: number; currency: string; keyId: string; prefill: { name: string; email: string; contact: string } } }>(
         '/subscriptions/razorpay-order',
         { method: 'POST', body: JSON.stringify({ planId: plan.id }) }
       );
@@ -125,7 +125,7 @@ export default function BillingPage() {
       const loaded = await loadRazorpayScript();
       if (!loaded) { setError('Failed to load payment gateway. Please try again.'); return; }
 
-      const { orderId, amount, currency, keyId } = orderRes.data;
+      const { orderId, amount, currency, keyId, prefill } = orderRes.data;
       const rzp = new window.Razorpay({
         key: keyId,
         amount,
@@ -149,7 +149,7 @@ export default function BillingPage() {
             setError('Payment verification failed. Please contact support.');
           }
         },
-        prefill: {},
+        prefill: prefill || {},
         theme: { color: '#6366f1' },
         modal: { ondismiss: () => setUpgrading(null) },
       });
