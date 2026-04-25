@@ -467,4 +467,182 @@ router.post('/invoice-templates/:id/set-default', async (req: AuthenticatedReque
   } catch (error) { next(error); }
 });
 
+// ─── Tools CMS ────────────────────────────────────────────────────────────
+
+router.get('/tools', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const page = parseInt(req.query.page as string || '1');
+    const limit = parseInt(req.query.limit as string || '20');
+    const search = req.query.search as string;
+    const category = req.query.category as string;
+    const status = req.query.status as string;
+    const visibility = req.query.visibility as string;
+    const toolType = req.query.toolType as string;
+    const featured = req.query.featured as string;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' as const } },
+        { shortDescription: { contains: search, mode: 'insensitive' as const } },
+        { category: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+    if (category) where.category = category;
+    if (status) where.status = status;
+    if (visibility) where.visibility = visibility;
+    if (toolType) where.toolType = toolType;
+    if (featured !== undefined && featured !== '') where.featured = featured === 'true';
+
+    const [tools, total] = await Promise.all([
+      prisma.tool.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+      }),
+      prisma.tool.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: tools,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNext: page * limit < total, hasPrev: page > 1 },
+    });
+  } catch (error) { next(error); }
+});
+
+router.get('/tools/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const tool = await prisma.tool.findUnique({ where: { id: req.params.id } });
+    if (!tool) { res.status(404).json({ success: false, error: 'Tool not found' }); return; }
+    res.json({ success: true, data: tool });
+  } catch (error) { next(error); }
+});
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+router.post('/tools', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const {
+      title, slug, shortDescription, fullDescription, logoUrl, bannerUrl, screenshots,
+      category, tags, status, visibility, featured, toolType, internalRoute, externalUrl,
+      customHtml, customCss, customJs, ctaText, ctaUrl, pricingType, seoTitle, seoDescription,
+      sortOrder,
+    } = req.body;
+
+    if (!title) { res.status(400).json({ success: false, error: 'title is required' }); return; }
+
+    const finalSlug = (slug || generateSlug(title)).toLowerCase().replace(/\s+/g, '-');
+
+    const existing = await prisma.tool.findUnique({ where: { slug: finalSlug } });
+    if (existing) { res.status(400).json({ success: false, error: 'A tool with this slug already exists' }); return; }
+
+    const tool = await prisma.tool.create({
+      data: {
+        title,
+        slug: finalSlug,
+        shortDescription: shortDescription || null,
+        fullDescription: fullDescription || null,
+        logoUrl: logoUrl || null,
+        bannerUrl: bannerUrl || null,
+        screenshots: screenshots || [],
+        category: category || null,
+        tags: tags || [],
+        status: status || 'DRAFT',
+        visibility: visibility || 'PUBLIC',
+        featured: featured || false,
+        toolType: toolType || 'INTERNAL_APP',
+        internalRoute: internalRoute || null,
+        externalUrl: externalUrl || null,
+        customHtml: customHtml || null,
+        customCss: customCss || null,
+        customJs: customJs || null,
+        ctaText: ctaText || null,
+        ctaUrl: ctaUrl || null,
+        pricingType: pricingType || 'FREE',
+        seoTitle: seoTitle || null,
+        seoDescription: seoDescription || null,
+        sortOrder: sortOrder != null ? parseInt(sortOrder) : 0,
+        createdBy: req.user?.id || null,
+      },
+    });
+
+    res.status(201).json({ success: true, data: tool });
+  } catch (error) { next(error); }
+});
+
+router.put('/tools/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.tool.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: 'Tool not found' }); return; }
+
+    const allowedFields = [
+      'title', 'slug', 'shortDescription', 'fullDescription', 'logoUrl', 'bannerUrl',
+      'screenshots', 'category', 'tags', 'status', 'visibility', 'featured', 'toolType',
+      'internalRoute', 'externalUrl', 'customHtml', 'customCss', 'customJs', 'ctaText',
+      'ctaUrl', 'pricingType', 'seoTitle', 'seoDescription', 'sortOrder',
+    ];
+
+    const data: any = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        data[field] = req.body[field];
+      }
+    }
+    if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder);
+
+    // If slug is being changed, check for uniqueness
+    if (data.slug && data.slug !== existing.slug) {
+      const slugConflict = await prisma.tool.findUnique({ where: { slug: data.slug } });
+      if (slugConflict) { res.status(400).json({ success: false, error: 'A tool with this slug already exists' }); return; }
+    }
+
+    const tool = await prisma.tool.update({ where: { id: req.params.id }, data });
+    res.json({ success: true, data: tool });
+  } catch (error) { next(error); }
+});
+
+router.delete('/tools/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const existing = await prisma.tool.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: 'Tool not found' }); return; }
+    await prisma.tool.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Tool deleted' });
+  } catch (error) { next(error); }
+});
+
+router.post('/tools/:id/duplicate', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const original = await prisma.tool.findUnique({ where: { id: req.params.id } });
+    if (!original) { res.status(404).json({ success: false, error: 'Tool not found' }); return; }
+
+    // Generate a unique slug for the copy
+    let newSlug = `${original.slug}-copy`;
+    let counter = 1;
+    while (await prisma.tool.findUnique({ where: { slug: newSlug } })) {
+      newSlug = `${original.slug}-copy-${counter++}`;
+    }
+
+    const { id, createdAt, updatedAt, viewCount, clickCount, ...rest } = original;
+    const duplicate = await prisma.tool.create({
+      data: {
+        ...rest,
+        slug: newSlug,
+        title: `${original.title} (Copy)`,
+        status: 'DRAFT',
+        createdBy: req.user?.id || null,
+      },
+    });
+    res.status(201).json({ success: true, data: duplicate });
+  } catch (error) { next(error); }
+});
+
 export default router;

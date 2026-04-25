@@ -962,6 +962,66 @@ model CRMActivity {
   @@map("crm_activities")
 }
 
+// ─── Tools CMS ────────────────────────────────────────────────────────────
+
+enum ToolType {
+  INTERNAL_APP
+  CUSTOM_HTML_TOOL
+  EXTERNAL_URL
+  COMING_SOON
+}
+
+enum ToolStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ToolVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum PricingType {
+  FREE
+  PAID
+  CUSTOM
+}
+
+model Tool {
+  id               String         @id @default(cuid())
+  title            String
+  slug             String         @unique
+  shortDescription String?
+  fullDescription  String?        @db.Text
+  logoUrl          String?
+  bannerUrl        String?
+  screenshots      String[]
+  category         String?
+  tags             String[]
+  status           ToolStatus     @default(DRAFT)
+  visibility       ToolVisibility @default(PUBLIC)
+  featured         Boolean        @default(false)
+  toolType         ToolType       @default(INTERNAL_APP)
+  internalRoute    String?
+  externalUrl      String?
+  customHtml       String?        @db.Text
+  customCss        String?        @db.Text
+  customJs         String?        @db.Text
+  ctaText          String?
+  ctaUrl           String?
+  pricingType      PricingType    @default(FREE)
+  seoTitle         String?
+  seoDescription   String?
+  sortOrder        Int            @default(0)
+  viewCount        Int            @default(0)
+  clickCount       Int            @default(0)
+  createdBy        String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("tools")
+}
+
 // ─── Invoice Templates ────────────────────────────────────────────────────
 
 model InvoiceTemplate {

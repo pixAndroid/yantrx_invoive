@@ -25,6 +25,7 @@ import expenseRoutes from './routes/expenses';
 import inventoryRoutes from './routes/inventory';
 import hrmRoutes from './routes/hrm';
 import crmRoutes from './routes/crm';
+import toolsRoutes from './routes/tools';
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use('/api/v1/expenses', expenseRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/hrm', hrmRoutes);
 app.use('/api/v1/crm', crmRoutes);
+app.use('/api/v1/tools', toolsRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────────────────────
 app.use((_req, res) => {
