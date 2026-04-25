@@ -6,9 +6,9 @@ import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
 
 const NAV_LINKS = [
-  { href: '/features', label: 'Features' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/', label: 'Home' },
   { href: '/tools', label: 'Tools' },
+  { href: '/services', label: 'Services' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
@@ -55,7 +55,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">Y</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Yantrix</span>
+              <span className="text-xl font-bold text-gray-900">Yantrix Labs</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-8">
@@ -147,19 +147,19 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">Y</span>
                 </div>
-                <span className="text-xl font-bold text-white">Yantrix</span>
+                <span className="text-xl font-bold text-white">Yantrix Labs</span>
               </Link>
               <p className="text-sm leading-relaxed mb-3">
-                India&apos;s simplest GST billing software. Built for small and medium businesses.
+                We build smart digital products and business tools for startups, SMEs, and enterprises.
               </p>
               <p className="text-xs">Made with ❤️ in India 🇮🇳</p>
             </div>
             <div>
-              <h5 className="font-semibold text-white mb-3">Product</h5>
+              <h5 className="font-semibold text-white mb-3">Products</h5>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/tools" className="hover:text-white transition-colors">Free Tools</Link></li>
+                <li><Link href="/tools/gst-invoice" className="hover:text-white transition-colors">GST Invoice Tool</Link></li>
+                <li><Link href="/tools" className="hover:text-white transition-colors">All Products</Link></li>
+                <li><Link href="/services" className="hover:text-white transition-colors">Custom Development</Link></li>
               </ul>
             </div>
             <div>
@@ -173,7 +173,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm">© {new Date().getFullYear()} Yantrix. All rights reserved.</p>
+            <p className="text-sm">© {new Date().getFullYear()} Yantrix Labs. All rights reserved.</p>
             <div className="flex items-center gap-4 text-sm">
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>

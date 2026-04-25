@@ -4,131 +4,66 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   FileText, BarChart3, Shield, Zap, CheckCircle, Star,
-  ArrowRight, IndianRupee, Users, Package, TrendingUp,
-  ChevronRight, Globe, Lock, Headphones, Menu, X, LayoutDashboard
+  ArrowRight, IndianRupee, Users, TrendingUp,
+  Menu, X, LayoutDashboard, ShoppingCart, Building2,
+  UtensilsCrossed, Car, MapPin, Briefcase, Settings,
+  Smartphone, Cloud, Bot, Repeat, Link2, Headphones,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
 
 const NAV_LINKS = [
-  { href: '/features', label: 'Features' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/', label: 'Home' },
   { href: '/tools', label: 'Tools' },
+  { href: '/services', label: 'Services' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
 
-const FEATURES = [
-  {
-    icon: FileText,
-    title: 'GST Invoicing in 30 Seconds',
-    description: 'Create professional GST-compliant invoices with auto-calculations for CGST, SGST, and IGST. Support for all invoice types.',
-    color: 'bg-indigo-50 text-indigo-600',
-  },
-  {
-    icon: BarChart3,
-    title: 'Automated GST Reports',
-    description: 'Generate GSTR-1, GSTR-3B, and other GST returns with a single click. Never miss a filing deadline again.',
-    color: 'bg-green-50 text-green-600',
-  },
-  {
-    icon: IndianRupee,
-    title: 'Payment Tracking',
-    description: 'Track payments, send reminders for overdue invoices, and accept online payments via UPI, cards, and net banking.',
-    color: 'bg-amber-50 text-amber-600',
-  },
-  {
-    icon: Users,
-    title: 'Customer Management',
-    description: 'Maintain a complete customer database with GST details, payment history, and outstanding balance tracking.',
-    color: 'bg-blue-50 text-blue-600',
-  },
-  {
-    icon: Package,
-    title: 'Inventory Management',
-    description: 'Track stock levels, get low-stock alerts, and manage your product catalog with HSN/SAC codes.',
-    color: 'bg-purple-50 text-purple-600',
-  },
-  {
-    icon: Shield,
-    title: 'Bank-Grade Security',
-    description: 'Your business data is encrypted and secure. Regular backups ensure you never lose important information.',
-    color: 'bg-rose-50 text-rose-600',
-  },
+const PRODUCTS = [
+  { icon: FileText, title: 'GST Invoice Tool', desc: 'Professional GST billing, invoicing and compliance in one place.', href: '/tools/gst-invoice', color: 'bg-indigo-50 text-indigo-600', border: 'hover:border-indigo-200' },
+  { icon: Users, title: 'Attendance System', desc: 'Biometric and digital attendance tracking for teams.', href: '/tools', color: 'bg-green-50 text-green-600', border: 'hover:border-green-200' },
+  { icon: ShoppingCart, title: 'Ecommerce Platform', desc: 'Full-featured online store with payments and inventory.', href: '/tools', color: 'bg-amber-50 text-amber-600', border: 'hover:border-amber-200' },
+  { icon: Building2, title: 'Hotel Booking', desc: 'Property management and room booking for hospitality.', href: '/tools', color: 'bg-blue-50 text-blue-600', border: 'hover:border-blue-200' },
+  { icon: UtensilsCrossed, title: 'Restaurant POS', desc: 'Order management and billing for F&B businesses.', href: '/tools', color: 'bg-rose-50 text-rose-600', border: 'hover:border-rose-200' },
+  { icon: Car, title: 'Taxi Booking', desc: 'Driver and ride management platform.', href: '/tools', color: 'bg-purple-50 text-purple-600', border: 'hover:border-purple-200' },
+  { icon: MapPin, title: 'GPS Tracking', desc: 'Real-time fleet tracking and route optimization.', href: '/tools', color: 'bg-cyan-50 text-cyan-600', border: 'hover:border-cyan-200' },
+  { icon: BarChart3, title: 'CRM', desc: 'Manage leads, customers, and sales pipelines.', href: '/tools', color: 'bg-orange-50 text-orange-600', border: 'hover:border-orange-200' },
+  { icon: Briefcase, title: 'HRMS', desc: 'HR, payroll, and employee lifecycle management.', href: '/tools', color: 'bg-pink-50 text-pink-600', border: 'hover:border-pink-200' },
+  { icon: Settings, title: 'Custom ERP', desc: 'Tailored enterprise systems built for your workflow.', href: '/services', color: 'bg-violet-50 text-violet-600', border: 'hover:border-violet-200' },
 ];
 
-const PLANS = [
-  {
-    name: 'Free',
-    price: '₹0',
-    period: '/month',
-    description: 'Perfect for freelancers',
-    features: ['5 invoices/month', '10 customers', 'Basic GST reports', 'PDF download', 'Email support'],
-    cta: 'Get Started Free',
-    highlighted: false,
-    badge: null,
-  },
-  {
-    name: 'Starter',
-    price: '₹149',
-    period: '/month',
-    description: 'For growing businesses',
-    features: ['100 invoices/month', '200 customers', '2 team members', 'GST reports', 'Email invoices', 'Payment tracking', 'Expense tracking'],
-    cta: 'Start Free Trial',
-    highlighted: false,
-    badge: null,
-  },
-  {
-    name: 'Pro',
-    price: '₹299',
-    period: '/month',
-    description: 'Most popular choice',
-    features: ['500 invoices/month', 'Unlimited customers', '5 team members', 'Advanced GST reports', 'GSTR filing help', 'Multi-branch', 'Custom templates', 'Payment gateway', 'Priority support'],
-    cta: 'Start Free Trial',
-    highlighted: true,
-    badge: 'Most Popular',
-  },
-  {
-    name: 'Business',
-    price: '₹599',
-    period: '/month',
-    description: 'For large enterprises',
-    features: ['Unlimited invoices', 'Unlimited customers', '20 team members', 'Full GST suite', 'API access', 'White-label', 'Dedicated manager', 'SLA support'],
-    cta: 'Contact Sales',
-    highlighted: false,
-    badge: null,
-  },
+const SERVICES = [
+  { icon: Zap, title: 'Web Apps', desc: 'Fast, responsive web applications built to scale.' },
+  { icon: Smartphone, title: 'Mobile Apps', desc: 'Native and cross-platform apps for iOS and Android.' },
+  { icon: Cloud, title: 'SaaS Platforms', desc: 'Multi-tenant SaaS with billing, auth, and admin built in.' },
+  { icon: LayoutDashboard, title: 'Admin Dashboards', desc: 'Data-rich dashboards for operations and analytics.' },
+  { icon: Link2, title: 'API Integrations', desc: 'Connect your tools with third-party APIs and services.' },
+  { icon: Bot, title: 'AI Tools', desc: 'Intelligent automation and AI-powered features.' },
+  { icon: Repeat, title: 'Automation Systems', desc: 'Workflow automation to eliminate manual processes.' },
+];
+
+const WHY_US = [
+  { icon: Zap, title: 'Fast Delivery', desc: 'Ship production-ready software in weeks, not months.', color: 'bg-indigo-50 text-indigo-600' },
+  { icon: TrendingUp, title: 'Scalable Architecture', desc: 'Built to handle growth from 10 to 10 million users.', color: 'bg-green-50 text-green-600' },
+  { icon: Star, title: 'Clean UI/UX', desc: 'Intuitive interfaces that users love from day one.', color: 'bg-amber-50 text-amber-600' },
+  { icon: IndianRupee, title: 'SME-Friendly Pricing', desc: 'Enterprise-quality software at startup-friendly costs.', color: 'bg-blue-50 text-blue-600' },
+  { icon: Shield, title: 'Enterprise Security', desc: 'Bank-grade security, GDPR-ready, and compliance-first.', color: 'bg-rose-50 text-rose-600' },
+  { icon: Headphones, title: 'Ongoing Support', desc: 'Dedicated support and maintenance after launch.', color: 'bg-purple-50 text-purple-600' },
 ];
 
 const TESTIMONIALS = [
-  {
-    name: 'Rajesh Sharma',
-    business: 'Sharma Electronics, Mumbai',
-    avatar: 'RS',
-    rating: 5,
-    quote: 'Yantrix has completely transformed how we handle GST billing. What used to take hours now takes minutes. The automatic tax calculations are a lifesaver!',
-  },
-  {
-    name: 'Priya Nair',
-    business: 'Priya Boutique, Bengaluru',
-    avatar: 'PN',
-    rating: 5,
-    quote: 'As a small business owner, I was struggling with GST compliance. Yantrix made it so easy. My CA is also happy with the organized reports.',
-  },
-  {
-    name: 'Amit Patel',
-    business: 'AP Trading Co, Ahmedabad',
-    avatar: 'AP',
-    rating: 5,
-    quote: 'The best billing software for Indian businesses. Simple, affordable, and packed with features. Highly recommend it to every SME owner.',
-  },
+  { name: 'Rajesh Sharma', business: 'Sharma Electronics, Mumbai', avatar: 'RS', quote: 'Yantrix Labs built our invoicing system. It transformed how we operate. Incredibly fast and professional team!' },
+  { name: 'Priya Nair', business: 'Priya Boutique, Bengaluru', avatar: 'PN', quote: 'The custom ecommerce platform they built grew our online revenue 3x in just 6 months. Highly recommend!' },
+  { name: 'Amit Patel', business: 'AP Logistics, Ahmedabad', avatar: 'AP', quote: 'Their GPS tracking system gave us real-time visibility across our entire fleet. Absolute game changer for us.' },
 ];
 
-const STATS = [
-  { value: '50,000+', label: 'Businesses' },
-  { value: '₹500 Cr+', label: 'Invoices Generated' },
-  { value: '99.9%', label: 'Uptime' },
-  { value: '4.9/5', label: 'Rating' },
+const PROCESS = [
+  { emoji: '💡', title: 'Idea', desc: 'Understand your requirements' },
+  { emoji: '🎨', title: 'Design', desc: 'UI/UX wireframes & prototypes' },
+  { emoji: '⚙️', title: 'Develop', desc: 'Clean, scalable code' },
+  { emoji: '🚀', title: 'Launch', desc: 'Deploy and go live' },
+  { emoji: '🤝', title: 'Support', desc: 'Ongoing maintenance' },
 ];
 
 export default function HomePage() {
@@ -170,7 +105,7 @@ export default function HomePage() {
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">Y</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Yantrix</span>
+              <span className="text-xl font-bold text-gray-900">Yantrix Labs</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-8">
@@ -200,14 +135,14 @@ export default function HomePage() {
                 </>
               ) : (
                 <>
-                  <Link href="/auth/login" className="text-sm font-medium text-gray-700 hover:text-gray-900 px-4 py-2">
-                    Log in
+                  <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-gray-900 px-4 py-2">
+                    Dashboard
                   </Link>
                   <Link
-                    href="/auth/register"
+                    href="/contact"
                     className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
                   >
-                    Get Started Free
+                    Get Started
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </>
@@ -220,7 +155,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-2">
             {NAV_LINKS.map(link => (
@@ -242,8 +176,8 @@ export default function HomePage() {
                 </Link>
               ) : (
                 <>
-                  <Link href="/auth/login" className="block py-2 text-sm font-medium text-gray-700">Log in</Link>
-                  <Link href="/auth/register" className="block rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white">Get Started Free</Link>
+                  <Link href="/dashboard" className="block py-2 text-sm font-medium text-gray-700">Dashboard</Link>
+                  <Link href="/contact" className="block rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white">Get Started</Link>
                 </>
               )}
             </div>
@@ -251,303 +185,314 @@ export default function HomePage() {
         )}
       </nav>
 
-      {/* ─── Hero Section ────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background gradient */}
+      {/* ─── HERO ────────────────────────────────────────────────────────── */}
+      <section className="relative pt-32 pb-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-r from-indigo-400/15 to-purple-400/15 blur-3xl rounded-full pointer-events-none" />
 
         <div className="container-wide relative">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-center max-w-4xl mx-auto"
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 mb-6">
               <Zap className="h-3.5 w-3.5" />
-              Trusted by 50,000+ Indian businesses
+              Trusted by 500+ businesses across India
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight leading-[1.1] mb-6">
-              GST Billing Made
-              <span className="block gradient-text">Ridiculously Simple</span>
+              We Build Tools That
+              <span className="block gradient-text">Power Modern Businesses</span>
             </h1>
 
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Create GST-compliant invoices in 30 seconds. Automate tax calculations, track payments, 
-              and file returns with confidence. Built for India&apos;s 63 million SMEs.
+              From invoicing to booking platforms, tracking systems to SaaS products —
+              we design software that helps companies grow faster.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Link
-                href="/auth/register"
+                href="/tools"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white hover:bg-indigo-700 transition-all active:scale-[0.98] shadow-lg shadow-indigo-200"
               >
-                Start for Free — No credit card needed
+                Explore Tools
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/pricing"
+                href="/contact"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-8 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-all"
               >
-                View Pricing
+                Start a Project
               </Link>
             </div>
 
-            <p className="mt-6 text-sm text-gray-500">
-              ✓ Free plan available &nbsp;·&nbsp; ✓ 14-day trial &nbsp;·&nbsp; ✓ Cancel anytime
-            </p>
-          </motion.div>
-
-          {/* Dashboard Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="mt-16 relative mx-auto max-w-5xl"
-          >
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden">
-              {/* Browser chrome */}
-              <div className="flex items-center gap-1.5 bg-gray-50 border-b border-gray-200 px-4 py-3">
-                <div className="h-3 w-3 rounded-full bg-red-400" />
-                <div className="h-3 w-3 rounded-full bg-yellow-400" />
-                <div className="h-3 w-3 rounded-full bg-green-400" />
-                <div className="ml-4 flex-1 rounded-md bg-gray-200 px-3 py-1 text-xs text-gray-500">app.yantrix.in/dashboard</div>
-              </div>
-              {/* Dashboard mockup */}
-              <div className="bg-gray-50 p-6">
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  {[
-                    { label: 'Total Revenue', value: '₹4,82,500', change: '+12%', color: 'indigo' },
-                    { label: 'Invoices', value: '247', change: '+8%', color: 'green' },
-                    { label: 'Customers', value: '89', change: '+5%', color: 'blue' },
-                    { label: 'Pending', value: '₹38,200', change: '-3%', color: 'amber' },
-                  ].map(stat => (
-                    <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4">
-                      <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
-                      <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-                      <p className={`text-xs font-medium mt-0.5 ${stat.color === 'blue' ? 'text-blue-600' : stat.color === 'amber' ? 'text-amber-600' : stat.color === 'green' ? 'text-green-600' : 'text-indigo-600'}`}>{stat.change} this month</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-4 h-40">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Revenue Overview</p>
-                    <div className="flex items-end gap-2 h-24">
-                      {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-                        <div key={i} className="flex-1 bg-indigo-100 rounded-t-sm relative overflow-hidden">
-                          <div className="absolute bottom-0 left-0 right-0 bg-indigo-500 rounded-t-sm" style={{ height: `${h}%` }} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl border border-gray-100 p-4">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Recent Invoices</p>
-                    <div className="space-y-2">
-                      {[
-                        { name: 'Acme Corp', amount: '₹25,900', status: 'Paid' },
-                        { name: 'Sharma Ent.', amount: '₹12,400', status: 'Sent' },
-                        { name: 'Patel Co.', amount: '₹8,500', status: 'Draft' },
-                      ].map(inv => (
-                        <div key={inv.name} className="flex items-center justify-between text-xs">
-                          <span className="text-gray-700 font-medium">{inv.name}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-900 font-semibold">{inv.amount}</span>
-                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${inv.status === 'Paid' ? 'bg-green-100 text-green-700' : inv.status === 'Sent' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{inv.status}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Stat cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+              {[
+                { value: '10+', label: 'Products Built' },
+                { value: '500+', label: 'Businesses Served' },
+                { value: '5+', label: 'Industries' },
+              ].map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                  className="bg-white/80 backdrop-blur rounded-2xl border border-gray-100 shadow-sm px-6 py-4 text-center"
+                >
+                  <p className="text-2xl font-bold text-indigo-600">{stat.value}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ─── Stats ───────────────────────────────────────────────────────── */}
-      <section className="py-16 bg-indigo-600">
-        <div className="container-wide">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((stat, idx) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <p className="text-3xl md:text-4xl font-bold text-white">{stat.value}</p>
-                <p className="text-indigo-200 mt-1">{stat.label}</p>
-              </motion.div>
+      {/* ─── TRUST STRIP ─────────────────────────────────────────────────── */}
+      <section className="py-16 bg-gray-50 border-y border-gray-100">
+        <div className="container-wide text-center">
+          <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-8">
+            Built for businesses across every industry
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {['Retail', 'Logistics', 'Hospitality', 'Healthcare', 'Education', 'Local Business'].map(ind => (
+              <span key={ind} className="rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm">
+                {ind}
+              </span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Features ────────────────────────────────────────────────────── */}
-      <section id="features" className="py-24">
+      {/* ─── PRODUCTS GRID ───────────────────────────────────────────────── */}
+      <section className="py-24">
         <div className="container-wide">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Everything you need to manage your business finances
-            </h2>
-            <p className="text-xl text-gray-600">
-              From GST invoicing to financial reports — Yantrix gives you the complete toolkit 
-              to run your business efficiently and stay compliant.
-            </p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Products &amp; Tools</h2>
+            <p className="text-xl text-gray-600">Ready-to-deploy software for every business need</p>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {FEATURES.map((feature, idx) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {PRODUCTS.map((product, idx) => (
               <motion.div
-                key={feature.title}
+                key={product.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
+                transition={{ delay: idx * 0.05 }}
                 viewport={{ once: true }}
-                className="group rounded-2xl border border-gray-100 bg-white p-6 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 card-hover"
+                className={`group bg-white rounded-2xl border border-gray-100 p-6 ${product.border} hover:shadow-lg transition-all duration-300 flex flex-col`}
               >
-                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.color} mb-4`}>
-                  <feature.icon className="h-6 w-6" />
+                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${product.color} mb-4`}>
+                  <product.icon className="h-6 w-6" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── How it works ────────────────────────────────────────────────── */}
-      <section className="py-24 bg-gray-50">
-        <div className="container-wide">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Up and running in 5 minutes</h2>
-            <p className="text-xl text-gray-600">No accounting degree needed. Yantrix is designed to be simple.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            {[
-              {
-                step: '01',
-                title: 'Create your account',
-                description: 'Sign up for free. Add your business GSTIN and you\'re ready to invoice.',
-                icon: Users,
-              },
-              {
-                step: '02',
-                title: 'Add your products & customers',
-                description: 'Import your product catalog with HSN/SAC codes and GST rates. Add your customers with their GSTIN.',
-                icon: Package,
-              },
-              {
-                step: '03',
-                title: 'Create & send invoices',
-                description: 'Select customer, add items, and Yantrix auto-calculates all taxes. Send via email or WhatsApp.',
-                icon: FileText,
-              },
-            ].map((item, idx) => (
-              <motion.div
-                key={item.step}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.15 }}
-                viewport={{ once: true }}
-                className="relative bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center"
-              >
-                <div className="text-5xl font-bold text-indigo-100 mb-4">{item.step}</div>
-                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 mb-4">
-                  <item.icon className="h-7 w-7 text-indigo-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{item.title}</h3>
-                <p className="text-gray-600">{item.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Pricing ─────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24">
-        <div className="container-wide">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Simple, transparent pricing</h2>
-            <p className="text-xl text-gray-600">
-              Start free, upgrade when you need to. All plans include a 14-day free trial.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PLANS.map((plan, idx) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                viewport={{ once: true }}
-                className={`relative rounded-2xl p-6 border-2 ${plan.highlighted
-                  ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl shadow-indigo-200'
-                  : 'border-gray-200 bg-white'
-                }`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-900">
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-
-                <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
-                <p className={`text-sm mb-4 ${plan.highlighted ? 'text-indigo-200' : 'text-gray-500'}`}>{plan.description}</p>
-
-                <div className="mb-6">
-                  <span className={`text-4xl font-bold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.price}</span>
-                  <span className={`text-sm ${plan.highlighted ? 'text-indigo-200' : 'text-gray-500'}`}>{plan.period}</span>
-                </div>
-
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-5">{product.desc}</p>
                 <Link
-                  href={
-                    plan.name === 'Business'
-                      ? '/contact'
-                      : loggedIn
-                        ? '/settings/billing'
-                        : '/auth/register'
-                  }
-                  className={`block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition-all mb-6 ${plan.highlighted
-                    ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  }`}
+                  href={product.href}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 group-hover:gap-2.5 transition-all"
                 >
-                  {loggedIn && plan.name !== 'Business' && plan.name !== 'Free' ? 'Upgrade Now' : plan.cta}
+                  Learn more <ArrowRight className="h-4 w-4" />
                 </Link>
-
-                <ul className="space-y-3">
-                  {plan.features.map(feature => (
-                    <li key={feature} className={`flex items-start gap-2 text-sm ${plan.highlighted ? 'text-indigo-100' : 'text-gray-600'}`}>
-                      <CheckCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${plan.highlighted ? 'text-indigo-300' : 'text-green-500'}`} />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Testimonials ────────────────────────────────────────────────── */}
+      {/* ─── SERVICES ────────────────────────────────────────────────────── */}
       <section className="py-24 bg-gray-50">
         <div className="container-wide">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Loved by Indian business owners</h2>
-            <p className="text-xl text-gray-600">Join thousands of SMEs who trust Yantrix for their billing needs</p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">We Build Custom Solutions</h2>
+            <p className="text-xl text-gray-600">Have a unique requirement? We design and build from scratch.</p>
           </div>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+            {SERVICES.map((s, idx) => (
+              <motion.div
+                key={s.title}
+                initial={{ opacity: 0, x: idx % 2 === 0 ? -16 : 16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.08 }}
+                viewport={{ once: true }}
+                className="flex items-start gap-4 bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow"
+              >
+                <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                  <s.icon className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">{s.title}</h3>
+                  <p className="text-sm text-gray-600">{s.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center">
+            <Link
+              href="/contact"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+            >
+              Talk to Us
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
+      {/* ─── WHY CHOOSE US ───────────────────────────────────────────────── */}
+      <section className="py-24">
+        <div className="container-wide">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why businesses choose Yantrix Labs</h2>
+            <p className="text-xl text-gray-600">We combine startup speed with enterprise quality.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {WHY_US.map((item, idx) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-md transition-shadow"
+              >
+                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${item.color} mb-4`}>
+                  <item.icon className="h-6 w-6" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FEATURED PRODUCT ────────────────────────────────────────────── */}
+      <section className="py-24 bg-gradient-to-br from-indigo-900 to-gray-900">
+        <div className="container-wide">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/20 px-4 py-1.5 text-sm font-medium text-indigo-300 mb-6">
+                <Star className="h-3.5 w-3.5" />
+                Featured Product
+              </span>
+              <h2 className="text-4xl font-bold text-white mb-4">
+                GST Invoice Tool — Billing Made Effortless
+              </h2>
+              <p className="text-indigo-200 text-lg leading-relaxed mb-8">
+                Create GST-compliant invoices in seconds. Automate tax calculations, track payments,
+                and generate returns with confidence. Built for Indian businesses.
+              </p>
+              <ul className="space-y-3 mb-10">
+                {['Instant GST invoicing (CGST/SGST/IGST)', 'Auto tax calculations for all slabs', 'Payment tracking & reminders'].map(f => (
+                  <li key={f} className="flex items-center gap-3 text-indigo-100">
+                    <CheckCircle className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/tools/gst-invoice"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-900 hover:bg-indigo-50 transition-all shadow-lg"
+              >
+                View GST Invoice Tool
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
+
+            {/* Decorative dashboard preview */}
+            <motion.div
+              initial={{ opacity: 0, x: 24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur"
+            >
+              <div className="flex items-center gap-1.5 mb-4">
+                <div className="h-3 w-3 rounded-full bg-red-400/60" />
+                <div className="h-3 w-3 rounded-full bg-yellow-400/60" />
+                <div className="h-3 w-3 rounded-full bg-green-400/60" />
+                <span className="ml-3 text-xs text-indigo-300/60">app.yantrixlab.com/dashboard</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                {[
+                  { label: 'Revenue', value: '₹4,82,500', color: 'from-indigo-500/30 to-purple-500/30' },
+                  { label: 'Invoices', value: '247 sent', color: 'from-green-500/30 to-teal-500/30' },
+                  { label: 'Customers', value: '89 active', color: 'from-blue-500/30 to-cyan-500/30' },
+                  { label: 'Pending', value: '₹38,200', color: 'from-amber-500/30 to-orange-500/30' },
+                ].map(s => (
+                  <div key={s.label} className={`rounded-xl bg-gradient-to-br ${s.color} border border-white/10 p-3`}>
+                    <p className="text-xs text-white/60 mb-1">{s.label}</p>
+                    <p className="text-sm font-bold text-white">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                <p className="text-xs text-white/60 mb-3">Recent Invoices</p>
+                <div className="space-y-2">
+                  {[
+                    { name: 'Acme Corp', amount: '₹25,900', status: 'Paid', c: 'text-green-400' },
+                    { name: 'Sharma Ent.', amount: '₹12,400', status: 'Sent', c: 'text-blue-400' },
+                    { name: 'Patel Co.', amount: '₹8,500', status: 'Draft', c: 'text-gray-400' },
+                  ].map(inv => (
+                    <div key={inv.name} className="flex items-center justify-between text-xs">
+                      <span className="text-white/70">{inv.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium">{inv.amount}</span>
+                        <span className={`${inv.c} font-medium`}>{inv.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── PROCESS ─────────────────────────────────────────────────────── */}
+      <section className="py-24 bg-gray-50">
+        <div className="container-wide">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">How We Work</h2>
+            <p className="text-xl text-gray-600">A simple, transparent process from idea to launch.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-0 relative">
+            {PROCESS.map((step, idx) => (
+              <div key={step.title} className="flex flex-col items-center text-center relative">
+                {idx < PROCESS.length - 1 && (
+                  <div className="hidden md:block absolute top-8 left-1/2 w-full h-px bg-indigo-100 z-0" />
+                )}
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  viewport={{ once: true }}
+                  className="relative z-10 flex flex-col items-center"
+                >
+                  <div className="h-16 w-16 rounded-2xl bg-white border border-indigo-100 shadow-sm flex items-center justify-center text-2xl mb-4">
+                    {step.emoji}
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-1">{step.title}</h3>
+                  <p className="text-xs text-gray-500 max-w-[100px]">{step.desc}</p>
+                </motion.div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TESTIMONIALS ────────────────────────────────────────────────── */}
+      <section className="py-24">
+        <div className="container-wide">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by business owners</h2>
+            <p className="text-xl text-gray-600">What our clients say about working with us</p>
+          </div>
           <div className="grid md:grid-cols-3 gap-8">
             {TESTIMONIALS.map((t, idx) => (
               <motion.div
@@ -556,10 +501,10 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
                 viewport={{ once: true }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+                className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, i) => (
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
@@ -579,29 +524,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─── Trust Badges ────────────────────────────────────────────────── */}
-      <section className="py-16 border-y border-gray-100">
-        <div className="container-wide">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { icon: Shield, title: 'GST Compliant', desc: 'Fully compliant with Indian GST laws and updates' },
-              { icon: Lock, title: 'Data Secure', desc: '256-bit SSL encryption for all your data' },
-              { icon: Globe, title: 'Always Available', desc: '99.9% uptime SLA guarantee' },
-              { icon: Headphones, title: '24/7 Support', desc: 'Dedicated support in Hindi and English' },
-            ].map(item => (
-              <div key={item.title} className="flex flex-col items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                  <item.icon className="h-6 w-6 text-indigo-600" />
-                </div>
-                <h4 className="font-semibold text-gray-900">{item.title}</h4>
-                <p className="text-sm text-gray-500">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── CTA ─────────────────────────────────────────────────────────── */}
+      {/* ─── FINAL CTA ───────────────────────────────────────────────────── */}
       <section className="py-24 bg-gradient-to-br from-indigo-600 to-purple-700">
         <div className="container-wide text-center">
           <motion.div
@@ -609,27 +532,26 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to simplify your GST billing?
+            <p className="text-indigo-300 font-semibold uppercase tracking-widest text-sm mb-4">Need software for your business?</p>
+            <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
+              Let&apos;s build it.
             </h2>
             <p className="text-xl text-indigo-200 mb-10 max-w-2xl mx-auto">
-              Join 50,000+ Indian businesses who have already made the switch to smarter billing.
-              Start free, no credit card required.
+              We work with startups, SMEs, and enterprises to create digital products that drive growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/auth/register"
+                href="/contact"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-600 hover:bg-indigo-50 transition-all shadow-lg"
               >
-                Start for Free Today
+                Book a Consultation
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/pricing"
+                href="/tools"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-400 px-8 py-4 text-base font-semibold text-white hover:bg-indigo-500/20 transition-all"
               >
-                View All Plans
-                <ChevronRight className="h-4 w-4" />
+                Explore Products
               </Link>
             </div>
           </motion.div>
@@ -639,70 +561,43 @@ export default function HomePage() {
       {/* ─── Footer ──────────────────────────────────────────────────────── */}
       <footer className="bg-gray-900 text-gray-400 py-16">
         <div className="container-wide">
-          <div className="grid md:grid-cols-5 gap-8 mb-12">
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="md:col-span-2">
               <Link href="/" className="flex items-center gap-2 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">Y</span>
                 </div>
-                <span className="text-xl font-bold text-white">Yantrix</span>
+                <span className="text-xl font-bold text-white">Yantrix Labs</span>
               </Link>
               <p className="text-sm leading-relaxed mb-4">
-                India&apos;s simplest GST billing software. Designed for small and medium businesses 
-                to manage invoicing, taxes, and payments without the complexity.
+                We build smart digital products and business tools for startups, SMEs, and enterprises.
               </p>
               <p className="text-xs">Made with ❤️ in India 🇮🇳</p>
             </div>
-
-            {[
-              {
-                title: 'Product',
-                links: [
-                  { href: '/features', label: 'Features' },
-                  { href: '/pricing', label: 'Pricing' },
-                  { href: '/tools', label: 'Free Tools' },
-                  { href: '/changelog', label: 'Changelog' },
-                ],
-              },
-              {
-                title: 'Company',
-                links: [
-                  { href: '/about', label: 'About Us' },
-                  { href: '/blog', label: 'Blog' },
-                  { href: '/careers', label: 'Careers' },
-                  { href: '/contact', label: 'Contact' },
-                ],
-              },
-              {
-                title: 'Legal',
-                links: [
-                  { href: '/privacy', label: 'Privacy Policy' },
-                  { href: '/terms', label: 'Terms of Service' },
-                  { href: '/refund', label: 'Refund Policy' },
-                  { href: '/security', label: 'Security' },
-                ],
-              },
-            ].map(col => (
-              <div key={col.title}>
-                <h5 className="font-semibold text-white mb-4">{col.title}</h5>
-                <ul className="space-y-2">
-                  {col.links.map(link => (
-                    <li key={link.href}>
-                      <Link href={link.href} className="text-sm hover:text-white transition-colors">
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <div>
+              <h5 className="font-semibold text-white mb-4">Products</h5>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/tools/gst-invoice" className="hover:text-white transition-colors">GST Invoice Tool</Link></li>
+                <li><Link href="/tools" className="hover:text-white transition-colors">All Products</Link></li>
+                <li><Link href="/services" className="hover:text-white transition-colors">Custom Development</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-semibold text-white mb-4">Company</h5>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              </ul>
+            </div>
           </div>
-
-          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm">© {new Date().getFullYear()} Yantrix. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm">
-              <span>GST: 29AABCY1234B1ZX</span>
-              <span>CIN: U72900KA2024PTC1234</span>
+          <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm">© {new Date().getFullYear()} Yantrix Labs. All rights reserved.</p>
+            <div className="flex items-center gap-4 text-sm">
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
             </div>
           </div>
         </div>
