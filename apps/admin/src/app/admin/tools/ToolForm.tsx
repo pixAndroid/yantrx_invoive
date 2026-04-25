@@ -38,13 +38,19 @@ interface ToolFormData {
 }
 
 const DEFAULT_FORM: ToolFormData = {
-  title: '', slug: '', shortDescription: '', fullDescription: '',
-  logoUrl: '', bannerUrl: '', category: '', tags: '',
-  status: 'DRAFT', visibility: 'PUBLIC', featured: false,
-  toolType: 'INTERNAL_APP', internalRoute: '', externalUrl: '',
+  title: 'GST Invoice Tool',
+  slug: 'gst-invoice',
+  shortDescription: 'Professional GST billing, invoicing, and compliance. Auto-calculate CGST, SGST, IGST. Generate GSTR-1 and GSTR-3B reports. Built for Indian businesses.',
+  fullDescription: '',
+  logoUrl: '', bannerUrl: '', category: 'Invoice', tags: 'GST, Invoice, Billing, India',
+  status: 'PUBLISHED', visibility: 'PUBLIC', featured: true,
+  toolType: 'INTERNAL_APP', internalRoute: '/tools/gst-invoice', externalUrl: '',
   customHtml: '', customCss: '', customJs: '',
   ctaText: 'Launch Tool', ctaUrl: '',
-  pricingType: 'FREE', seoTitle: '', seoDescription: '', sortOrder: '0',
+  pricingType: 'FREE',
+  seoTitle: 'GST Invoice Tool — Professional GST Billing for Indian Businesses',
+  seoDescription: 'Create GST-compliant invoices in 30 seconds. Auto-calculate CGST, SGST, IGST. Generate GSTR-1 and GSTR-3B reports. Built for Indian SMEs.',
+  sortOrder: '0',
   screenshots: '',
 };
 
