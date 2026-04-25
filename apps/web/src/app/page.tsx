@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import { type CSSProperties } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -103,7 +103,7 @@ function getProductBadgeClass(badge: string): string {
   if (badge === 'Custom Build') return 'border-violet-200/80 text-violet-700';
   return 'border-gray-200/80 text-gray-500';
 }
-function getProductBadgeStyle(badge: string): React.CSSProperties {
+function getProductBadgeStyle(badge: string): CSSProperties {
   if (badge === 'FREE' || badge === 'Free') return { background: 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
   if (badge === 'Live') return { background: 'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
   if (badge === 'Custom Build') return { background: 'linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
