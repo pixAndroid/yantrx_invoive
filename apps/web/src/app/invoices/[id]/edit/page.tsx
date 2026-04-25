@@ -475,29 +475,82 @@ export default function EditInvoicePage() {
 
           {/* Summary sidebar */}
           <div className="space-y-5">
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sticky top-4">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Summary</h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>₹{totals.subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between text-gray-600"><span>Taxable</span><span>₹{totals.taxableAmount.toFixed(2)}</span></div>
-                {!isInterState ? (
-                  <>
-                    <div className="flex justify-between text-gray-600"><span>CGST</span><span>₹{totals.cgst.toFixed(2)}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>SGST</span><span>₹{totals.sgst.toFixed(2)}</span></div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-gray-600"><span>IGST</span><span>₹{totals.igst.toFixed(2)}</span></div>
-                )}
-                <div className="border-t pt-2 flex justify-between font-bold text-base text-gray-900">
-                  <span>Total</span><span className="text-indigo-600">₹{totals.total.toFixed(2)}</span>
+            <div className="rounded-2xl border border-gray-100/80 bg-white shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08),0_2px_8px_-2px_rgba(0,0,0,0.05)] sticky top-4 overflow-hidden">
+
+              {/* Header */}
+              <div className="px-6 pt-6 pb-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
+                    <Save className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-[15px] font-semibold text-gray-900 leading-tight">Tax Summary</h2>
+                    <p className="text-xs text-gray-400 mt-0.5 font-medium">Calculated automatically</p>
+                  </div>
                 </div>
               </div>
-              <div className="mt-5 space-y-2">
-                <button onClick={handleSave} disabled={isLoading} className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-50">
-                  {isLoading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Save className="h-4 w-4" />}
+
+              {/* Line items */}
+              <div className="px-6 pb-5 space-y-0.5">
+                <div className="flex justify-between items-center py-2.5 border-b border-gray-50">
+                  <span className="text-sm text-gray-500 font-medium">Subtotal</span>
+                  <span className="text-sm font-semibold text-gray-800 tabular-nums">&#8377;{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center py-2.5 border-b border-gray-50">
+                  <span className="text-sm text-gray-500 font-medium">Taxable Amount</span>
+                  <span className="text-sm font-semibold text-gray-800 tabular-nums">&#8377;{totals.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="pt-1 space-y-0.5">
+                  {!isInterState ? (
+                    <>
+                      <div className="flex justify-between items-center py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] text-[9px] font-bold bg-violet-50 text-violet-600 ring-1 ring-violet-100 leading-none">C</span>
+                          <span className="text-sm text-gray-500 font-medium">CGST</span>
+                        </div>
+                        <span className="text-sm text-gray-700 tabular-nums font-medium">&#8377;{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] text-[9px] font-bold bg-violet-50 text-violet-600 ring-1 ring-violet-100 leading-none">S</span>
+                          <span className="text-sm text-gray-500 font-medium">SGST</span>
+                        </div>
+                        <span className="text-sm text-gray-700 tabular-nums font-medium">&#8377;{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] text-[9px] font-bold bg-violet-50 text-violet-600 ring-1 ring-violet-100 leading-none">I</span>
+                        <span className="text-sm text-gray-500 font-medium">IGST</span>
+                      </div>
+                      <span className="text-sm text-gray-700 tabular-nums font-medium">&#8377;{totals.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Total hero block */}
+              <div className="mx-4 mb-5 rounded-2xl bg-gradient-to-br from-[#5B4BFF] via-indigo-600 to-[#4338ca] px-5 py-5 text-white shadow-[0_8px_24px_-4px_rgba(91,75,255,0.40),0_4px_12px_-4px_rgba(91,75,255,0.25)] ring-1 ring-white/10">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200 mb-2">Invoice Total</p>
+                <p className="text-[2.25rem] font-bold tracking-tight leading-none tabular-nums">&#8377;{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[11px] text-indigo-300/90 mt-2.5 font-medium">Includes all applicable taxes</p>
+              </div>
+
+              {/* CTA buttons */}
+              <div className="px-4 pb-5 space-y-2.5">
+                <button
+                  onClick={handleSave}
+                  disabled={isLoading}
+                  className="group w-full rounded-xl bg-gradient-to-r from-[#5B4BFF] to-indigo-600 py-3 text-sm font-semibold text-white shadow-[0_4px_14px_0_rgba(91,75,255,0.35)] hover:shadow-[0_6px_20px_0_rgba(91,75,255,0.45)] hover:-translate-y-0.5 hover:from-[#4e40f0] hover:to-indigo-700 active:translate-y-0 active:shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-1"
+                >
+                  {isLoading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <Save className="h-4 w-4 transition-transform duration-150 group-hover:scale-110" />}
                   Save Changes
                 </button>
-                <button onClick={() => router.back()} className="w-full rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button
+                  onClick={() => router.back()}
+                  className="w-full rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-700 shadow-xs hover:border-gray-300 hover:bg-gray-50/80 hover:shadow-sm hover:-translate-y-px active:translate-y-0 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:ring-offset-1"
+                >
                   Cancel
                 </button>
               </div>
