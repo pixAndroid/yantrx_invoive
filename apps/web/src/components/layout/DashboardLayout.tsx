@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, Users, Package, BarChart3,
   LogOut, Bell, Menu, X,
-  IndianRupee, Zap, Building2, ChevronRight, Lock,
+  IndianRupee, Building2, ChevronRight, Lock,
   Receipt, Boxes, UserCircle, Target, Crown,
   Settings, PanelLeftClose, PanelLeft,
   Plus
@@ -56,9 +56,7 @@ const NAV_MODULE_SLUG: Record<string, string> = {
 
 const SETTINGS_ITEMS = [
   { href: '/settings', label: 'Business Settings', icon: Building2 },
-  { href: '/settings/team', label: 'Team', icon: Users },
   { href: '/settings/billing', label: 'Billing & Plans', icon: IndianRupee },
-  { href: '/settings/modules', label: 'Modules', icon: Zap },
 ];
 
 interface DashboardLayoutProps {
