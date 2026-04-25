@@ -391,7 +391,7 @@ export default function AdminSettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">State / Zip</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">State &amp; Postal Code</label>
                       <input
                         type="text"
                         value={contactDetails.officeState}

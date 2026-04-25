@@ -50,8 +50,17 @@ const CONTACT_DETAILS_DEFAULTS = {
 
 router.get('/contact-details', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const config = await prisma.siteConfig.findUnique({ where: { key: CONTACT_DETAILS_KEY } });
-    res.json({ success: true, data: config ?? { key: CONTACT_DETAILS_KEY, ...CONTACT_DETAILS_DEFAULTS } });
+    const config = await prisma.siteConfig.findUnique({
+      where: { key: CONTACT_DETAILS_KEY },
+      select: {
+        contactEmail: true, contactPhone: true, contactPhoneHref: true,
+        officeCompanyName: true, officeFloor: true, officeStreet: true,
+        officeCity: true, officeState: true, officePinCode: true,
+        officeCountry: true, officeWebsite: true,
+        hoursMondayFriday: true, hoursSaturday: true, hoursSunday: true, hoursNote: true,
+      },
+    });
+    res.json({ success: true, data: config ?? CONTACT_DETAILS_DEFAULTS });
   } catch (error) { next(error); }
 });
 
