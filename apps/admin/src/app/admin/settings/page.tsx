@@ -82,7 +82,10 @@ export default function AdminSettingsPage() {
     adminFetch('/admin/settings/home-header')
       .then((res: any) => {
         if (res.success && res.data) {
-          setHomeHeader(prev => ({ ...prev, ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null)) }));
+          setHomeHeader(prev => ({
+            ...prev,
+            ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null && v !== '')),
+          }));
         }
       })
       .catch(() => {})
@@ -93,9 +96,12 @@ export default function AdminSettingsPage() {
     await adminFetch('/admin/settings/home-header', {
       method: 'PUT',
       body: JSON.stringify(homeHeader),
-    }).catch(() => {});
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    })
+      .then(() => {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      })
+      .catch(() => {});
   };
 
   return (

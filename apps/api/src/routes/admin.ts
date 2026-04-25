@@ -746,24 +746,18 @@ router.get('/settings/home-header', async (_req: AuthenticatedRequest, res: Resp
 
 router.put('/settings/home-header', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const {
-      badgeText, titleLine1, titleGradientText, description,
-      primaryBtnLabel, secondaryBtnLabel,
-      stat1Value, stat1Label, stat2Value, stat2Label, stat3Value, stat3Label,
-    } = req.body;
-
-    const data: Record<string, string | null> = {};
-    const fields = [
+    const ALLOWED_FIELDS = [
       'badgeText', 'titleLine1', 'titleGradientText', 'description',
       'primaryBtnLabel', 'secondaryBtnLabel',
       'stat1Value', 'stat1Label', 'stat2Value', 'stat2Label', 'stat3Value', 'stat3Label',
     ];
-    const values = [
-      badgeText, titleLine1, titleGradientText, description,
-      primaryBtnLabel, secondaryBtnLabel,
-      stat1Value, stat1Label, stat2Value, stat2Label, stat3Value, stat3Label,
-    ];
-    fields.forEach((f, i) => { if (values[i] !== undefined) data[f] = values[i] ?? null; });
+
+    const data: Record<string, string | null> = {};
+    for (const field of ALLOWED_FIELDS) {
+      if (req.body[field] !== undefined) {
+        data[field] = req.body[field] ?? null;
+      }
+    }
 
     const config = await prisma.siteConfig.upsert({
       where: { key: HOME_HEADER_KEY },
