@@ -45,6 +45,21 @@ const NAV_FEATURE_REQUIREMENTS: Record<string, string[]> = {
   '/crm': ['crm'],
 };
 
+// Maps each nav route to its corresponding module slug as defined in the DB.
+// Nav items whose slug is absent from the globally-active modules list will be hidden.
+// Routes with no entry (e.g. /dashboard) are always shown.
+const NAV_MODULE_SLUG: Record<string, string> = {
+  '/invoices': 'invoicing',
+  '/customers': 'customers',
+  '/products': 'products',
+  '/reports': 'gst-reports',
+  '/payments': 'payments',
+  '/expenses': 'expenses',
+  '/inventory': 'inventory',
+  '/hrm': 'hrms',
+  '/crm': 'crm',
+};
+
 const SETTINGS_ITEMS = [
   { href: '/settings', label: 'Business Settings', icon: Building2 },
   { href: '/settings/team', label: 'Team', icon: Users },
@@ -67,6 +82,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [setupSettings, setSetupSettings] = useState<BizSettings | null>(null);
   const [setupRequired, setSetupRequired] = useState(false);
+  const [activeModuleSlugs, setActiveModuleSlugs] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -109,6 +125,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
       })
       .catch(() => {});
+
+    apiFetch('/modules')
+      .then((res: any) => {
+        const slugs = new Set<string>((res.data || []).map((m: any) => m.slug as string));
+        setActiveModuleSlugs(slugs);
+      })
+      .catch(() => setActiveModuleSlugs(new Set()));
 
     apiFetch('/subscriptions')
       .then(async (res: any) => {
@@ -261,6 +284,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   };
 
+  // Returns false when the admin has globally disabled the module for this nav route.
+  // While the modules list is still loading (null), we show all items to avoid flicker.
+  const isModuleGloballyActive = (href: string): boolean => {
+    const slug = NAV_MODULE_SLUG[href];
+    if (!slug) return true; // No module mapping (e.g. /dashboard) — always show
+    if (activeModuleSlugs === null) return true; // Still loading
+    return activeModuleSlugs.has(slug);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -296,6 +328,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
           {NAV_ITEMS.map(item => {
+            if (!isModuleGloballyActive(item.href)) return null;
             const enabled = isNavEnabled(item.href);
             if (!enabled) {
               return (
