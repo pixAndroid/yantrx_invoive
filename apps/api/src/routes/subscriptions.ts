@@ -9,31 +9,41 @@ router.use(authenticate);
 /** Returns endDate and amount to charge based on plan billing period. */
 function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null; durationDays: number | null }) {
   const now = new Date();
-  // If the plan has an explicit durationDays, always use that.
+  const slug = plan.slug.toLowerCase();
+
+  // Determine the effective charge amount based on billing period type.
+  // Daily and yearly plans store the real price in dailyPrice/yearlyPrice
+  // while price is 0, so we must pick the right field regardless of durationDays.
+  let amount: number;
+  if (slug === 'daily' || (plan.dailyPrice !== null && plan.price === 0)) {
+    amount = plan.dailyPrice ?? plan.price;
+  } else if (slug === 'yearly' || (plan.yearlyPrice !== null && plan.price === 0 && plan.dailyPrice === null)) {
+    amount = plan.yearlyPrice ?? plan.price;
+  } else {
+    amount = plan.price;
+  }
+
+  // Determine the subscription end-date.
+  // An explicit durationDays on the plan takes precedence for the duration.
   if (plan.durationDays !== null && plan.durationDays > 0) {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + plan.durationDays);
-    return { endDate, amount: plan.price };
+    return { endDate, amount };
   }
-  const slug = plan.slug.toLowerCase();
-  // A plan is treated as daily when its slug is 'daily' OR when it has a dailyPrice
-  // with no monthly base price (price === 0).
   if (slug === 'daily' || (plan.dailyPrice !== null && plan.price === 0)) {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 1);
-    return { endDate, amount: plan.dailyPrice ?? plan.price };
+    return { endDate, amount };
   }
-  // A plan is treated as yearly when its slug is 'yearly' OR when it has a yearlyPrice
-  // with no monthly base price (price === 0) and no daily price.
   if (slug === 'yearly' || (plan.yearlyPrice !== null && plan.price === 0 && plan.dailyPrice === null)) {
     const endDate = new Date(now);
     endDate.setFullYear(endDate.getFullYear() + 1);
-    return { endDate, amount: plan.yearlyPrice ?? plan.price };
+    return { endDate, amount };
   }
   // default: monthly
   const endDate = new Date(now);
   endDate.setMonth(endDate.getMonth() + 1);
-  return { endDate, amount: plan.price };
+  return { endDate, amount };
 }
 
 router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
