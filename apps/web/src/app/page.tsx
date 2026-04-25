@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -21,16 +22,16 @@ const NAV_LINKS = [
 ];
 
 const PRODUCTS = [
-  { icon: FileText, title: 'GST Invoice Tool', desc: 'Professional GST billing, invoicing and compliance in one place.', href: '/tools/gst-invoice', color: 'bg-indigo-50 text-indigo-600', border: 'hover:border-indigo-200' },
-  { icon: Users, title: 'Attendance System', desc: 'Biometric and digital attendance tracking for teams.', href: '/tools', color: 'bg-green-50 text-green-600', border: 'hover:border-green-200' },
-  { icon: ShoppingCart, title: 'Ecommerce Platform', desc: 'Full-featured online store with payments and inventory.', href: '/tools', color: 'bg-amber-50 text-amber-600', border: 'hover:border-amber-200' },
-  { icon: Building2, title: 'Hotel Booking', desc: 'Property management and room booking for hospitality.', href: '/tools', color: 'bg-blue-50 text-blue-600', border: 'hover:border-blue-200' },
-  { icon: UtensilsCrossed, title: 'Restaurant POS', desc: 'Order management and billing for F&B businesses.', href: '/tools', color: 'bg-rose-50 text-rose-600', border: 'hover:border-rose-200' },
-  { icon: Car, title: 'Taxi Booking', desc: 'Driver and ride management platform.', href: '/tools', color: 'bg-purple-50 text-purple-600', border: 'hover:border-purple-200' },
-  { icon: MapPin, title: 'GPS Tracking', desc: 'Real-time fleet tracking and route optimization.', href: '/tools', color: 'bg-cyan-50 text-cyan-600', border: 'hover:border-cyan-200' },
-  { icon: BarChart3, title: 'CRM', desc: 'Manage leads, customers, and sales pipelines.', href: '/tools', color: 'bg-orange-50 text-orange-600', border: 'hover:border-orange-200' },
-  { icon: Briefcase, title: 'HRMS', desc: 'HR, payroll, and employee lifecycle management.', href: '/tools', color: 'bg-pink-50 text-pink-600', border: 'hover:border-pink-200' },
-  { icon: Settings, title: 'Custom ERP', desc: 'Tailored enterprise systems built for your workflow.', href: '/services', color: 'bg-violet-50 text-violet-600', border: 'hover:border-violet-200' },
+  { icon: FileText, title: 'GST Invoice Tool', desc: 'Professional GST billing, invoicing and compliance in one place.', href: '/tools/gst-invoice', color: 'text-indigo-600', badge: 'FREE' },
+  { icon: Users, title: 'Attendance System', desc: 'Biometric and digital attendance tracking for teams.', href: '/tools', color: 'text-green-600', badge: 'Coming Soon' },
+  { icon: ShoppingCart, title: 'Ecommerce Platform', desc: 'Full-featured online store with payments and inventory.', href: '/tools', color: 'text-amber-600', badge: 'Coming Soon' },
+  { icon: Building2, title: 'Hotel Booking', desc: 'Property management and room booking for hospitality.', href: '/tools', color: 'text-blue-600', badge: 'Coming Soon' },
+  { icon: UtensilsCrossed, title: 'Restaurant POS', desc: 'Order management and billing for F&B businesses.', href: '/tools', color: 'text-rose-600', badge: 'Coming Soon' },
+  { icon: Car, title: 'Taxi Booking', desc: 'Driver and ride management platform.', href: '/tools', color: 'text-purple-600', badge: 'Coming Soon' },
+  { icon: MapPin, title: 'GPS Tracking', desc: 'Real-time fleet tracking and route optimization.', href: '/tools', color: 'text-cyan-600', badge: 'Coming Soon' },
+  { icon: BarChart3, title: 'CRM', desc: 'Manage leads, customers, and sales pipelines.', href: '/tools', color: 'text-orange-600', badge: 'Coming Soon' },
+  { icon: Briefcase, title: 'HRMS', desc: 'HR, payroll, and employee lifecycle management.', href: '/tools', color: 'text-pink-600', badge: 'Coming Soon' },
+  { icon: Settings, title: 'Custom ERP', desc: 'Tailored enterprise systems built for your workflow.', href: '/services', color: 'text-violet-600', badge: 'Custom Build' },
 ];
 
 const SERVICES = [
@@ -69,9 +70,45 @@ const PROCESS = [
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
 const CATEGORY_COLORS = ['bg-indigo-50 text-indigo-600','bg-green-50 text-green-600','bg-amber-50 text-amber-600','bg-blue-50 text-blue-600','bg-rose-50 text-rose-600','bg-purple-50 text-purple-600','bg-cyan-50 text-cyan-600','bg-orange-50 text-orange-600','bg-pink-50 text-pink-600','bg-violet-50 text-violet-600'];
-const CATEGORY_BORDERS = ['hover:border-indigo-200','hover:border-green-200','hover:border-amber-200','hover:border-blue-200','hover:border-rose-200','hover:border-purple-200','hover:border-cyan-200','hover:border-orange-200','hover:border-pink-200','hover:border-violet-200'];
 function getColorForIndex(idx: number) { return CATEGORY_COLORS[idx % CATEGORY_COLORS.length]; }
-function getBorderForIndex(idx: number) { return CATEGORY_BORDERS[idx % CATEGORY_BORDERS.length]; }
+const ICON_GRADIENTS = [
+  'linear-gradient(135deg,#eef2ff 0%,#c7d2fe 100%)',
+  'linear-gradient(135deg,#f0fdf4 0%,#bbf7d0 100%)',
+  'linear-gradient(135deg,#fffbeb 0%,#fde68a 100%)',
+  'linear-gradient(135deg,#eff6ff 0%,#bfdbfe 100%)',
+  'linear-gradient(135deg,#fff1f2 0%,#fecdd3 100%)',
+  'linear-gradient(135deg,#faf5ff 0%,#e9d5ff 100%)',
+  'linear-gradient(135deg,#ecfeff 0%,#a5f3fc 100%)',
+  'linear-gradient(135deg,#fff7ed 0%,#fed7aa 100%)',
+  'linear-gradient(135deg,#fdf2f8 0%,#fbcfe8 100%)',
+  'linear-gradient(135deg,#f5f3ff 0%,#ddd6fe 100%)',
+];
+const CARD_GRADIENTS = [
+  'linear-gradient(135deg,#ffffff 0%,#f8f7ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f5f8ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f7fff9 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f5f8ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#fff7f8 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#faf5ff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f0fdff 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#fff8f0 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#fff5fb 100%)',
+  'linear-gradient(135deg,#ffffff 0%,#f5f3ff 100%)',
+];
+function getIconGradient(idx: number) { return ICON_GRADIENTS[idx % ICON_GRADIENTS.length]; }
+function getCardGradient(idx: number) { return CARD_GRADIENTS[idx % CARD_GRADIENTS.length]; }
+function getProductBadgeClass(badge: string): string {
+  if (badge === 'FREE' || badge === 'Free') return 'border-emerald-200/80 text-emerald-700';
+  if (badge === 'Live') return 'border-indigo-200/80 text-indigo-700';
+  if (badge === 'Custom Build') return 'border-violet-200/80 text-violet-700';
+  return 'border-gray-200/80 text-gray-500';
+}
+function getProductBadgeStyle(badge: string): React.CSSProperties {
+  if (badge === 'FREE' || badge === 'Free') return { background: 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
+  if (badge === 'Live') return { background: 'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
+  if (badge === 'Custom Build') return { background: 'linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' };
+  return { background: '#f9fafb' };
+}
 
 interface CMSTool {
   id: string;
@@ -404,26 +441,62 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 viewport={{ once: true }}
-                className={`group bg-white rounded-2xl border border-gray-100 p-6 ${getBorderForIndex(idx)} hover:shadow-lg transition-all duration-300 flex flex-col`}
+                className="group relative flex flex-col rounded-2xl border border-gray-100/80 p-6 overflow-hidden transition-all duration-[220ms] ease-out hover:-translate-y-1.5 hover:shadow-xl hover:border-indigo-100/80"
+                style={{ background: getCardGradient(idx), boxShadow: '0 1px 4px 0 rgb(0 0 0/0.06),0 1px 2px -1px rgb(0 0 0/0.04)' }}
               >
-                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden ${getColorForIndex(idx)} mb-4`}>
-                  {tool.logoUrl && isSafeImageUrl(tool.logoUrl)
-                    ? <img src={tool.logoUrl} alt={tool.title} className="h-full w-full object-cover" />
-                    : <Wrench className="h-6 w-6" />
-                  }
+                {/* Top highlight line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-200/50 to-transparent" />
+                {/* Corner radial glow */}
+                <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-[220ms]" style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.10) 0%,transparent 70%)' }} />
+
+                {/* Header: icon + badge */}
+                <div className="flex items-start justify-between mb-5">
+                  <div
+                    className={`relative inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden flex-shrink-0 transition-transform duration-[220ms] group-hover:scale-105 ${getColorForIndex(idx)}`}
+                    style={{ background: getIconGradient(idx), boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.06)' }}
+                  >
+                    {tool.logoUrl && isSafeImageUrl(tool.logoUrl)
+                      ? <img src={tool.logoUrl} alt={tool.title} className="h-full w-full object-cover" />
+                      : <Wrench className="h-5 w-5" />
+                    }
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {tool.featured && (
+                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200/80 text-amber-600" style={{ background: 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>★ Featured</span>
+                    )}
+                    <span
+                      className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border ${
+                        tool.toolType === 'COMING_SOON'
+                          ? 'bg-gray-50 border-gray-200/80 text-gray-500'
+                          : tool.pricingType === 'FREE'
+                          ? 'border-emerald-200/80 text-emerald-700'
+                          : 'border-indigo-200/80 text-indigo-700'
+                      }`}
+                      style={
+                        tool.toolType !== 'COMING_SOON'
+                          ? tool.pricingType === 'FREE'
+                            ? { background: 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+                            : { background: 'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+                          : {}
+                      }
+                    >
+                      {tool.toolType === 'COMING_SOON' ? 'Coming Soon' : tool.pricingType}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">{tool.title}</h3>
-                  {tool.toolType === 'COMING_SOON' && (
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Coming Soon</span>
-                  )}
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-5">{tool.shortDescription || ''}</p>
+
+                {/* Title */}
+                <h3 className="text-[18px] font-bold text-gray-900 mb-2 leading-snug tracking-tight">{tool.title}</h3>
+                {/* Description */}
+                <p className="text-gray-500 text-[13.5px] leading-relaxed flex-1 mb-5">{tool.shortDescription || ''}</p>
+
+                {/* CTA */}
                 <Link
                   href={getCmsToolHref(tool)}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 group-hover:gap-2.5 transition-all"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors duration-[220ms]"
                 >
-                  {tool.toolType === 'COMING_SOON' ? 'Get Notified' : (tool.ctaText || 'Learn more')} <ArrowRight className="h-4 w-4" />
+                  {tool.toolType === 'COMING_SOON' ? 'Get Notified' : (tool.ctaText || 'Launch Tool')}
+                  <ArrowRight className="h-4 w-4 transition-transform duration-[220ms] group-hover:translate-x-1" />
                 </Link>
               </motion.div>
             )) : PRODUCTS.map((product, idx) => (
@@ -433,18 +506,42 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 viewport={{ once: true }}
-                className={`group bg-white rounded-2xl border border-gray-100 p-6 ${product.border} hover:shadow-lg transition-all duration-300 flex flex-col`}
+                className="group relative flex flex-col rounded-2xl border border-gray-100/80 p-6 overflow-hidden transition-all duration-[220ms] ease-out hover:-translate-y-1.5 hover:shadow-xl hover:border-indigo-100/80"
+                style={{ background: getCardGradient(idx), boxShadow: '0 1px 4px 0 rgb(0 0 0/0.06),0 1px 2px -1px rgb(0 0 0/0.04)' }}
               >
-                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${product.color} mb-4`}>
-                  <product.icon className="h-6 w-6" />
+                {/* Top highlight line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-200/50 to-transparent" />
+                {/* Corner radial glow */}
+                <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-[220ms]" style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.10) 0%,transparent 70%)' }} />
+
+                {/* Header: icon + badge */}
+                <div className="flex items-start justify-between mb-5">
+                  <div
+                    className={`relative inline-flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 transition-transform duration-[220ms] group-hover:scale-105 ${product.color}`}
+                    style={{ background: getIconGradient(idx), boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.06)' }}
+                  >
+                    <product.icon className="h-5 w-5" />
+                  </div>
+                  <span
+                    className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border ${getProductBadgeClass(product.badge)}`}
+                    style={getProductBadgeStyle(product.badge)}
+                  >
+                    {product.badge}
+                  </span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-5">{product.desc}</p>
+
+                {/* Title */}
+                <h3 className="text-[18px] font-bold text-gray-900 mb-2 leading-snug tracking-tight">{product.title}</h3>
+                {/* Description */}
+                <p className="text-gray-500 text-[13.5px] leading-relaxed flex-1 mb-5">{product.desc}</p>
+
+                {/* CTA */}
                 <Link
                   href={product.href}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 group-hover:gap-2.5 transition-all"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors duration-[220ms]"
                 >
-                  Learn more <ArrowRight className="h-4 w-4" />
+                  {product.badge === 'Coming Soon' ? 'Get Notified' : product.badge === 'Custom Build' ? 'Build Custom' : 'Launch Tool'}
+                  <ArrowRight className="h-4 w-4 transition-transform duration-[220ms] group-hover:translate-x-1" />
                 </Link>
               </motion.div>
             ))}
