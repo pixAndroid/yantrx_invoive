@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Wrench, Plus, Search, Edit2, Trash2, Copy, Eye, Globe, Lock,
   Star, StarOff, CheckCircle, Clock, Filter, ExternalLink, Code2,
-  BarChart2, RefreshCw, ChevronLeft, ChevronRight, AlertCircle,
+  BarChart2, RefreshCw, ChevronLeft, ChevronRight, AlertCircle, ShieldCheck,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/api';
 
@@ -20,6 +20,7 @@ interface Tool {
   visibility: string;
   status: string;
   featured: boolean;
+  isSystem: boolean;
   pricingType: string;
   viewCount: number;
   sortOrder: number;
@@ -316,7 +317,14 @@ export default function AdminToolsPage() {
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-white leading-tight">{tool.title}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-white leading-tight">{tool.title}</p>
+                              {tool.isSystem && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-900/40 px-1.5 py-0.5 text-xs font-medium text-blue-400" title="System tool — cannot be deleted">
+                                  <ShieldCheck className="h-3 w-3" /> System
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-500 mt-0.5">/{tool.slug}</p>
                           </div>
                         </div>
@@ -333,13 +341,16 @@ export default function AdminToolsPage() {
                       {/* Visibility */}
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => handleToggle(tool.id, 'visibility', tool.visibility)}
-                          disabled={!!isActionLoading('-visibility')}
+                          onClick={() => !tool.isSystem && handleToggle(tool.id, 'visibility', tool.visibility)}
+                          disabled={tool.isSystem || !!isActionLoading('-visibility')}
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                            tool.visibility === 'PUBLIC'
+                            tool.isSystem
+                              ? 'bg-green-900/40 text-green-400 cursor-not-allowed opacity-75'
+                              : tool.visibility === 'PUBLIC'
                               ? 'bg-green-900/40 text-green-400 hover:bg-green-900/60'
                               : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                           }`}
+                          title={tool.isSystem ? 'System tools are always public' : undefined}
                         >
                           {tool.visibility === 'PUBLIC' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                           {tool.visibility === 'PUBLIC' ? 'Public' : 'Private'}
@@ -348,13 +359,16 @@ export default function AdminToolsPage() {
                       {/* Status */}
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => handleToggle(tool.id, 'status', tool.status)}
-                          disabled={!!isActionLoading('-status')}
+                          onClick={() => !tool.isSystem && handleToggle(tool.id, 'status', tool.status)}
+                          disabled={tool.isSystem || !!isActionLoading('-status')}
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                            tool.status === 'PUBLISHED'
+                            tool.isSystem
+                              ? 'bg-emerald-900/40 text-emerald-400 cursor-not-allowed opacity-75'
+                              : tool.status === 'PUBLISHED'
                               ? 'bg-emerald-900/40 text-emerald-400 hover:bg-emerald-900/60'
                               : 'bg-amber-900/30 text-amber-400 hover:bg-amber-900/50'
                           }`}
+                          title={tool.isSystem ? 'System tools are always published' : undefined}
                         >
                           {tool.status === 'PUBLISHED' ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                           {tool.status === 'PUBLISHED' ? 'Published' : 'Draft'}
@@ -411,14 +425,23 @@ export default function AdminToolsPage() {
                           >
                             <Copy className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(tool.id, tool.title)}
-                            disabled={!!isActionLoading('')}
-                            className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {tool.isSystem ? (
+                            <span
+                              className="p-2 rounded-lg text-gray-700 cursor-not-allowed"
+                              title="System tools cannot be deleted"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleDelete(tool.id, tool.title)}
+                              disabled={!!isActionLoading('')}
+                              className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -642,6 +642,35 @@ async function main() {
 
   console.log('  ✓ 2 invoice templates created (Classic, Professional)\n');
 
+  // System Tools
+  console.log('Creating system tools...');
+  await prisma.tool.upsert({
+    where: { slug: 'gst-invoice' },
+    update: {
+      isSystem: true,
+      status: 'PUBLISHED',
+      visibility: 'PUBLIC',
+    },
+    create: {
+      id: 'tool_gst_invoice',
+      title: 'GST Invoice Tool',
+      slug: 'gst-invoice',
+      shortDescription: 'Professional GST billing, invoicing, and compliance. Auto-calculate CGST, SGST, IGST. Generate GSTR-1 and GSTR-3B reports. Built for Indian businesses.',
+      category: 'Invoice',
+      tags: ['GST', 'Invoice', 'Billing', 'India'],
+      status: 'PUBLISHED',
+      visibility: 'PUBLIC',
+      featured: true,
+      toolType: 'INTERNAL_APP',
+      internalRoute: '/tools/gst-invoice',
+      ctaText: 'Launch Tool',
+      pricingType: 'FREE',
+      isSystem: true,
+      sortOrder: 0,
+    },
+  });
+  console.log('  ✓ GST Invoice Tool (system, non-removable)\n');
+
   console.log('✅ Seed complete!\n');
   console.log('🔑 Credentials:');
   console.log('   admin@yantrix.in / Admin@123 (Super Admin)');

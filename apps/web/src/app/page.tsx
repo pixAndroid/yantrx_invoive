@@ -7,7 +7,7 @@ import {
   ArrowRight, IndianRupee, Users, TrendingUp,
   Menu, X, LayoutDashboard, ShoppingCart, Building2,
   UtensilsCrossed, Car, MapPin, Briefcase, Settings,
-  Smartphone, Cloud, Bot, Repeat, Link2, Headphones,
+  Smartphone, Cloud, Bot, Repeat, Link2, Headphones, Wrench,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
@@ -66,12 +66,48 @@ const PROCESS = [
   { emoji: '🤝', title: 'Support', desc: 'Ongoing maintenance' },
 ];
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+
+const CATEGORY_COLORS = ['bg-indigo-50 text-indigo-600','bg-green-50 text-green-600','bg-amber-50 text-amber-600','bg-blue-50 text-blue-600','bg-rose-50 text-rose-600','bg-purple-50 text-purple-600','bg-cyan-50 text-cyan-600','bg-orange-50 text-orange-600','bg-pink-50 text-pink-600','bg-violet-50 text-violet-600'];
+const CATEGORY_BORDERS = ['hover:border-indigo-200','hover:border-green-200','hover:border-amber-200','hover:border-blue-200','hover:border-rose-200','hover:border-purple-200','hover:border-cyan-200','hover:border-orange-200','hover:border-pink-200','hover:border-violet-200'];
+function getColorForIndex(idx: number) { return CATEGORY_COLORS[idx % CATEGORY_COLORS.length]; }
+function getBorderForIndex(idx: number) { return CATEGORY_BORDERS[idx % CATEGORY_BORDERS.length]; }
+
+interface CMSTool {
+  id: string;
+  title: string;
+  slug: string;
+  shortDescription: string | null;
+  logoUrl: string | null;
+  category: string | null;
+  toolType: string;
+  featured: boolean;
+  pricingType: string;
+  ctaText: string | null;
+  ctaUrl: string | null;
+  viewCount: number;
+}
+
+function getCmsToolHref(tool: CMSTool): string {
+  if (tool.ctaUrl) return tool.ctaUrl;
+  if (tool.toolType === 'COMING_SOON') return '/contact';
+  return `/tools/${tool.slug}`;
+}
+
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [initials, setInitials] = useState('');
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string | null>(null);
+  const [cmsTools, setCmsTools] = useState<CMSTool[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/tools?limit=12`)
+      .then(r => r.json())
+      .then(d => { if (d.success && Array.isArray(d.data) && d.data.length > 0) setCmsTools(d.data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated()) return;
@@ -361,7 +397,36 @@ export default function HomePage() {
             <p className="text-xl text-gray-600">Ready-to-deploy software for every business need</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PRODUCTS.map((product, idx) => (
+            {cmsTools.length > 0 ? cmsTools.map((tool, idx) => (
+              <motion.div
+                key={tool.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                viewport={{ once: true }}
+                className={`group bg-white rounded-2xl border border-gray-100 p-6 ${getBorderForIndex(idx)} hover:shadow-lg transition-all duration-300 flex flex-col`}
+              >
+                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden ${getColorForIndex(idx)} mb-4`}>
+                  {tool.logoUrl && isSafeImageUrl(tool.logoUrl)
+                    ? <img src={tool.logoUrl} alt={tool.title} className="h-full w-full object-cover" />
+                    : <Wrench className="h-6 w-6" />
+                  }
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">{tool.title}</h3>
+                  {tool.toolType === 'COMING_SOON' && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Coming Soon</span>
+                  )}
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-5">{tool.shortDescription || ''}</p>
+                <Link
+                  href={getCmsToolHref(tool)}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 group-hover:gap-2.5 transition-all"
+                >
+                  {tool.toolType === 'COMING_SOON' ? 'Get Notified' : (tool.ctaText || 'Learn more')} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </motion.div>
+            )) : PRODUCTS.map((product, idx) => (
               <motion.div
                 key={product.title}
                 initial={{ opacity: 0, y: 20 }}
