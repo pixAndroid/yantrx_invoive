@@ -6,22 +6,30 @@ import prisma from '../utils/prisma';
 const router = Router();
 router.use(authenticate);
 
+type PlanBillingType = 'daily' | 'yearly' | 'monthly';
+
+/** Classifies a plan as daily, yearly, or monthly based on its slug and pricing fields. */
+function getPlanBillingType(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null }): PlanBillingType {
+  const slug = plan.slug.toLowerCase();
+  // Daily plans store their price in dailyPrice with price === 0
+  if (slug === 'daily' || (plan.dailyPrice !== null && plan.price === 0)) return 'daily';
+  // Yearly plans store their price in yearlyPrice with price === 0 and no dailyPrice
+  if (slug === 'yearly' || (plan.yearlyPrice !== null && plan.price === 0 && plan.dailyPrice === null)) return 'yearly';
+  return 'monthly';
+}
+
 /** Returns endDate and amount to charge based on plan billing period. */
 function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: number | null; yearlyPrice: number | null; durationDays: number | null }) {
   const now = new Date();
-  const slug = plan.slug.toLowerCase();
+  const billingType = getPlanBillingType(plan);
 
   // Determine the effective charge amount based on billing period type.
   // Daily and yearly plans store the real price in dailyPrice/yearlyPrice
   // while price is 0, so we must pick the right field regardless of durationDays.
-  let amount: number;
-  if (slug === 'daily' || (plan.dailyPrice !== null && plan.price === 0)) {
-    amount = plan.dailyPrice ?? plan.price;
-  } else if (slug === 'yearly' || (plan.yearlyPrice !== null && plan.price === 0 && plan.dailyPrice === null)) {
-    amount = plan.yearlyPrice ?? plan.price;
-  } else {
-    amount = plan.price;
-  }
+  const amount =
+    billingType === 'daily' ? (plan.dailyPrice ?? plan.price) :
+    billingType === 'yearly' ? (plan.yearlyPrice ?? plan.price) :
+    plan.price;
 
   // Determine the subscription end-date.
   // An explicit durationDays on the plan takes precedence for the duration.
@@ -30,12 +38,12 @@ function getPlanBillingDetails(plan: { slug: string; price: number; dailyPrice: 
     endDate.setDate(endDate.getDate() + plan.durationDays);
     return { endDate, amount };
   }
-  if (slug === 'daily' || (plan.dailyPrice !== null && plan.price === 0)) {
+  if (billingType === 'daily') {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 1);
     return { endDate, amount };
   }
-  if (slug === 'yearly' || (plan.yearlyPrice !== null && plan.price === 0 && plan.dailyPrice === null)) {
+  if (billingType === 'yearly') {
     const endDate = new Date(now);
     endDate.setFullYear(endDate.getFullYear() + 1);
     return { endDate, amount };
