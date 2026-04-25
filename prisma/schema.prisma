@@ -1023,6 +1023,29 @@ model Tool {
   @@map("tools")
 }
 
+// ─── Contact Enquiries ────────────────────────────────────────────────────
+
+enum EnquiryStatus {
+  UNREAD
+  READ
+  REPLIED
+}
+
+model ContactEnquiry {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String        @db.Text
+  status    EnquiryStatus @default(UNREAD)
+  ipAddress String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("contact_enquiries")
+}
+
 // ─── Invoice Templates ────────────────────────────────────────────────────
 
 model InvoiceTemplate {
