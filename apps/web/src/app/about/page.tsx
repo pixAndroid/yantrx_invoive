@@ -72,11 +72,14 @@ const VALUES = [
 ];
 
 const MILESTONES = [
-  { year: '2021', event: 'Yantrix Labs founded in Bengaluru. Started with GST billing software for local businesses.' },
-  { year: '2022', event: 'Launched beta GST Invoice Tool. Served first 100 businesses. Built our first custom web app for a logistics company.' },
-  { year: '2023', event: 'Expanded product line. Launched Attendance System and CRM. Started custom software development services.' },
-  { year: '2024', event: 'Crossed 500+ businesses. Delivered 10+ custom software projects across retail, hospitality, and logistics.' },
-  { year: '2025', event: 'Scaling product suite — GPS tracking, Hotel Booking, Restaurant POS, and HRMS. Building for every industry.' },
+  { year: '2019', event: 'Started the development journey with Android Studio, building native Android applications using Java/XML and learning real-world app architecture.' },
+  { year: '2020', event: 'Expanded into React Native CLI and cross-platform mobile app development. Began delivering custom apps for businesses and internal operations.' },
+  { year: '2021', event: 'Moved into full-stack web development, backend systems, databases, admin panels, and scalable web applications for growing businesses.' },
+  { year: '2022', event: 'Built multiple business solutions including ecommerce platforms, booking systems, billing tools, and custom management software.' },
+  { year: '2023', event: 'Focused on SaaS product development, dashboards, automation systems, CRM tools, and operational software for SMEs and startups.' },
+  { year: '2024', event: 'Launched advanced solutions including GPS tracking systems, taxi booking apps, restaurant platforms, hotel booking systems, and workforce tools.' },
+  { year: '2025', event: 'Expanded into AI-powered products including face recognition attendance systems, smart automation workflows, productivity tools, and modern scalable business platforms.' },
+  { year: 'Today', event: 'Yantrix Labs continues building custom software, SaaS products, mobile apps, AI systems, and digital tools that help businesses automate operations and grow faster.' },
 ];
 
 export default function AboutPage() {
@@ -140,24 +143,44 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6">How it started</h2>
           <div className="prose prose-gray max-w-none text-gray-600 space-y-4 leading-relaxed">
             <p>
-              In 2021, our co-founder Arjun was working as a Chartered Accountant in Bengaluru.
-              He watched his clients — restaurant owners, textile traders, logistics companies — struggle with
-              software that was either too complex, too expensive, or not built for Indian workflows.
+              Yantrix Labs was built on one clear idea: businesses need reliable, scalable, and affordable
+              software that solves real operational problems.
             </p>
             <p>
-              The problem wasn&apos;t just billing. It was everything — attendance, customer management,
-              booking systems, delivery tracking. Businesses were using a patchwork of tools,
-              Excel sheets, and manual processes that cost them time and money every single day.
+              Founded by a solo developer with hands-on product engineering experience since 2019, the journey
+              began with native Android development in Android Studio using Java/XML, then expanded into React
+              Native CLI for cross-platform apps, full-stack web development, backend systems, database
+              architecture, and SaaS product engineering.
             </p>
             <p>
-              Arjun teamed up with Sneha, an engineer who had built payment infrastructure at Razorpay,
-              and together they founded Yantrix Labs — a software company focused on building smart,
-              affordable digital products for Indian businesses.
+              Over the years, multiple production-grade solutions have been designed and developed across
+              different industries — combining strong UI/UX, business logic, automation, and scalable
+              architecture. What started as independent development evolved into a technology studio focused
+              on building modern business systems.
+            </p>
+            <p>Yantrix Labs has worked on and developed:</p>
+            <ul>
+              <li>SaaS platforms and admin dashboards</li>
+              <li>Ecommerce websites and custom stores</li>
+              <li>Booking systems for hotels, services, and appointments</li>
+              <li>Restaurant ordering and management systems</li>
+              <li>GPS vehicle and fleet tracking platforms</li>
+              <li>Taxi booking and dispatch systems</li>
+              <li>Attendance systems with AI face recognition</li>
+              <li>Employee management and HR tools</li>
+              <li>Billing, GST invoicing, and business utility tools</li>
+              <li>Workflow automation systems</li>
+              <li>AI-powered business solutions</li>
+              <li>Custom Android, iOS, and Web applications</li>
+              <li>Internal tools for operations and productivity</li>
+            </ul>
+            <p>
+              Today, Yantrix Labs builds practical, secure, and scalable digital products for startups, SMEs,
+              and growing businesses — with a focus on performance, automation, and real business outcomes.
             </p>
             <p>
-              Today, Yantrix Labs builds and maintains a growing suite of products — from GST invoicing
-              to custom enterprise systems — serving businesses across retail, logistics, hospitality,
-              and more. Our mission: every Indian business deserves great software.
+              Our mission: engineer smart software systems that help businesses save time, reduce manual work,
+              and scale faster.
             </p>
           </div>
         </div>
