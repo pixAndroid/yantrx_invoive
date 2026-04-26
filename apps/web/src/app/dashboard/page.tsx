@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FileText, Users, IndianRupee, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, Clock, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -48,8 +49,18 @@ export default function DashboardPage() {
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenue[]>([]);
   const [planFeatures, setPlanFeatures] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const userData = getUserData();
   const firstName = userData.name?.split(' ')[0] || 'there';
+
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      router.push('/');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [router]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
