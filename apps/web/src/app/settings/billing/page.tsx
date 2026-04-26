@@ -437,21 +437,6 @@ export default function BillingPage() {
             </div>
           </div>
 
-          {/* Enterprise CTA Banner */}
-          <div className="mt-6 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-800 to-indigo-900 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-            <div className="text-center sm:text-left">
-              <p className="text-white font-bold text-base">Need a custom plan?</p>
-              <p className="text-gray-300 text-sm mt-0.5">Get enterprise pricing with custom limits, SSO, dedicated support &amp; more.</p>
-            </div>
-            <Link
-              href="/settings"
-              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-900 text-sm font-semibold hover:bg-indigo-50 transition-colors shadow"
-            >
-              <CreditCard className="h-4 w-4" />
-              Contact Sales
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
         </>
       )}
 
