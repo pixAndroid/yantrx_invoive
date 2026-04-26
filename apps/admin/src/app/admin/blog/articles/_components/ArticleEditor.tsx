@@ -168,6 +168,14 @@ export default function ArticleEditor({ postId }: Props) {
     adminFetch<{ success: boolean; data: Tag[] }>('/blog/tags').then(r => setTags(r.data)).catch(() => {});
   }, []);
 
+  // Sync the visual editor's innerHTML when switching from HTML → Visual mode
+  useEffect(() => {
+    if (!htmlMode && editorRef.current && dataRef.current) {
+      editorRef.current.innerHTML = dataRef.current.contentHtml;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [htmlMode]);
+
   const update = useCallback((field: keyof ArticleData, value: unknown) => {
     setData(prev => {
       const next = { ...prev, [field]: value };
