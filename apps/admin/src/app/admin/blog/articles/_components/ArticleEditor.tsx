@@ -50,6 +50,20 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+function sanitizeForEditor(html: string): string {
+  // Strip <style> and <script> tags to prevent global CSS/JS injection when
+  // the article HTML is inserted into a contentEditable div in the live document.
+  if (typeof window === 'undefined') {
+    // SSR fallback: use regex since DOMParser is not available server-side.
+    return html
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  }
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('style, script').forEach(el => el.remove());
+  return doc.body.innerHTML;
+}
+
 function countWords(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
@@ -157,7 +171,7 @@ export default function ArticleEditor({ postId }: Props) {
         setData(loaded);
         dataRef.current = loaded;
         if (editorRef.current) {
-          editorRef.current.innerHTML = loaded.contentHtml;
+          editorRef.current.innerHTML = sanitizeForEditor(loaded.contentHtml);
         }
       })
       .catch(() => {});
@@ -171,7 +185,7 @@ export default function ArticleEditor({ postId }: Props) {
   // Sync the visual editor's innerHTML when switching from HTML → Visual mode
   useEffect(() => {
     if (!htmlMode && editorRef.current && dataRef.current) {
-      editorRef.current.innerHTML = dataRef.current.contentHtml;
+      editorRef.current.innerHTML = sanitizeForEditor(dataRef.current.contentHtml);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [htmlMode]);
