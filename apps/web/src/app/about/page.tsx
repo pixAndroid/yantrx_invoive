@@ -84,7 +84,7 @@ export default function AboutPage() {
 
   useEffect(() => {
     fetch(`${API_URL}/settings/about-stats`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
       .then(d => {
         if (d.success && d.data) {
           const data = d.data;
@@ -124,8 +124,8 @@ export default function AboutPage() {
       <section className="py-16 bg-indigo-600">
         <div className="container-wide">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {stats.map(stat => (
-              <div key={stat.label}>
+            {stats.map((stat, i) => (
+              <div key={`stat-${i}`}>
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
                 <p className="text-indigo-200 mt-1 text-sm">{stat.label}</p>
               </div>
