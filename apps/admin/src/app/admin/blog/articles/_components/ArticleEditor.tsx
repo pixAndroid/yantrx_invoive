@@ -535,7 +535,7 @@ export default function ArticleEditor({ postId }: Props) {
       {/* Sidebar */}
       <div className="lg:w-80 space-y-4">
         {/* Publishing */}
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-3">
+        <div className="sticky top-4 bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-3">
           <h3 className="text-white font-semibold text-sm">Publishing</h3>
           <div>
             <label className="text-xs text-gray-400 block mb-1">Status</label>
