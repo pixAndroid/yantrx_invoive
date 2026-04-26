@@ -155,7 +155,7 @@ export default function GSTInvoiceHero() {
               {...fadeUp(0.18)}
               className="text-lg sm:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0 mb-4 leading-relaxed"
             >
-              Generate invoices in seconds, export PDF &amp; Excel files, manage stock inventory, track payments, and access smart business reports — all in one powerful platform.
+              Generate invoices in seconds, export PDF & Excel files, manage stock inventory, track payments, and access smart business reports — all in one powerful platform.
             </motion.p>
 
             {/* Supporting line */}
@@ -190,7 +190,7 @@ export default function GSTInvoiceHero() {
                     animation: 'gstBtnShimmer 2.8s ease-in-out infinite',
                   }}
                 />
-                <Rocket className="relative h-4.5 w-4.5 flex-shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-12" style={{ height: '18px', width: '18px' }} />
+                <Rocket className="relative flex-shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-12" style={{ height: '18px', width: '18px' }} />
                 <span className="relative">Launch App</span>
                 <ArrowRight className="relative h-4 w-4 flex-shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
               </Link>
@@ -431,35 +431,6 @@ export default function GSTInvoiceHero() {
         className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none"
         style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.85))' }}
       />
-
-      {/* CSS keyframes injected via style tag */}
-      <style>{`
-        @keyframes gstParticleFloat {
-          0%   { transform: translateY(0px) translateX(0px); }
-          100% { transform: translateY(-12px) translateX(5px); }
-        }
-        @keyframes gstMockupFloat {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-10px); }
-        }
-        @keyframes gstGradientShimmer {
-          0%   { background-position: 0% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes gstBtnShimmer {
-          0%   { background-position: -100% 0; opacity: 0; }
-          30%  { opacity: 1; }
-          60%  { background-position: 200% 0; opacity: 0; }
-          100% { background-position: 200% 0; opacity: 0; }
-        }
-        .gst-launch-btn:hover {
-          transform: translateY(-2px) scale(1.015);
-          box-shadow: 0 0 0 1px rgba(99,102,241,0.6), 0 16px 40px rgba(79,70,229,0.50), 0 4px 12px rgba(79,70,229,0.30) !important;
-        }
-        .gst-launch-btn:active {
-          transform: scale(0.975);
-        }
-      `}</style>
     </section>
   );
 }
