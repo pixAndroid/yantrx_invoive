@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { adminFetch } from '@/lib/api';
 import { Plus, Edit2, Trash2, X, ChevronDown } from 'lucide-react';
 
@@ -74,7 +74,7 @@ export default function CategoriesPage() {
     fetch_();
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {

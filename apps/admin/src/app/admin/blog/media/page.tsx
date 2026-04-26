@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import { adminFetch } from '@/lib/api';
 import { Plus, Search, Copy, Trash2, X, FileImage, Check } from 'lucide-react';
 
@@ -74,7 +74,7 @@ export default function MediaLibraryPage() {
     });
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminFetch } from '@/lib/api';
 import {
@@ -255,7 +255,7 @@ export default function ArticleEditor({ postId }: Props) {
     return savedId;
   };
 
-  const handleSave = async (e?: React.FormEvent) => {
+  const handleSave = async (e?: FormEvent) => {
     e?.preventDefault();
     setSaving(true);
     try {
