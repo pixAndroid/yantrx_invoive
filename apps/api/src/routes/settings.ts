@@ -84,4 +84,15 @@ router.get('/contact-details', async (_req: Request, res: Response, next: NextFu
   } catch (error) { next(error); }
 });
 
+router.get('/team-members', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const members = await prisma.teamMember.findMany({
+      where: { isActive: true },
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, name: true, role: true, bio: true, imageUrl: true, displayOrder: true },
+    });
+    res.json({ success: true, data: members });
+  } catch (error) { next(error); }
+});
+
 export default router;

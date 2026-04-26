@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate, Phone, Info } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate, Phone, Info, Users, Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { adminFetch } from '@/lib/api';
 
 const SETTING_SECTIONS = [
@@ -84,6 +84,25 @@ const ABOUT_STATS_DEFAULTS = {
   stat4Label: 'Years Building',
 };
 
+type TeamMember = {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  imageUrl: string | null;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+type TeamMemberDraft = {
+  id?: string;
+  name: string;
+  role: string;
+  bio: string;
+  imageUrl: string | null;
+  displayOrder: number;
+};
+
 export default function AdminSettingsPage() {
   const [formData, setFormData] = useState<Record<string, string>>({
     platformName: 'Yantrix',
@@ -110,6 +129,15 @@ export default function AdminSettingsPage() {
 
   const [contactDetails, setContactDetails] = useState<Record<string, string>>(CONTACT_DEFAULTS);
   const [contactLoading, setContactLoading] = useState(true);
+
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [teamModal, setTeamModal] = useState<{ open: boolean; draft: TeamMemberDraft }>({
+    open: false,
+    draft: { name: '', role: '', bio: '', imageUrl: null, displayOrder: 0 },
+  });
+  const [teamSaving, setTeamSaving] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [saved, setSaved] = useState(false);
 
@@ -149,6 +177,15 @@ export default function AdminSettingsPage() {
       })
       .catch(() => {})
       .finally(() => setContactLoading(false));
+
+    adminFetch('/admin/settings/team-members')
+      .then((res: any) => {
+        if (res.success && Array.isArray(res.data)) {
+          setTeamMembers(res.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTeamLoading(false));
   }, []);
 
   const handleSave = async () => {
@@ -173,7 +210,75 @@ export default function AdminSettingsPage() {
       .catch(() => {});
   };
 
+  const openAddMember = () => {
+    setTeamModal({ open: true, draft: { name: '', role: '', bio: '', imageUrl: null, displayOrder: teamMembers.length } });
+  };
+
+  const openEditMember = (m: TeamMember) => {
+    setTeamModal({ open: true, draft: { id: m.id, name: m.name, role: m.role, bio: m.bio, imageUrl: m.imageUrl, displayOrder: m.displayOrder } });
+  };
+
+  const closeTeamModal = () => {
+    setTeamModal(prev => ({ ...prev, open: false }));
+  };
+
+  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be smaller than 5 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, imageUrl: ev.target?.result as string } }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveMember = async () => {
+    const { id, name, role, bio, imageUrl, displayOrder } = teamModal.draft;
+    if (!name.trim() || !role.trim() || !bio.trim()) return;
+    setTeamSaving(true);
+    try {
+      if (id) {
+        const res: any = await adminFetch(`/admin/settings/team-members/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name, role, bio, imageUrl, displayOrder }),
+        });
+        if (res.success) {
+          setTeamMembers(prev => prev.map(m => m.id === id ? res.data : m));
+        }
+      } else {
+        const res: any = await adminFetch('/admin/settings/team-members', {
+          method: 'POST',
+          body: JSON.stringify({ name, role, bio, imageUrl, displayOrder }),
+        });
+        if (res.success) {
+          setTeamMembers(prev => [...prev, res.data]);
+        }
+      }
+      closeTeamModal();
+    } catch {
+      // ignore
+    } finally {
+      setTeamSaving(false);
+    }
+  };
+
+  const handleDeleteMember = async (id: string) => {
+    if (!confirm('Delete this team member?')) return;
+    try {
+      await adminFetch(`/admin/settings/team-members/${id}`, { method: 'DELETE' });
+      setTeamMembers(prev => prev.filter(m => m.id !== id));
+    } catch {
+      // ignore
+    }
+  };
+
   return (
+    <>
     <div className="p-6 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -544,6 +649,68 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
+        {/* Team Members Config */}
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-800/50">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-orange-400" />
+              <h2 className="text-base font-semibold text-white">Team Members</h2>
+            </div>
+            <button
+              onClick={openAddMember}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Member
+            </button>
+          </div>
+          <div className="p-6">
+            {teamLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : teamMembers.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No team members yet. Click &quot;Add Member&quot; to add one.</p>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {teamMembers.map(m => (
+                  <div key={m.id} className="flex gap-4 rounded-xl border border-gray-700 bg-gray-800/50 p-4">
+                    <div className="flex-shrink-0">
+                      {m.imageUrl ? (
+                        <img
+                          src={m.imageUrl}
+                          alt={m.name}
+                          className="h-14 w-14 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          {m.name.split(' ').filter(n => n).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{m.name}</p>
+                      <p className="text-xs text-orange-400 mb-1">{m.role}</p>
+                      <p className="text-xs text-gray-400 line-clamp-2">{m.bio}</p>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        onClick={() => openEditMember(m)}
+                        className="rounded-lg border border-gray-600 p-1.5 text-gray-400 hover:text-orange-400 hover:border-orange-500 transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMember(m.id)}
+                        className="rounded-lg border border-gray-600 p-1.5 text-gray-400 hover:text-red-400 hover:border-red-500 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Danger Zone */}
         <div className="rounded-2xl border border-red-900/50 bg-gray-900 overflow-hidden">
           <div className="flex items-center gap-3 px-6 py-4 border-b border-red-900/50 bg-red-900/10">
@@ -594,5 +761,118 @@ export default function AdminSettingsPage() {
         </div>
       </div>
     </div>
+
+    {/* Team Member Modal */}
+    {teamModal.open && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+            <h3 className="text-base font-semibold text-white">
+              {teamModal.draft.id ? 'Edit Team Member' : 'Add Team Member'}
+            </h3>
+            <button onClick={closeTeamModal} className="text-gray-400 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            {/* Image Picker */}
+            <div className="flex flex-col items-center gap-3">
+              {teamModal.draft.imageUrl ? (
+                <img
+                  src={teamModal.draft.imageUrl}
+                  alt="Preview"
+                  className="h-20 w-20 rounded-full object-cover border-2 border-orange-500"
+                />
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-gray-700 flex items-center justify-center text-gray-400">
+                  <Upload className="h-8 w-8" />
+                </div>
+              )}
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImagePick}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:border-orange-500 hover:text-orange-400 transition-colors"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {teamModal.draft.imageUrl ? 'Change Photo' : 'Upload Photo'}
+              </button>
+              {teamModal.draft.imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, imageUrl: null } }))}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Remove photo
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Name <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                value={teamModal.draft.name}
+                onChange={e => setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, name: e.target.value } }))}
+                placeholder="e.g. Arjun Mehta"
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Role / Title <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                value={teamModal.draft.role}
+                onChange={e => setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, role: e.target.value } }))}
+                placeholder="e.g. Co-Founder & CEO"
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Bio <span className="text-red-400">*</span></label>
+              <textarea
+                rows={3}
+                value={teamModal.draft.bio}
+                onChange={e => setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, bio: e.target.value } }))}
+                placeholder="Short bio about the team member…"
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Display Order</label>
+              <input
+                type="number"
+                min={0}
+                value={teamModal.draft.displayOrder}
+                onChange={e => setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, displayOrder: Number(e.target.value) } }))}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-800">
+            <button
+              onClick={closeTeamModal}
+              className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveMember}
+              disabled={teamSaving || !teamModal.draft.name.trim() || !teamModal.draft.role.trim() || !teamModal.draft.bio.trim()}
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {teamSaving ? 'Saving…' : <><Save className="h-4 w-4" /> Save</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

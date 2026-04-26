@@ -1100,3 +1100,17 @@ model SiteConfig {
 
   @@map("site_configs")
 }
+
+model TeamMember {
+  id           String   @id @default(cuid())
+  name         String
+  role         String
+  bio          String   @db.Text
+  imageUrl     String?  @db.Text
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("team_members")
+}
