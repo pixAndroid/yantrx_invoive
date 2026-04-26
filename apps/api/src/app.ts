@@ -31,6 +31,11 @@ import settingsRoutes from './routes/settings';
 
 const app = express();
 
+// Trust the first proxy so req.ip reflects the real client IP, not the
+// proxy's loopback address.  Without this, every user behind a reverse
+// proxy (or in Docker/nginx) would share the same rate-limit bucket.
+app.set('trust proxy', 1);
+
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -61,8 +66,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
-app.use('/api/v1/auth', rateLimiter({ max: 20, windowMs: 15 * 60 * 1000 }));
-app.use('/api/v1', rateLimiter({ max: 200, windowMs: 60 * 1000 }));
+// Auth endpoints get a stricter, dedicated limiter.
+const authLimiter = rateLimiter({ max: 20, windowMs: 15 * 60 * 1000 });
+// General limiter is instantiated once and reused for all non-auth routes.
+const generalLimiter = rateLimiter({ max: 200, windowMs: 60 * 1000 });
+
+app.use('/api/v1/auth', authLimiter);
+// Skip auth paths so those requests are only counted once (against authLimiter).
+app.use('/api/v1', (req, res, next) => {
+  if (req.path.startsWith('/auth')) return next();
+  return generalLimiter(req, res, next);
+});
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
