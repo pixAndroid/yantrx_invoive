@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ArrowRight, LayoutDashboard, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
@@ -18,6 +19,7 @@ interface PublicLayoutProps {
 }
 
 export function PublicLayout({ children }: PublicLayoutProps) {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [initials, setInitials] = useState('');
@@ -59,11 +61,18 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </Link>
 
             <div className="hidden md:flex items-center gap-8">
-              {NAV_LINKS.map(link => (
-                <Link key={link.href} href={link.href} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                  {link.label}
-                </Link>
-              ))}
+              {NAV_LINKS.map(link => {
+                const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`text-sm font-medium transition-colors ${isActive ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="hidden md:flex items-center gap-3">
@@ -107,11 +116,19 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-2">
-            {NAV_LINKS.map(link => (
-              <Link key={link.href} href={link.href} className="block py-2 text-sm font-medium text-gray-700" onClick={() => setMobileMenuOpen(false)}>
-                {link.label}
-              </Link>
-            ))}
+            {NAV_LINKS.map(link => {
+                const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`block py-2 text-sm font-medium ${isActive ? 'text-indigo-600 font-semibold' : 'text-gray-700'}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             <div className="pt-2 space-y-2">
               {loggedIn ? (
                 <Link href="/dashboard" className="flex items-center gap-2 py-2 text-sm font-medium text-gray-700" onClick={() => setMobileMenuOpen(false)}>
