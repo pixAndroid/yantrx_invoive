@@ -370,7 +370,7 @@ export default function HomePage() {
                       backgroundSize: '250% 100%',
                     }}
                   />
-                  <Rocket className="relative h-4.5 w-4.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  <Rocket className="relative h-[18px] w-[18px] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                   <span className="relative">Launch App</span>
                   <ArrowRight className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </Link>
