@@ -129,9 +129,7 @@ export default function HeroSection({ homeHeader, loggedIn, businessLogo, busine
           <div className="flex h-[68px] items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 transition-shadow duration-200 group-hover:shadow-indigo-500/50">
-                <span className="text-white font-black text-[15px]">Y</span>
-              </div>
+              <img src="/yeantrix-labs-logo.svg" alt="Yantrix Labs" className="h-9 w-9 rounded-xl shadow-lg shadow-indigo-600/30 transition-shadow duration-200 group-hover:shadow-indigo-500/50" />
               <span className="text-[17px] font-bold text-white tracking-tight">Yantrix Labs</span>
             </Link>
 

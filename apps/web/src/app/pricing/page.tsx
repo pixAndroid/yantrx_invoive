@@ -178,9 +178,7 @@ export default function PricingPage() {
         <div className="container-wide">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">Y</span>
-              </div>
+              <img src="/yeantrix-labs-logo.svg" alt="Yantrix" className="h-8 w-8 rounded-lg" />
               <span className="text-xl font-bold text-gray-900">Yantrix</span>
             </Link>
 

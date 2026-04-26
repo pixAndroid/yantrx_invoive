@@ -615,9 +615,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="md:col-span-2">
               <Link href="/" className="flex items-center gap-2 mb-4">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">Y</span>
-                </div>
+                <img src="/yeantrix-labs-logo.svg" alt="Yantrix Labs" className="h-8 w-8 rounded-lg" />
                 <span className="text-xl font-bold text-white">Yantrix Labs</span>
               </Link>
               <p className="text-sm leading-relaxed mb-4">
