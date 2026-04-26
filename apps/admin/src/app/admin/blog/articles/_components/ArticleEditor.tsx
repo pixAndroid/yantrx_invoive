@@ -38,6 +38,7 @@ interface ArticleData {
   schemaType: string;
   robotsIndex: boolean;
   robotsFollow: boolean;
+  isFeatured: boolean;
   seoScore: number;
 }
 
@@ -104,6 +105,7 @@ export default function ArticleEditor({ postId }: Props) {
     authorBio: '',
     publishedAt: '',
     scheduledAt: '',
+    isFeatured: false,
     seoTitle: '',
     seoDescription: '',
     focusKeyword: '',
@@ -148,6 +150,7 @@ export default function ArticleEditor({ postId }: Props) {
           schemaType: post.schemaType || 'ARTICLE',
           robotsIndex: post.robotsIndex ?? true,
           robotsFollow: post.robotsFollow ?? true,
+          isFeatured: post.isFeatured ?? false,
           seoScore: post.seoScore || 0,
         };
         setData(loaded);
@@ -210,11 +213,11 @@ export default function ArticleEditor({ postId }: Props) {
 
   const doAutoSave = useCallback(async () => {
     setAutoSaveStatus('saving');
+    const current = await new Promise<ArticleData>(resolve => {
+      setData(d => { resolve(d); return d; });
+    });
     try {
-      setData(current => {
-        savePost(current, true);
-        return current;
-      });
+      await savePost(current, true);
     } catch {
       setAutoSaveStatus('idle');
     }
@@ -546,8 +549,8 @@ export default function ArticleEditor({ postId }: Props) {
             <input
               id="featured"
               type="checkbox"
-              checked={Boolean((data as unknown as Record<string, unknown>).isFeatured)}
-              onChange={e => update('isFeatured' as keyof ArticleData, e.target.checked)}
+              checked={data.isFeatured}
+              onChange={e => update('isFeatured', e.target.checked)}
               className="rounded"
             />
             <label htmlFor="featured" className="text-xs text-gray-400">Featured article</label>

@@ -423,8 +423,7 @@ router.post('/:id/duplicate', async (req: AuthenticatedRequest, res: Response, n
       return;
     }
 
-    const { id, createdAt, updatedAt, slug, title, totalViews, uniqueViews, totalClaps, popularityScore, ...rest } = original;
-    void id; void createdAt; void updatedAt;
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, slug, title, totalViews, uniqueViews, totalClaps, popularityScore, ...rest } = original;
     const newPost = await prisma.blogPost.create({
       data: {
         ...rest,
