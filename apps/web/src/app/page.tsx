@@ -4,7 +4,7 @@ import { type CSSProperties } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  FileText, BarChart3, Shield, Zap, CheckCircle, Star,
+  FileText, BarChart3, Shield, Zap, CheckCircle, Star, Rocket,
   ArrowRight, IndianRupee, Users, TrendingUp, LayoutDashboard,
   ShoppingCart, Building2,
   UtensilsCrossed, Car, MapPin, Briefcase, Settings,
@@ -230,87 +230,308 @@ export default function HomePage() {
       </section>
 
       {/* ─── FEATURED PRODUCT ────────────────────────────────────────────── */}
-      <section className="py-24 bg-gradient-to-br from-indigo-900 to-gray-900">
-        <div className="container-wide">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+      <section
+        className="relative py-28 overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #0c0a1e 0%, #12103a 35%, #0d1b3e 70%, #0a1628 100%)' }}
+      >
+        {/* Ambient glow blobs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute -top-32 left-1/4 h-[520px] w-[520px] rounded-full opacity-25 blur-[120px]"
+            style={{ background: 'radial-gradient(circle, #6366f1, transparent 70%)' }}
+          />
+          <div
+            className="absolute bottom-0 right-1/4 h-[420px] w-[420px] rounded-full opacity-20 blur-[100px]"
+            style={{ background: 'radial-gradient(circle, #8b5cf6, transparent 70%)' }}
+          />
+          <div
+            className="absolute top-1/2 -right-16 h-[280px] w-[280px] rounded-full opacity-15 blur-[80px]"
+            style={{ background: 'radial-gradient(circle, #06b6d4, transparent 70%)' }}
+          />
+          {/* Subtle grid */}
+          <div
+            className="absolute inset-0 opacity-[0.032]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(148,163,184,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.8) 1px, transparent 1px)',
+              backgroundSize: '56px 56px',
+            }}
+          />
+        </div>
+
+        <div className="container-wide relative">
+          <div className="grid lg:grid-cols-2 gap-16 xl:gap-24 items-center">
+
+            {/* ── LEFT: Content ── */}
             <motion.div
-              initial={{ opacity: 0, x: -24 }}
+              initial={{ opacity: 0, x: -28 }}
               whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               viewport={{ once: true }}
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/20 px-4 py-1.5 text-sm font-medium text-indigo-300 mb-6">
-                <Star className="h-3.5 w-3.5" />
-                Featured Product
-              </span>
-              <h2 className="text-4xl font-bold text-white mb-4">
-                GST Invoice Tool — Billing Made Effortless
-              </h2>
-              <p className="text-indigo-200 text-lg leading-relaxed mb-8">
+              {/* Badge */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                viewport={{ once: true }}
+                className="mb-7"
+              >
+                <span
+                  className="inline-flex items-center gap-2 rounded-full border border-indigo-400/25 px-4 py-1.5 text-xs font-semibold tracking-widest uppercase"
+                  style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', backdropFilter: 'blur(12px)' }}
+                >
+                  <Star className="h-3 w-3 fill-current" />
+                  Featured Product
+                </span>
+              </motion.div>
+
+              {/* Headline */}
+              <motion.h2
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18, duration: 0.65 }}
+                viewport={{ once: true }}
+                className="text-4xl md:text-5xl lg:text-[52px] font-bold leading-[1.1] tracking-tight text-white mb-5"
+              >
+                GST Invoice Tool —{' '}
+                <span
+                  style={{
+                    background: 'linear-gradient(135deg, #818cf8 0%, #c084fc 55%, #67e8f9 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Billing Made Effortless
+                </span>
+              </motion.h2>
+
+              {/* Subheadline */}
+              <motion.p
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.28, duration: 0.6 }}
+                viewport={{ once: true }}
+                className="text-lg leading-relaxed mb-10 max-w-md"
+                style={{ color: 'rgba(203,213,225,0.80)' }}
+              >
                 Create GST-compliant invoices in seconds. Automate tax calculations, track payments,
-                and generate returns with confidence. Built for Indian businesses.
-              </p>
-              <ul className="space-y-3 mb-10">
-                {['Instant GST invoicing (CGST/SGST/IGST)', 'Auto tax calculations for all slabs', 'Payment tracking & reminders'].map(f => (
-                  <li key={f} className="flex items-center gap-3 text-indigo-100">
-                    <CheckCircle className="h-5 w-5 text-indigo-400 flex-shrink-0" />
-                    {f}
-                  </li>
+                and manage billing with confidence.
+              </motion.p>
+
+              {/* Feature bullets */}
+              <ul className="space-y-3.5 mb-12">
+                {[
+                  { icon: Zap,          label: 'Instant GST invoicing (CGST/SGST/IGST)', iconColor: '#fbbf24', iconBg: 'rgba(251,191,36,0.10)',  iconBorder: 'rgba(251,191,36,0.22)' },
+                  { icon: CheckCircle,  label: 'Auto tax calculations',                   iconColor: '#34d399', iconBg: 'rgba(52,211,153,0.10)',   iconBorder: 'rgba(52,211,153,0.22)' },
+                  { icon: IndianRupee, label: 'Payment reminders & tracking',             iconColor: '#818cf8', iconBg: 'rgba(129,140,248,0.10)',  iconBorder: 'rgba(129,140,248,0.22)' },
+                  { icon: TrendingUp,   label: 'Fast export & sharing',                   iconColor: '#67e8f9', iconBg: 'rgba(103,232,249,0.10)',  iconBorder: 'rgba(103,232,249,0.22)' },
+                ].map((f, i) => (
+                  <motion.li
+                    key={f.label}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.38 + i * 0.09, duration: 0.5, ease: 'easeOut' }}
+                    viewport={{ once: true }}
+                    className="flex items-center gap-3.5"
+                  >
+                    <span
+                      className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg"
+                      style={{ background: f.iconBg, border: `1px solid ${f.iconBorder}` }}
+                    >
+                      <f.icon className="h-4 w-4" style={{ color: f.iconColor }} />
+                    </span>
+                    <span className="font-medium" style={{ color: 'rgba(226,232,240,0.90)' }}>{f.label}</span>
+                  </motion.li>
                 ))}
               </ul>
-              <Link
-                href="/tools/gst-invoice"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-900 hover:bg-indigo-50 transition-all shadow-lg"
+
+              {/* CTA Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.78, duration: 0.5 }}
+                viewport={{ once: true }}
               >
-                View GST Invoice Tool
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+                <Link
+                  href="/tools/gst-invoice"
+                  className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #7c3aed 100%)',
+                    boxShadow: '0 0 0 1px rgba(139,92,246,0.35), 0 0 36px rgba(99,102,241,0.50), 0 8px 24px rgba(99,102,241,0.28)',
+                  }}
+                >
+                  {/* Shimmer sweep */}
+                  <span
+                    className="pointer-events-none absolute inset-0 animate-shimmer"
+                    style={{
+                      backgroundImage: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)',
+                      backgroundSize: '250% 100%',
+                    }}
+                  />
+                  <Rocket className="relative h-[18px] w-[18px] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  <span className="relative">Launch App</span>
+                  <ArrowRight className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
             </motion.div>
 
-            {/* Decorative dashboard preview */}
+            {/* ── RIGHT: Dashboard Mockup ── */}
             <motion.div
-              initial={{ opacity: 0, x: 24 }}
+              initial={{ opacity: 0, x: 28 }}
               whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               viewport={{ once: true }}
-              className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur"
+              className="relative"
             >
-              <div className="flex items-center gap-1.5 mb-4">
-                <div className="h-3 w-3 rounded-full bg-red-400/60" />
-                <div className="h-3 w-3 rounded-full bg-yellow-400/60" />
-                <div className="h-3 w-3 rounded-full bg-green-400/60" />
-                <span className="ml-3 text-xs text-indigo-300/60">app.yantrixlab.com/dashboard</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {[
-                  { label: 'Revenue', value: '₹4,82,500', color: 'from-indigo-500/30 to-purple-500/30' },
-                  { label: 'Invoices', value: '247 sent', color: 'from-green-500/30 to-teal-500/30' },
-                  { label: 'Customers', value: '89 active', color: 'from-blue-500/30 to-cyan-500/30' },
-                  { label: 'Pending', value: '₹38,200', color: 'from-amber-500/30 to-orange-500/30' },
-                ].map(s => (
-                  <div key={s.label} className={`rounded-xl bg-gradient-to-br ${s.color} border border-white/10 p-3`}>
-                    <p className="text-xs text-white/60 mb-1">{s.label}</p>
-                    <p className="text-sm font-bold text-white">{s.value}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                <p className="text-xs text-white/60 mb-3">Recent Invoices</p>
-                <div className="space-y-2">
-                  {[
-                    { name: 'Acme Corp', amount: '₹25,900', status: 'Paid', c: 'text-green-400' },
-                    { name: 'Sharma Ent.', amount: '₹12,400', status: 'Sent', c: 'text-blue-400' },
-                    { name: 'Patel Co.', amount: '₹8,500', status: 'Draft', c: 'text-gray-400' },
-                  ].map(inv => (
-                    <div key={inv.name} className="flex items-center justify-between text-xs">
-                      <span className="text-white/70">{inv.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">{inv.amount}</span>
-                        <span className={`${inv.c} font-medium`}>{inv.status}</span>
-                      </div>
+              {/* Float wrapper */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
+                className="relative"
+              >
+                {/* Outer glow ring */}
+                <div
+                  className="absolute -inset-4 rounded-3xl opacity-30 blur-2xl pointer-events-none"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)' }}
+                />
+
+                {/* Glass card */}
+                <div
+                  className="relative rounded-2xl border border-white/10 p-5 overflow-hidden"
+                  style={{
+                    background: 'rgba(12, 10, 36, 0.75)',
+                    backdropFilter: 'blur(24px)',
+                    boxShadow: '0 30px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {/* Inner top highlight line */}
+                  <div
+                    className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+                    style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.7) 30%, rgba(139,92,246,0.7) 70%, transparent 100%)' }}
+                  />
+
+                  {/* Browser bar */}
+                  <div className="flex items-center gap-1.5 mb-5">
+                    <div className="h-3 w-3 rounded-full bg-red-500/70" />
+                    <div className="h-3 w-3 rounded-full bg-yellow-500/70" />
+                    <div className="h-3 w-3 rounded-full bg-green-500/70" />
+                    <div
+                      className="ml-3 flex items-center gap-1.5 rounded-md px-3 py-1 text-xs"
+                      style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: 'rgba(165,180,252,0.55)' }}
+                    >
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-400/60" />
+                      app.yantrixlab.com/dashboard
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Stat cards */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {[
+                      { label: 'Revenue',   value: '₹4,82,500', trend: '+12.4%', up: true,  bg: 'rgba(99,102,241,0.18)',  border: 'rgba(99,102,241,0.25)',  trendColor: '#34d399' },
+                      { label: 'Invoices',  value: '247 sent',  trend: '+8 today', up: true, bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.22)',  trendColor: '#34d399' },
+                      { label: 'Customers', value: '89 active', trend: '+3 new',   up: true, bg: 'rgba(14,165,233,0.15)',  border: 'rgba(14,165,233,0.22)',  trendColor: '#34d399' },
+                      { label: 'Pending',   value: '₹38,200',  trend: '3 due',    up: false, bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.22)',  trendColor: '#fbbf24' },
+                    ].map((s, i) => (
+                      <motion.div
+                        key={s.label}
+                        initial={{ opacity: 0, scale: 0.92 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 + i * 0.07, duration: 0.45 }}
+                        viewport={{ once: true }}
+                        className="rounded-xl p-3.5"
+                        style={{ background: s.bg, border: `1px solid ${s.border}` }}
+                      >
+                        <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.50)' }}>{s.label}</p>
+                        <p className="text-sm font-bold text-white mb-1.5">{s.value}</p>
+                        <span className="text-[10px] font-semibold" style={{ color: s.trendColor }}>
+                          {s.up ? '↑' : '→'} {s.trend}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Mini bar chart */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.55, duration: 0.45 }}
+                    viewport={{ once: true }}
+                    className="rounded-xl p-3.5 mb-4"
+                    style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>Revenue Trend</p>
+                      <span className="text-[10px] font-semibold" style={{ color: '#34d399' }}>↑ Last 7 days</span>
+                    </div>
+                    <div className="flex items-end gap-1.5 h-14">
+                      {[35, 55, 45, 70, 60, 88, 78].map((h, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t-sm animate-pulse-soft"
+                          style={{
+                            height: `${h}%`,
+                            background: i === 5
+                              ? 'linear-gradient(180deg, #818cf8 0%, #6366f1 100%)'
+                              : 'rgba(99,102,241,0.28)',
+                            animationDelay: `${i * 0.18}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  {/* Recent Invoices */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.62, duration: 0.45 }}
+                    viewport={{ once: true }}
+                    className="rounded-xl p-3.5"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  >
+                    <p className="text-xs font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.55)' }}>Recent Invoices</p>
+                    <div className="space-y-2.5">
+                      {[
+                        { name: 'Acme Corp',   amount: '₹25,900', status: 'Paid',  statusColor: '#34d399', statusBg: 'rgba(52,211,153,0.12)',  statusBorder: 'rgba(52,211,153,0.25)' },
+                        { name: 'Sharma Ent.', amount: '₹12,400', status: 'Sent',  statusColor: '#38bdf8', statusBg: 'rgba(56,189,248,0.12)',  statusBorder: 'rgba(56,189,248,0.25)' },
+                        { name: 'Patel Co.',   amount: '₹8,500',  status: 'Draft', statusColor: '#94a3b8', statusBg: 'rgba(148,163,184,0.10)', statusBorder: 'rgba(148,163,184,0.20)' },
+                      ].map((inv, i) => (
+                        <motion.div
+                          key={inv.name}
+                          initial={{ opacity: 0, x: 10 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.68 + i * 0.07 }}
+                          viewport={{ once: true }}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="h-6 w-6 rounded-md flex items-center justify-center text-[9px] font-bold"
+                              style={{ background: 'rgba(99,102,241,0.18)', color: 'rgba(165,180,252,0.8)' }}
+                            >
+                              {inv.name.charAt(0)}
+                            </div>
+                            <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.70)' }}>{inv.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xs font-semibold text-white">{inv.amount}</span>
+                            <span
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                              style={{ color: inv.statusColor, background: inv.statusBg, border: `1px solid ${inv.statusBorder}` }}
+                            >
+                              {inv.status}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
+
           </div>
         </div>
       </section>
