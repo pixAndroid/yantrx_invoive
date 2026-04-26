@@ -260,9 +260,7 @@ export default function SidebarMenusPage() {
               <div className="w-52 border-r border-gray-800 bg-gray-950 p-3 space-y-1 min-h-[420px]">
                 {/* Brand */}
                 <div className="flex items-center gap-2 px-2 py-2 mb-3 border-b border-gray-800">
-                  <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                    <span className="text-white font-bold text-xs">Y</span>
-                  </div>
+                  <img src="/yeantrix-labs-logo.svg" alt="Yantrix" className="h-7 w-7 rounded-lg" />
                   <span className="text-sm font-bold text-white">Yantrix</span>
                 </div>
 
