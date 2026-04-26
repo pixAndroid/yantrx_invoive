@@ -13,35 +13,44 @@ const ABOUT_STATS_DEFAULTS = [
   { value: '3+', label: 'Years Building' },
 ];
 
-const TEAM = [
+const TEAM_DEFAULTS = [
   {
+    id: '1',
     name: 'Arjun Mehta',
     role: 'Co-Founder & CEO',
-    initials: 'AM',
     bio: 'Former CA with 10+ years in fintech. Passionate about simplifying tax compliance for Indian SMEs.',
-    color: 'from-indigo-500 to-purple-600',
+    imageUrl: null,
   },
   {
+    id: '2',
     name: 'Sneha Reddy',
     role: 'Co-Founder & CTO',
-    initials: 'SR',
     bio: 'Ex-Razorpay engineer. Built scalable payment systems serving millions of transactions.',
-    color: 'from-pink-500 to-rose-600',
+    imageUrl: null,
   },
   {
+    id: '3',
     name: 'Vikram Nair',
     role: 'Head of Product',
-    initials: 'VN',
     bio: 'Product leader who previously scaled a SaaS to 100k users. Obsessed with user experience.',
-    color: 'from-amber-500 to-orange-600',
+    imageUrl: null,
   },
   {
+    id: '4',
     name: 'Divya Sharma',
     role: 'Head of Customer Success',
-    initials: 'DS',
     bio: 'Spent 8 years helping small businesses navigate GST compliance. Your first call when you need help.',
-    color: 'from-green-500 to-teal-600',
+    imageUrl: null,
   },
+];
+
+const AVATAR_COLORS = [
+  'from-indigo-500 to-purple-600',
+  'from-pink-500 to-rose-600',
+  'from-amber-500 to-orange-600',
+  'from-green-500 to-teal-600',
+  'from-blue-500 to-cyan-600',
+  'from-violet-500 to-purple-600',
 ];
 
 const VALUES = [
@@ -84,6 +93,7 @@ const MILESTONES = [
 
 export default function AboutPage() {
   const [stats, setStats] = useState(ABOUT_STATS_DEFAULTS);
+  const [team, setTeam] = useState(TEAM_DEFAULTS);
 
   useEffect(() => {
     fetch(`${API_URL}/settings/about-stats`)
@@ -98,6 +108,15 @@ export default function AboutPage() {
             { value: data.stat4Value || ABOUT_STATS_DEFAULTS[3].value, label: data.stat4Label || ABOUT_STATS_DEFAULTS[3].label },
           ];
           setStats(updated);
+        }
+      })
+      .catch(() => {});
+
+    fetch(`${API_URL}/settings/team-members`)
+      .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
+      .then(d => {
+        if (d.success && Array.isArray(d.data) && d.data.length > 0) {
+          setTeam(d.data);
         }
       })
       .catch(() => {});
@@ -237,16 +256,28 @@ export default function AboutPage() {
             <p className="text-gray-600">A small, passionate group obsessed with making Indian businesses thrive.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {TEAM.map(member => (
-              <div key={member.name} className="bg-white rounded-2xl border border-gray-100 p-6 text-center hover:shadow-md transition-shadow">
-                <div className={`h-16 w-16 rounded-full bg-gradient-to-br ${member.color} flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg`}>
-                  {member.initials}
+            {team.map((member, i) => {
+              const initials = member.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+              const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+              return (
+                <div key={member.id} className="bg-white rounded-2xl border border-gray-100 p-6 text-center hover:shadow-md transition-shadow">
+                  {member.imageUrl ? (
+                    <img
+                      src={member.imageUrl}
+                      alt={member.name}
+                      className="h-16 w-16 rounded-full object-cover mx-auto mb-4"
+                    />
+                  ) : (
+                    <div className={`h-16 w-16 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg`}>
+                      {initials}
+                    </div>
+                  )}
+                  <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                  <p className="text-xs text-indigo-600 font-medium mb-3">{member.role}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed">{member.bio}</p>
                 </div>
-                <h3 className="font-semibold text-gray-900">{member.name}</h3>
-                <p className="text-xs text-indigo-600 font-medium mb-3">{member.role}</p>
-                <p className="text-sm text-gray-600 leading-relaxed">{member.bio}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

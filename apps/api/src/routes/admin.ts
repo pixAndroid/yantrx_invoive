@@ -813,6 +813,61 @@ router.put('/settings/about-stats', async (req: AuthenticatedRequest, res: Respo
   } catch (error) { next(error); }
 });
 
+// ─── Team Members Settings ────────────────────────────────────────────────
+
+router.get('/settings/team-members', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const members = await prisma.teamMember.findMany({
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+    res.json({ success: true, data: members });
+  } catch (error) { next(error); }
+});
+
+router.post('/settings/team-members', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, role, bio, imageUrl, displayOrder } = req.body;
+    if (!name || !role || !bio) {
+      res.status(400).json({ success: false, error: 'name, role, and bio are required' });
+      return;
+    }
+    const member = await prisma.teamMember.create({
+      data: {
+        name: String(name),
+        role: String(role),
+        bio: String(bio),
+        imageUrl: imageUrl ? String(imageUrl) : null,
+        displayOrder: displayOrder !== undefined ? Number(displayOrder) : 0,
+      },
+    });
+    res.json({ success: true, data: member });
+  } catch (error) { next(error); }
+});
+
+router.put('/settings/team-members/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { name, role, bio, imageUrl, displayOrder, isActive } = req.body;
+    const data: Record<string, any> = {};
+    if (name !== undefined) data.name = String(name);
+    if (role !== undefined) data.role = String(role);
+    if (bio !== undefined) data.bio = String(bio);
+    if (imageUrl !== undefined) data.imageUrl = imageUrl ? String(imageUrl) : null;
+    if (displayOrder !== undefined) data.displayOrder = Number(displayOrder);
+    if (isActive !== undefined) data.isActive = Boolean(isActive);
+    const member = await prisma.teamMember.update({ where: { id }, data });
+    res.json({ success: true, data: member });
+  } catch (error) { next(error); }
+});
+
+router.delete('/settings/team-members/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.teamMember.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
 // ─── Contact Details Settings ─────────────────────────────────────────────
 
 const CONTACT_DETAILS_KEY = 'contact_details';
