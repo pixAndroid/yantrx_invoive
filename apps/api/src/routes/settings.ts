@@ -28,6 +28,26 @@ router.get('/home-header', async (_req: Request, res: Response, next: NextFuncti
   } catch (error) { next(error); }
 });
 
+const ABOUT_STATS_KEY = 'about_stats';
+
+const ABOUT_STATS_DEFAULTS = {
+  stat1Value: '10+',
+  stat1Label: 'Products Built',
+  stat2Value: '500+',
+  stat2Label: 'Businesses Served',
+  stat3Value: '5+',
+  stat3Label: 'Industries Covered',
+  stat4Value: '3+',
+  stat4Label: 'Years Building',
+};
+
+router.get('/about-stats', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const config = await prisma.siteConfig.findUnique({ where: { key: ABOUT_STATS_KEY } });
+    res.json({ success: true, data: config ?? { key: ABOUT_STATS_KEY, ...ABOUT_STATS_DEFAULTS } });
+  } catch (error) { next(error); }
+});
+
 const CONTACT_DETAILS_KEY = 'contact_details';
 
 const CONTACT_DETAILS_DEFAULTS = {

@@ -1,5 +1,17 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Users, Target, Heart, Award, TrendingUp, Globe } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+
+const ABOUT_STATS_DEFAULTS = [
+  { value: '10+', label: 'Products Built' },
+  { value: '500+', label: 'Businesses Served' },
+  { value: '5+', label: 'Industries Covered' },
+  { value: '3+', label: 'Years Building' },
+];
 
 const TEAM = [
   {
@@ -68,6 +80,26 @@ const MILESTONES = [
 ];
 
 export default function AboutPage() {
+  const [stats, setStats] = useState(ABOUT_STATS_DEFAULTS);
+
+  useEffect(() => {
+    fetch(`${API_URL}/settings/about-stats`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data) {
+          const data = d.data;
+          const updated = [
+            { value: data.stat1Value || ABOUT_STATS_DEFAULTS[0].value, label: data.stat1Label || ABOUT_STATS_DEFAULTS[0].label },
+            { value: data.stat2Value || ABOUT_STATS_DEFAULTS[1].value, label: data.stat2Label || ABOUT_STATS_DEFAULTS[1].label },
+            { value: data.stat3Value || ABOUT_STATS_DEFAULTS[2].value, label: data.stat3Label || ABOUT_STATS_DEFAULTS[2].label },
+            { value: data.stat4Value || ABOUT_STATS_DEFAULTS[3].value, label: data.stat4Label || ABOUT_STATS_DEFAULTS[3].label },
+          ];
+          setStats(updated);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <PublicLayout>
       {/* Hero */}
@@ -92,12 +124,7 @@ export default function AboutPage() {
       <section className="py-16 bg-indigo-600">
         <div className="container-wide">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { value: '10+', label: 'Products Built' },
-              { value: '500+', label: 'Businesses Served' },
-              { value: '5+', label: 'Industries Covered' },
-              { value: '3+', label: 'Years Building' },
-            ].map(stat => (
+            {stats.map(stat => (
               <div key={stat.label}>
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
                 <p className="text-indigo-200 mt-1 text-sm">{stat.label}</p>
