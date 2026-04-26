@@ -165,12 +165,23 @@ export default function HomePage() {
 
   useEffect(() => {
     fetch(`${API_URL}/settings/home-header`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
       .then(d => {
         if (d.success && d.data) {
+          const data = d.data;
           setHomeHeader(prev => ({
-            ...prev,
-            ...Object.fromEntries(Object.entries(d.data).filter(([, v]) => v != null && v !== '')),
+            badgeText: data.badgeText || prev.badgeText,
+            titleLine1: data.titleLine1 || prev.titleLine1,
+            titleGradientText: data.titleGradientText || prev.titleGradientText,
+            description: data.description || prev.description,
+            primaryBtnLabel: data.primaryBtnLabel || prev.primaryBtnLabel,
+            secondaryBtnLabel: data.secondaryBtnLabel || prev.secondaryBtnLabel,
+            stat1Value: data.stat1Value || prev.stat1Value,
+            stat1Label: data.stat1Label || prev.stat1Label,
+            stat2Value: data.stat2Value || prev.stat2Value,
+            stat2Label: data.stat2Label || prev.stat2Label,
+            stat3Value: data.stat3Value || prev.stat3Value,
+            stat3Label: data.stat3Label || prev.stat3Label,
           }));
         }
       })
