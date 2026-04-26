@@ -156,7 +156,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         {children}
       </main>
 
-      <footer className="bg-gray-900 text-gray-400 py-12 mt-16">
+      <footer className="bg-gray-900 text-gray-400 py-12">
         <div className="container-wide">
           <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div className="md:col-span-2">
