@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useCallback, type FormEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 import {
@@ -127,6 +127,11 @@ export default function ArticleEditor({ postId }: Props) {
   const [pickerError, setPickerError] = useState<string | null>(null);
   const pickerFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Image editing state
+  const [activeImgEl, setActiveImgEl] = useState<HTMLImageElement | null>(null);
+  const [imgRect, setImgRect] = useState<DOMRect | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+
   const [data, setData] = useState<ArticleData>({
     title: '',
     slug: '',
@@ -202,6 +207,31 @@ export default function ArticleEditor({ postId }: Props) {
     adminFetch<{ success: boolean; data: Category[] }>('/blog/categories').then(r => setCategories(r.data)).catch(() => {});
     adminFetch<{ success: boolean; data: Tag[] }>('/blog/tags').then(r => setTags(r.data)).catch(() => {});
   }, []);
+
+  // Sync image toolbar position when page scrolls
+  useEffect(() => {
+    if (!activeImgEl) return;
+    const sync = () => setImgRect(activeImgEl.getBoundingClientRect());
+    window.addEventListener('scroll', sync, true);
+    return () => window.removeEventListener('scroll', sync, true);
+  }, [activeImgEl]);
+
+  // Deselect active image when clicking outside the overlay or a different element
+  useEffect(() => {
+    if (!activeImgEl) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-img-overlay]')) return;
+      if (t.tagName === 'IMG' && editorRef.current?.contains(t)) return;
+      setActiveImgEl(null);
+      setImgRect(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [activeImgEl]);
+
+  // Cleanup any in-progress resize on unmount
+  useEffect(() => () => { resizeCleanupRef.current?.(); }, []);
 
   // Sync the visual editor's innerHTML when switching from HTML → Visual mode
   useEffect(() => {
@@ -352,18 +382,7 @@ export default function ArticleEditor({ postId }: Props) {
   };
 
   const handlePickerSelect = (url: string) => {
-    // Restore saved selection inside the editor, then insert
-    if (savedRangeRef.current && editorRef.current) {
-      editorRef.current.focus();
-      const sel = window.getSelection();
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(savedRangeRef.current);
-      }
-    } else {
-      editorRef.current?.focus();
-    }
-    exec('insertImage', url);
+    insertImageAtCursor(url);
     setMediaPickerOpen(false);
   };
 
@@ -395,6 +414,120 @@ export default function ArticleEditor({ postId }: Props) {
   const filteredPickerMedia = pickerMedia.filter(m =>
     !pickerSearch || m.originalName.toLowerCase().includes(pickerSearch.toLowerCase())
   );
+
+  const insertImageAtCursor = (url: string) => {
+    if (savedRangeRef.current && editorRef.current) {
+      editorRef.current.focus();
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    } else {
+      editorRef.current?.focus();
+    }
+
+    const wrapper = document.createElement('figure');
+    wrapper.setAttribute('data-img-block', '1');
+    wrapper.style.cssText = 'margin:0.5em 0;text-align:left;';
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'max-width:100%;width:300px;display:inline-block;vertical-align:middle;cursor:pointer;';
+
+    wrapper.appendChild(img);
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(wrapper);
+      range.setStartAfter(wrapper);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else if (editorRef.current) {
+      editorRef.current.appendChild(wrapper);
+    }
+
+    handleEditorInput();
+  };
+
+  const alignImage = (align: 'left' | 'center' | 'right') => {
+    if (!activeImgEl) return;
+    const wrapper = activeImgEl.closest('[data-img-block]') as HTMLElement | null;
+    if (wrapper) {
+      wrapper.style.textAlign = align;
+    } else {
+      if (align === 'center') {
+        activeImgEl.style.display = 'block';
+        activeImgEl.style.margin = '0 auto';
+        activeImgEl.style.float = 'none';
+      } else if (align === 'left') {
+        activeImgEl.style.float = 'left';
+        activeImgEl.style.margin = '0 0.5em 0.5em 0';
+        activeImgEl.style.display = 'inline';
+      } else {
+        activeImgEl.style.float = 'right';
+        activeImgEl.style.margin = '0 0 0.5em 0.5em';
+        activeImgEl.style.display = 'inline';
+      }
+    }
+    handleEditorInput();
+    requestAnimationFrame(() => {
+      if (activeImgEl) setImgRect(activeImgEl.getBoundingClientRect());
+    });
+  };
+
+  const startImgResize = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (!activeImgEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const img = activeImgEl;
+    const startX = e.clientX;
+    const startW = img.getBoundingClientRect().width;
+    let rafId: number | null = null;
+
+    const removeListeners = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      resizeCleanupRef.current = null;
+    };
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const newW = Math.max(50, startW + (ev.clientX - startX));
+        img.style.width = `${newW}px`;
+        setImgRect(img.getBoundingClientRect());
+      });
+    };
+
+    const onMouseUp = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      setImgRect(img.getBoundingClientRect());
+      handleEditorInput();
+      removeListeners();
+    };
+
+    resizeCleanupRef.current = removeListeners;
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleEditorClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG' && editorRef.current?.contains(target)) {
+      const img = target as HTMLImageElement;
+      setActiveImgEl(img);
+      setImgRect(img.getBoundingClientRect());
+    } else {
+      setActiveImgEl(null);
+      setImgRect(null);
+    }
+  };
 
   const insertCodeBlock = () => {
     const sel = window.getSelection();
@@ -603,6 +736,7 @@ export default function ArticleEditor({ postId }: Props) {
               ref={editorRef}
               contentEditable
               onInput={handleEditorInput}
+              onClick={handleEditorClick}
               suppressContentEditableWarning
               className="min-h-[500px] p-4 text-gray-200 focus:outline-none blog-editor-content"
               style={{ lineHeight: '1.8' }}
@@ -944,6 +1078,95 @@ export default function ArticleEditor({ postId }: Props) {
             )}
           </div>
         </div>
+      </div>
+    )}
+
+    {/* Image editing overlay – selection border, alignment toolbar, resize handle */}
+    {activeImgEl && imgRect && (
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
+        {/* Selection border */}
+        <div
+          style={{
+            position: 'fixed',
+            top: imgRect.top,
+            left: imgRect.left,
+            width: imgRect.width,
+            height: imgRect.height,
+            border: '2px solid #6366f1',
+            borderRadius: 2,
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Alignment + width toolbar */}
+        <div
+          data-img-overlay
+          style={{
+            position: 'fixed',
+            top: Math.max(4, imgRect.top - 42),
+            left: imgRect.left,
+            pointerEvents: 'auto',
+          }}
+          className="flex items-center gap-1 bg-gray-800 border border-gray-600 rounded-lg px-2 py-1.5 shadow-xl"
+        >
+          <button
+            type="button"
+            title="Align Left"
+            onClick={() => alignImage('left')}
+            className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+          >
+            <AlignLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title="Align Center"
+            onClick={() => alignImage('center')}
+            className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+          >
+            <AlignCenter className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title="Align Right"
+            onClick={() => alignImage('right')}
+            className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+          >
+            <AlignRight className="h-3.5 w-3.5" />
+          </button>
+          <div className="w-px h-4 bg-gray-600 mx-1" />
+          <input
+            type="number"
+            min={50}
+            max={2000}
+            value={Math.round(imgRect.width)}
+            onChange={e => {
+              if (!activeImgEl) return;
+              const newW = Math.max(50, Number(e.target.value) || 50);
+              activeImgEl.style.width = `${newW}px`;
+              setImgRect(activeImgEl.getBoundingClientRect());
+              handleEditorInput();
+            }}
+            className="w-16 bg-gray-700 text-white text-xs px-1.5 py-0.5 rounded border border-gray-600 focus:outline-none focus:border-indigo-500"
+          />
+          <span className="text-xs text-gray-400">px</span>
+        </div>
+
+        {/* Resize handle – bottom-right corner */}
+        <div
+          data-img-overlay
+          style={{
+            position: 'fixed',
+            top: imgRect.bottom - 6,
+            left: imgRect.right - 6,
+            width: 12,
+            height: 12,
+            background: '#6366f1',
+            borderRadius: 2,
+            cursor: 'se-resize',
+            pointerEvents: 'auto',
+          }}
+          onMouseDown={startImgResize}
+        />
       </div>
     )}
   </>
