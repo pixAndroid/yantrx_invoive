@@ -2,15 +2,26 @@
 
 import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { adminFetch } from '@/lib/api';
+import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 import {
   Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Link2, Image, Code, Quote, ChevronDown, ChevronUp,
-  Save, Eye, EyeOff, Check, Loader2, Type,
+  Save, Eye, EyeOff, Check, Loader2, Type, Search, Upload, X, FileImage,
 } from 'lucide-react';
 
 interface Category { id: string; name: string; slug: string; color: string | null }
 interface Tag { id: string; name: string; slug: string; color: string | null }
+interface MediaItem {
+  id: string;
+  filename: string;
+  originalName: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  alt: string | null;
+  folder: string | null;
+  createdAt: string;
+}
 
 interface ArticleData {
   id?: string;
@@ -96,6 +107,7 @@ interface Props {
 export default function ArticleEditor({ postId }: Props) {
   const router = useRouter();
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -105,6 +117,15 @@ export default function ArticleEditor({ postId }: Props) {
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIdRef = useRef<string | undefined>(postId);
   const dataRef = useRef<ArticleData | null>(null);
+
+  // Media picker state
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [pickerMedia, setPickerMedia] = useState<MediaItem[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [pickerUploading, setPickerUploading] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const pickerFileInputRef = useRef<HTMLInputElement>(null);
 
   const [data, setData] = useState<ArticleData>({
     title: '',
@@ -307,9 +328,73 @@ export default function ArticleEditor({ postId }: Props) {
   };
 
   const insertImage = () => {
-    const url = prompt('Enter image URL:');
-    if (url) exec('insertImage', url);
+    // Save current selection so we can restore it after the modal closes
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+    openMediaPicker();
   };
+
+  const openMediaPicker = async () => {
+    setPickerSearch('');
+    setPickerError(null);
+    setMediaPickerOpen(true);
+    setPickerLoading(true);
+    try {
+      const res = await adminFetch<{ success: boolean; data: MediaItem[] }>('/blog/media');
+      setPickerMedia(res.data);
+    } catch (err) {
+      setPickerError(err instanceof Error ? err.message : 'Failed to load media library');
+    } finally {
+      setPickerLoading(false);
+    }
+  };
+
+  const handlePickerSelect = (url: string) => {
+    // Restore saved selection inside the editor, then insert
+    if (savedRangeRef.current && editorRef.current) {
+      editorRef.current.focus();
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    } else {
+      editorRef.current?.focus();
+    }
+    exec('insertImage', url);
+    setMediaPickerOpen(false);
+  };
+
+  const handlePickerUpload = async (file: File) => {
+    setPickerUploading(true);
+    setPickerError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = getAdminToken();
+      const res = await fetch(`${API_URL}/blog/media/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      // Refresh list and auto-select the uploaded image
+      const mediaRes = await adminFetch<{ success: boolean; data: MediaItem[] }>('/blog/media');
+      setPickerMedia(mediaRes.data);
+      handlePickerSelect(json.data.url);
+    } catch (err) {
+      setPickerError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setPickerUploading(false);
+    }
+  };
+
+  const filteredPickerMedia = pickerMedia.filter(m =>
+    !pickerSearch || m.originalName.toLowerCase().includes(pickerSearch.toLowerCase())
+  );
 
   const insertCodeBlock = () => {
     const sel = window.getSelection();
@@ -357,6 +442,7 @@ export default function ArticleEditor({ postId }: Props) {
   };
 
   return (
+    <>
     <form onSubmit={handleSave} className="flex flex-col lg:flex-row gap-6 p-6 bg-gray-950 min-h-screen">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-4">
@@ -759,5 +845,107 @@ export default function ArticleEditor({ postId }: Props) {
         </div>
       </div>
     </form>
+
+    {/* Media Picker Modal */}
+    {mediaPickerOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+            <h2 className="text-white font-semibold">Select Image</h2>
+            <button
+              type="button"
+              onClick={() => setMediaPickerOpen(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Search + Upload */}
+          <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-700">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <input
+                value={pickerSearch}
+                onChange={e => setPickerSearch(e.target.value)}
+                placeholder="Search images..."
+                className="w-full bg-gray-800 text-white pl-9 pr-4 py-2 rounded-lg text-sm border border-gray-700 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => pickerFileInputRef.current?.click()}
+              disabled={pickerUploading}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              {pickerUploading
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Upload className="h-4 w-4" />}
+              {pickerUploading ? 'Uploading...' : 'Upload Image'}
+            </button>
+            <input
+              ref={pickerFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handlePickerUpload(file);
+                e.target.value = '';
+              }}
+            />
+          </div>
+
+          {/* Grid */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {pickerError && (
+              <div className="mb-4 px-4 py-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
+                {pickerError}
+              </div>
+            )}
+            {pickerLoading ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                {[...Array(10)].map((_, i) => (
+                  <div key={i} className="h-24 bg-gray-800 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : filteredPickerMedia.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-500 gap-3">
+                <FileImage className="h-10 w-10" />
+                <p className="text-sm">
+                  {pickerSearch ? 'No images match your search.' : 'No images uploaded yet. Upload one above.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                {filteredPickerMedia.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handlePickerSelect(item.url)}
+                    className="group relative h-24 bg-gray-800 rounded-xl overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all focus:outline-none focus:border-indigo-500"
+                    title={item.originalName}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.url}
+                      alt={item.alt || item.originalName}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end">
+                      <p className="w-full px-1.5 py-1 text-white text-[10px] truncate bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {item.originalName}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }

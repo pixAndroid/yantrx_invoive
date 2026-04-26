@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -100,6 +101,9 @@ app.get('/api/docs.json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
+
+// ─── Static file serving (uploaded media) ───────────────────────────────────
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ─── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/v1/auth', authRoutes);
