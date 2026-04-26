@@ -1,7 +1,7 @@
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import Link from 'next/link';
 import {
-  FileText, BarChart3, Shield, Zap, CheckCircle, Star,
+  FileText, BarChart3, Shield, Zap, Star,
   ArrowRight, IndianRupee, Users, Package,
 } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -50,47 +50,12 @@ const FEATURES = [
   },
 ];
 
-const PLANS = [
-  {
-    name: 'Free',
-    price: '₹0',
-    period: '/month',
-    description: 'Perfect for freelancers',
-    features: ['5 invoices/month', '10 customers', 'Basic GST reports', 'PDF download', 'Email support'],
-    cta: 'Get Started Free',
-    highlighted: false,
-    badge: null,
-  },
-  {
-    name: 'Starter',
-    price: '₹149',
-    period: '/month',
-    description: 'For growing businesses',
-    features: ['100 invoices/month', '200 customers', '2 team members', 'GST reports', 'Email invoices', 'Payment tracking', 'Expense tracking'],
-    cta: 'Start Free Trial',
-    highlighted: false,
-    badge: null,
-  },
-  {
-    name: 'Pro',
-    price: '₹299',
-    period: '/month',
-    description: 'Most popular choice',
-    features: ['500 invoices/month', 'Unlimited customers', '5 team members', 'Advanced GST reports', 'GSTR filing help', 'Multi-branch', 'Custom templates', 'Payment gateway', 'Priority support'],
-    cta: 'Start Free Trial',
-    highlighted: true,
-    badge: 'Most Popular',
-  },
-  {
-    name: 'Business',
-    price: '₹599',
-    period: '/month',
-    description: 'For large enterprises',
-    features: ['Unlimited invoices', 'Unlimited customers', '20 team members', 'Full GST suite', 'API access', 'White-label', 'Dedicated manager', 'SLA support'],
-    cta: 'Contact Sales',
-    highlighted: false,
-    badge: null,
-  },
+const GST_SLABS = [
+  { rate: '0%', items: 'Essential food items, fresh vegetables, milk, eggs, salt, educational services' },
+  { rate: '5%', items: 'Packaged food, edible oils, sugar, tea, coffee, rail tickets, economy hotels' },
+  { rate: '12%', items: 'Processed food, computers, smartphones, business class tickets, non-AC restaurants' },
+  { rate: '18%', items: 'Most goods and services — electronics, IT services, financial services, AC restaurants' },
+  { rate: '28%', items: 'Luxury goods, tobacco, automobiles, cement, aerated drinks, casinos' },
 ];
 
 const TESTIMONIALS = [
@@ -182,59 +147,32 @@ export default function GSTInvoicePage() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* GST Slab Reference */}
       <section className="py-24 bg-gray-50">
-        <div className="container-wide">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Simple, transparent pricing</h2>
-            <p className="text-xl text-gray-600">
-              Start free, upgrade when you need to. All plans include a 14-day free trial.
-            </p>
+        <div className="container-wide max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">GST Rate Reference</h2>
+            <p className="text-gray-600">Quick reference for GST slabs applicable in India (FY 2025-26)</p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PLANS.map(plan => (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl p-6 border-2 ${
-                  plan.highlighted
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl shadow-indigo-200'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-900">
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-                <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
-                <p className={`text-sm mb-4 ${plan.highlighted ? 'text-indigo-200' : 'text-gray-500'}`}>{plan.description}</p>
-                <div className="mb-6">
-                  <span className={`text-4xl font-bold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.price}</span>
-                  <span className={`text-sm ${plan.highlighted ? 'text-indigo-200' : 'text-gray-500'}`}>{plan.period}</span>
-                </div>
-                <Link
-                  href={plan.name === 'Business' ? '/contact' : '/auth/register'}
-                  className={`block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition-all mb-6 ${
-                    plan.highlighted
-                      ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-                <ul className="space-y-3">
-                  {plan.features.map(feature => (
-                    <li key={feature} className={`flex items-start gap-2 text-sm ${plan.highlighted ? 'text-indigo-100' : 'text-gray-600'}`}>
-                      <CheckCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${plan.highlighted ? 'text-indigo-300' : 'text-green-500'}`} />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-indigo-600 text-white">
+                  <th className="text-left px-6 py-4 font-semibold">GST Rate</th>
+                  <th className="text-left px-6 py-4 font-semibold">Applicable Items / Services</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {GST_SLABS.map((slab, idx) => (
+                  <tr key={slab.rate} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-6 py-4"><span className="font-bold text-lg text-indigo-600">{slab.rate}</span></td>
+                    <td className="px-6 py-4 text-gray-700 text-sm">{slab.items}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+          <p className="text-center text-xs text-gray-400 mt-4">* GST rates are subject to change. Always verify with the GST Council notifications for the latest updates.</p>
         </div>
       </section>
 
