@@ -39,13 +39,6 @@ const FALLBACK_PRODUCTS = [
   { icon: Settings, title: 'Custom ERP', description: 'Tailored enterprise resource planning systems built for your specific workflow and industry requirements.', href: '/services', badge: 'Custom Build', color: 'bg-violet-50 text-violet-600', badgeColor: 'bg-violet-100 text-violet-700' },
 ];
 
-const GST_SLABS = [
-  { rate: '0%', items: 'Essential food items, fresh vegetables, milk, eggs, salt, educational services' },
-  { rate: '5%', items: 'Packaged food, edible oils, sugar, tea, coffee, rail tickets, economy hotels' },
-  { rate: '12%', items: 'Processed food, computers, smartphones, business class tickets, non-AC restaurants' },
-  { rate: '18%', items: 'Most goods and services — electronics, IT services, financial services, AC restaurants' },
-  { rate: '28%', items: 'Luxury goods, tobacco, automobiles, cement, aerated drinks, casinos' },
-];
 
 const CATEGORY_COLORS = ['text-indigo-600','text-emerald-600','text-amber-600','text-blue-600','text-rose-600','text-purple-600','text-cyan-600','text-orange-600','text-pink-600','text-violet-600'];
 const ICON_GRADIENTS = [
@@ -357,35 +350,6 @@ export default function ToolsPage() {
           </div>
         </section>
       )}
-
-      {/* GST Slab Reference */}
-      <section className="py-20 bg-gray-50">
-        <div className="container-wide max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">GST Rate Reference</h2>
-            <p className="text-gray-600">Quick reference for GST slabs applicable in India (FY 2025-26)</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-indigo-600 text-white">
-                  <th className="text-left px-6 py-4 font-semibold">GST Rate</th>
-                  <th className="text-left px-6 py-4 font-semibold">Applicable Items / Services</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {GST_SLABS.map((slab, idx) => (
-                  <tr key={slab.rate} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-6 py-4"><span className="font-bold text-lg text-indigo-600">{slab.rate}</span></td>
-                    <td className="px-6 py-4 text-gray-700 text-sm">{slab.items}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-center text-xs text-gray-400 mt-4">* GST rates are subject to change. Always verify with the GST Council notifications for the latest updates.</p>
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="py-20 bg-gradient-to-br from-indigo-600 to-purple-700 text-center">
