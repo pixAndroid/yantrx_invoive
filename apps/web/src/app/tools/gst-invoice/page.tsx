@@ -1,7 +1,8 @@
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import GSTInvoiceHero from '@/components/layout/GSTInvoiceHero';
 import Link from 'next/link';
 import {
-  FileText, BarChart3, Shield, Zap, Star,
+  FileText, BarChart3, Shield, Star,
   ArrowRight, IndianRupee, Users, Package,
 } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -83,41 +84,7 @@ export default function GSTInvoicePage() {
   return (
     <PublicLayout>
       {/* Hero */}
-      <section className="py-20 bg-gradient-to-br from-indigo-50 via-white to-purple-50 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-r from-indigo-500/15 to-purple-500/15 blur-3xl rounded-full pointer-events-none" />
-        <div className="container-wide relative text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 mb-6">
-            <Zap className="h-3.5 w-3.5" />
-            GST Invoice Tool
-          </div>
-          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 tracking-tight leading-[1.1] mb-6">
-            Professional GST Billing,
-            <span className="block gradient-text">Built for Indian Businesses</span>
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Create GST-compliant invoices in 30 seconds. Automate tax calculations, track payments,
-            and file returns with confidence. Trusted by 50,000+ Indian SMEs.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-            >
-              Get Started Free
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-8 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-            >
-              View Dashboard
-            </Link>
-          </div>
-          <p className="mt-6 text-sm text-gray-500">
-            ✓ Free plan available &nbsp;·&nbsp; ✓ 14-day trial &nbsp;·&nbsp; ✓ Cancel anytime
-          </p>
-        </div>
-      </section>
+      <GSTInvoiceHero />
 
       {/* Features */}
       <section className="py-24">
