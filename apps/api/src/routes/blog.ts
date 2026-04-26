@@ -332,121 +332,6 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
   }
 });
 
-// Get post by id
-router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const post = await prisma.blogPost.findUnique({
-      where: { id: req.params.id },
-      include: {
-        category: true,
-        tags: { include: { tag: true } },
-        revisions: { orderBy: { createdAt: 'desc' }, take: 10 },
-      },
-    });
-    if (!post) {
-      res.status(404).json({ success: false, error: 'Post not found' });
-      return;
-    }
-    res.json({ success: true, data: post });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Update post
-router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const { tagIds, ...data } = req.body;
-
-    // Save revision before update
-    const existing = await prisma.blogPost.findUnique({
-      where: { id: req.params.id },
-      select: { title: true, content: true },
-    });
-    if (existing) {
-      await prisma.blogRevision.create({
-        data: {
-          postId: req.params.id,
-          title: existing.title,
-          content: existing.content,
-          savedBy: req.user?.id,
-        },
-      });
-    }
-
-    const post = await prisma.blogPost.update({
-      where: { id: req.params.id },
-      data: {
-        ...data,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
-        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
-        ...(Array.isArray(tagIds)
-          ? {
-              tags: {
-                deleteMany: {},
-                create: tagIds.map((tagId: string) => ({ tagId })),
-              },
-            }
-          : {}),
-      },
-      include: {
-        category: true,
-        tags: { include: { tag: true } },
-      },
-    });
-
-    res.json({ success: true, data: post });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Delete post
-router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    await prisma.blogPost.delete({ where: { id: req.params.id } });
-    res.json({ success: true, data: { message: 'Post deleted' } });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Duplicate post
-router.post('/:id/duplicate', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const original = await prisma.blogPost.findUnique({
-      where: { id: req.params.id },
-      include: { tags: true },
-    });
-    if (!original) {
-      res.status(404).json({ success: false, error: 'Post not found' });
-      return;
-    }
-
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, slug, title, totalViews, uniqueViews, totalClaps, popularityScore, ...rest } = original;
-    const newPost = await prisma.blogPost.create({
-      data: {
-        ...rest,
-        title: `${title} (Copy)`,
-        slug: `${slug}-copy-${Date.now()}`,
-        status: 'DRAFT',
-        totalViews: 0,
-        uniqueViews: 0,
-        totalClaps: 0,
-        popularityScore: 0,
-        publishedAt: null,
-        tags: {
-          create: original.tags.map(t => ({ tagId: t.tagId })),
-        },
-      },
-    });
-
-    res.status(201).json({ success: true, data: newPost });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // ─── Categories (admin) ─────────────────────────────────────────────────────
 
 router.get('/categories', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -571,6 +456,123 @@ router.delete('/media/:id', async (req: AuthenticatedRequest, res: Response, nex
   try {
     await prisma.blogMedia.delete({ where: { id: req.params.id } });
     res.json({ success: true, data: { message: 'Media deleted' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Post by id (admin) — must come after all fixed-path routes ─────────────
+
+// Get post by id
+router.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const post = await prisma.blogPost.findUnique({
+      where: { id: req.params.id },
+      include: {
+        category: true,
+        tags: { include: { tag: true } },
+        revisions: { orderBy: { createdAt: 'desc' }, take: 10 },
+      },
+    });
+    if (!post) {
+      res.status(404).json({ success: false, error: 'Post not found' });
+      return;
+    }
+    res.json({ success: true, data: post });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update post
+router.put('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { tagIds, ...data } = req.body;
+
+    // Save revision before update
+    const existing = await prisma.blogPost.findUnique({
+      where: { id: req.params.id },
+      select: { title: true, content: true },
+    });
+    if (existing) {
+      await prisma.blogRevision.create({
+        data: {
+          postId: req.params.id,
+          title: existing.title,
+          content: existing.content,
+          savedBy: req.user?.id,
+        },
+      });
+    }
+
+    const post = await prisma.blogPost.update({
+      where: { id: req.params.id },
+      data: {
+        ...data,
+        publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
+        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+        ...(Array.isArray(tagIds)
+          ? {
+              tags: {
+                deleteMany: {},
+                create: tagIds.map((tagId: string) => ({ tagId })),
+              },
+            }
+          : {}),
+      },
+      include: {
+        category: true,
+        tags: { include: { tag: true } },
+      },
+    });
+
+    res.json({ success: true, data: post });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete post
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    await prisma.blogPost.delete({ where: { id: req.params.id } });
+    res.json({ success: true, data: { message: 'Post deleted' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Duplicate post
+router.post('/:id/duplicate', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const original = await prisma.blogPost.findUnique({
+      where: { id: req.params.id },
+      include: { tags: true },
+    });
+    if (!original) {
+      res.status(404).json({ success: false, error: 'Post not found' });
+      return;
+    }
+
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, slug, title, totalViews, uniqueViews, totalClaps, popularityScore, ...rest } = original;
+    const newPost = await prisma.blogPost.create({
+      data: {
+        ...rest,
+        title: `${title} (Copy)`,
+        slug: `${slug}-copy-${Date.now()}`,
+        status: 'DRAFT',
+        totalViews: 0,
+        uniqueViews: 0,
+        totalClaps: 0,
+        popularityScore: 0,
+        publishedAt: null,
+        tags: {
+          create: original.tags.map(t => ({ tagId: t.tagId })),
+        },
+      },
+    });
+
+    res.status(201).json({ success: true, data: newPost });
   } catch (error) {
     next(error);
   }
