@@ -345,7 +345,7 @@ export default function ArticleEditor({ postId }: Props) {
   return (
     <form onSubmit={handleSave} className="flex flex-col lg:flex-row gap-6 p-6 bg-gray-950 min-h-screen">
       {/* Main Content */}
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 min-w-0 space-y-4">
         {/* Auto-save indicator */}
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">{postId ? 'Edit Article' : 'New Article'}</h1>
