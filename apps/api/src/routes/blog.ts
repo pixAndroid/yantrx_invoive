@@ -1,6 +1,37 @@
 import { Router, Response, NextFunction, Request } from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import prisma from '../utils/prisma';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { randomUUID } from 'crypto';
+
+// ─── Multer setup for media file uploads ────────────────────────────────────
+const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'blog');
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: UPLOAD_DIR,
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = `${Date.now()}-${randomUUID()}${ext}`;
+    cb(null, name);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
 
 const router = Router();
 
@@ -446,6 +477,30 @@ router.get('/media', async (req: AuthenticatedRequest, res: Response, next: Next
 router.post('/media', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const media = await prisma.blogMedia.create({ data: req.body });
+    res.status(201).json({ success: true, data: media });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/media/upload', authenticate, upload.single('file'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    // API_URL may include the /api/v1 path prefix; strip it to get the server origin for static file URLs.
+    const apiBase = (process.env.API_URL || `http://localhost:4000`).replace(/\/api\/v1\/?$/, '');
+    const fileUrl = `${apiBase}/uploads/blog/${req.file.filename}`;
+    const media = await prisma.blogMedia.create({
+      data: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        url: fileUrl,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        folder: 'blog',
+      },
+    });
     res.status(201).json({ success: true, data: media });
   } catch (error) {
     next(error);
