@@ -232,6 +232,41 @@
   100% { transform: translateY(-6px)  translateX(-4px);  opacity: var(--p-op, 0.12); }
 }
 
+/* GST Invoice hero — particle float */
+@keyframes gstParticleFloat {
+  0%   { transform: translateY(0px) translateX(0px); }
+  100% { transform: translateY(-12px) translateX(5px); }
+}
+
+/* GST Invoice hero — mockup card float */
+@keyframes gstMockupFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* GST Invoice hero — gradient text shimmer */
+@keyframes gstGradientShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* GST Invoice hero — CTA button shimmer sweep */
+@keyframes gstBtnShimmer {
+  0%   { background-position: -100% 0; opacity: 0; }
+  30%  { opacity: 1; }
+  60%  { background-position: 200% 0; opacity: 0; }
+  100% { background-position: 200% 0; opacity: 0; }
+}
+
+/* GST Invoice hero — Launch App button hover/active */
+.gst-launch-btn:hover {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.6), 0 16px 40px rgba(79,70,229,0.50), 0 4px 12px rgba(79,70,229,0.30) !important;
+}
+.gst-launch-btn:active {
+  transform: scale(0.975);
+}
+
 /* Hero data-stream line sweep */
 @keyframes heroStreamSweep {
   0%   { opacity: 0.04; }
