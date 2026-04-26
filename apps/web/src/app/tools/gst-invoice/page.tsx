@@ -1,9 +1,9 @@
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import GSTInvoiceHero from '@/components/layout/GSTInvoiceHero';
-import Link from 'next/link';
+import GetStartedButton from '@/components/GetStartedButton';
 import {
   FileText, BarChart3, Shield, Star,
-  ArrowRight, IndianRupee, Users, Package,
+  IndianRupee, Users, Package,
 } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -183,13 +183,7 @@ export default function GSTInvoicePage() {
           <p className="text-indigo-200 mb-8 text-lg">
             No credit card required. Setup in 5 minutes. Cancel anytime.
           </p>
-          <Link
-            href="/auth/register"
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-600 hover:bg-indigo-50 transition-all shadow-lg"
-          >
-            Get Started Free
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <GetStartedButton />
         </div>
       </section>
     </PublicLayout>

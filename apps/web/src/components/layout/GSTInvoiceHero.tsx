@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { isAuthenticated } from '@/lib/api';
 import {
   Zap, ArrowRight, Rocket, FileText, IndianRupee,
   Users, Package, BarChart3, TrendingUp, CheckCircle,
@@ -57,6 +59,11 @@ const fadeUp = (delay = 0) => ({
 
 export default function GSTInvoiceHero() {
   const particles = useMemo(() => generateParticles(50), []);
+  const router = useRouter();
+
+  const handleLaunchApp = useCallback(() => {
+    router.push(isAuthenticated() ? '/dashboard' : '/auth/register');
+  }, [router]);
 
   return (
     <section className="relative overflow-hidden" style={{ background: 'linear-gradient(155deg, #ffffff 0%, #f5f3ff 35%, #ede9fe 65%, #faf5ff 100%)' }}>
@@ -172,8 +179,8 @@ export default function GSTInvoiceHero() {
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12"
             >
               {/* Primary — Launch App */}
-              <Link
-                href="/auth/register"
+              <button
+                onClick={handleLaunchApp}
                 className="gst-launch-btn group relative inline-flex items-center justify-center gap-2.5 rounded-2xl px-8 py-4 text-base font-bold text-white overflow-hidden"
                 style={{
                   background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%)',
@@ -193,7 +200,7 @@ export default function GSTInvoiceHero() {
                 <Rocket className="relative flex-shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-12" style={{ height: '18px', width: '18px' }} />
                 <span className="relative">Launch App</span>
                 <ArrowRight className="relative h-4 w-4 flex-shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
-              </Link>
+              </button>
 
               {/* Secondary — View Dashboard */}
               <Link
