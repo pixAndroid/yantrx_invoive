@@ -67,12 +67,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
 // Auth endpoints get a stricter, dedicated limiter.
-app.use('/api/v1/auth', rateLimiter({ max: 20, windowMs: 15 * 60 * 1000 }));
-// General limiter covers every other /api/v1 route but skips /api/v1/auth so
-// those requests are only counted once (against the auth limiter above).
+const authLimiter = rateLimiter({ max: 20, windowMs: 15 * 60 * 1000 });
+// General limiter is instantiated once and reused for all non-auth routes.
+const generalLimiter = rateLimiter({ max: 200, windowMs: 60 * 1000 });
+
+app.use('/api/v1/auth', authLimiter);
+// Skip auth paths so those requests are only counted once (against authLimiter).
 app.use('/api/v1', (req, res, next) => {
   if (req.path.startsWith('/auth')) return next();
-  return rateLimiter({ max: 200, windowMs: 60 * 1000 })(req, res, next);
+  return generalLimiter(req, res, next);
 });
 
 // ─── Health Check ───────────────────────────────────────────────────────────
