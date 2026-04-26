@@ -225,6 +225,11 @@ export default function AdminSettingsPage() {
   const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be smaller than 5 MB.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = ev => {
       setTeamModal(prev => ({ ...prev, draft: { ...prev.draft, imageUrl: ev.target?.result as string } }));
@@ -676,7 +681,7 @@ export default function AdminSettingsPage() {
                         />
                       ) : (
                         <div className="h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
-                          {m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          {m.name.split(' ').filter(n => n).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
                       )}
                     </div>

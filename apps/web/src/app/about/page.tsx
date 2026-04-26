@@ -257,7 +257,7 @@ export default function AboutPage() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {team.map((member, i) => {
-              const initials = member.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+              const initials = member.name.split(' ').filter((n: string) => n).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
               const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
               return (
                 <div key={member.id} className="bg-white rounded-2xl border border-gray-100 p-6 text-center hover:shadow-md transition-shadow">
