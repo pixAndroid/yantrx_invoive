@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { Users, Target, Heart, Award, TrendingUp, Globe } from 'lucide-react';
+import { Users, Target, Heart, Award, TrendingUp, Globe, LayoutDashboard, ShoppingCart, CalendarCheck, UtensilsCrossed, MapPin, Car, ScanFace, UserCog, Receipt, Workflow, BrainCircuit, Smartphone, Wrench, CheckCircle2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
@@ -157,51 +157,91 @@ export default function AboutPage() {
       </section>
 
       {/* Mission / Story */}
-      <section className="py-20">
-        <div className="container-wide max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">How it started</h2>
-          <div className="prose prose-gray max-w-none text-gray-600 space-y-4 leading-relaxed">
-            <p>
-              Yantrix Labs was built on one clear idea: businesses need reliable, scalable, and affordable
-              software that solves real operational problems.
-            </p>
-            <p>
-              Founded by a solo developer with hands-on product engineering experience since 2019, the journey
-              began with native Android development in Android Studio using Java/XML, then expanded into React
-              Native CLI for cross-platform apps, full-stack web development, backend systems, database
-              architecture, and SaaS product engineering.
-            </p>
-            <p>
-              Over the years, multiple production-grade solutions have been designed and developed across
-              different industries — combining strong UI/UX, business logic, automation, and scalable
-              architecture. What started as independent development evolved into a technology studio focused
-              on building modern business systems.
-            </p>
-            <p>Yantrix Labs has worked on and developed:</p>
-            <ul>
-              <li>SaaS platforms and admin dashboards</li>
-              <li>Ecommerce websites and custom stores</li>
-              <li>Booking systems for hotels, services, and appointments</li>
-              <li>Restaurant ordering and management systems</li>
-              <li>GPS vehicle and fleet tracking platforms</li>
-              <li>Taxi booking and dispatch systems</li>
-              <li>Attendance systems with AI face recognition</li>
-              <li>Employee management and HR tools</li>
-              <li>Billing, GST invoicing, and business utility tools</li>
-              <li>Workflow automation systems</li>
-              <li>AI-powered business solutions</li>
-              <li>Custom Android, iOS, and Web applications</li>
-              <li>Internal tools for operations and productivity</li>
-            </ul>
-            <p>
-              Today, Yantrix Labs builds practical, secure, and scalable digital products for startups, SMEs,
-              and growing businesses — with a focus on performance, automation, and real business outcomes.
-            </p>
-            <p>
-              Our mission: engineer smart software systems that help businesses save time, reduce manual work,
-              and scale faster.
-            </p>
+      <section className="py-24 bg-white overflow-hidden">
+        <div className="container-wide max-w-5xl mx-auto px-4">
+
+          {/* Section header */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="inline-block h-1 w-10 rounded-full bg-indigo-500" />
+            <span className="text-sm font-semibold uppercase tracking-widest text-indigo-600">Our Story</span>
           </div>
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-10 leading-tight">
+            How it started
+          </h2>
+
+          {/* Intro paragraphs */}
+          <div className="grid md:grid-cols-2 gap-6 mb-14">
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-6">
+              <p className="text-gray-700 leading-relaxed">
+                Yantrix Labs was built on one clear idea: businesses need <strong className="text-indigo-700">reliable, scalable, and affordable software</strong> that solves real operational problems.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-purple-100 bg-purple-50 p-6">
+              <p className="text-gray-700 leading-relaxed">
+                Founded by a solo developer since <strong className="text-purple-700">2019</strong>, the journey began with native Android development, then expanded into React Native, full-stack web, backend systems, and SaaS product engineering.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-gray-600 leading-relaxed mb-10 max-w-3xl">
+            Over the years, multiple production-grade solutions have been designed across different industries —
+            combining strong UI/UX, business logic, automation, and scalable architecture. What started as
+            independent development evolved into a <span className="font-semibold text-gray-800">technology studio</span> focused on building modern business systems.
+          </p>
+
+          {/* Built & Developed heading */}
+          <div className="flex items-center gap-3 mb-8">
+            <span className="inline-block h-1 w-8 rounded-full bg-indigo-400" />
+            <h3 className="text-xl font-bold text-gray-900">Yantrix Labs has worked on and developed:</h3>
+          </div>
+
+          {/* Bullet grid */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+            {[
+              { icon: LayoutDashboard, label: 'SaaS platforms and admin dashboards', color: 'text-indigo-600 bg-indigo-50' },
+              { icon: ShoppingCart,    label: 'Ecommerce websites and custom stores', color: 'text-pink-600 bg-pink-50' },
+              { icon: CalendarCheck,  label: 'Booking systems for hotels, services, and appointments', color: 'text-blue-600 bg-blue-50' },
+              { icon: UtensilsCrossed,label: 'Restaurant ordering and management systems', color: 'text-orange-600 bg-orange-50' },
+              { icon: MapPin,         label: 'GPS vehicle and fleet tracking platforms', color: 'text-green-600 bg-green-50' },
+              { icon: Car,            label: 'Taxi booking and dispatch systems', color: 'text-yellow-600 bg-yellow-50' },
+              { icon: ScanFace,       label: 'Attendance systems with AI face recognition', color: 'text-violet-600 bg-violet-50' },
+              { icon: UserCog,        label: 'Employee management and HR tools', color: 'text-teal-600 bg-teal-50' },
+              { icon: Receipt,        label: 'Billing, GST invoicing, and business utility tools', color: 'text-rose-600 bg-rose-50' },
+              { icon: Workflow,       label: 'Workflow automation systems', color: 'text-cyan-600 bg-cyan-50' },
+              { icon: BrainCircuit,   label: 'AI-powered business solutions', color: 'text-purple-600 bg-purple-50' },
+              { icon: Smartphone,     label: 'Custom Android, iOS, and Web applications', color: 'text-sky-600 bg-sky-50' },
+              { icon: Wrench,         label: 'Internal tools for operations and productivity', color: 'text-amber-600 bg-amber-50' },
+            ].map(({ icon: Icon, label, color }) => (
+              <div
+                key={label}
+                className="flex items-start gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <span className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${color}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="text-sm font-medium text-gray-700 leading-snug">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Today + Mission callout */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="relative rounded-2xl border border-gray-200 bg-gray-50 p-6 overflow-hidden">
+              <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-indigo-100 opacity-40" />
+              <CheckCircle2 className="h-6 w-6 text-indigo-500 mb-3" />
+              <p className="text-gray-700 leading-relaxed text-sm">
+                Today, Yantrix Labs builds <strong className="text-gray-900">practical, secure, and scalable</strong> digital products for startups, SMEs, and growing businesses — with a focus on performance, automation, and real business outcomes.
+              </p>
+            </div>
+            <div className="relative rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-6 overflow-hidden text-white">
+              <div className="absolute -bottom-6 -right-6 h-28 w-28 rounded-full bg-white opacity-10" />
+              <p className="text-xs font-bold uppercase tracking-widest text-indigo-200 mb-2">Our Mission</p>
+              <p className="text-white font-semibold text-base leading-relaxed">
+                Engineer smart software systems that help businesses save time, reduce manual work, and scale faster.
+              </p>
+            </div>
+          </div>
+
         </div>
       </section>
 
