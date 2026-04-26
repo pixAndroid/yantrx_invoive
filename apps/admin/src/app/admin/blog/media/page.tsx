@@ -45,6 +45,7 @@ export default function MediaLibraryPage() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
 
   const fetchMedia = useCallback(async () => {
     setLoading(true);
@@ -204,14 +205,14 @@ export default function MediaLibraryPage() {
                 <input
                   required
                   value={form.url}
-                  onChange={e => setForm(prev => ({ ...prev, url: e.target.value }))}
+                  onChange={e => { setPreviewError(false); setForm(prev => ({ ...prev, url: e.target.value })); }}
                   placeholder="https://example.com/image.jpg"
                   className="w-full bg-gray-800 text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
-              {form.url && (
+              {form.url && !previewError && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={form.url} alt="" className="w-full h-32 object-cover rounded-lg" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img src={form.url} alt="" className="w-full h-32 object-cover rounded-lg" onError={() => setPreviewError(true)} />
               )}
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Original Name *</label>

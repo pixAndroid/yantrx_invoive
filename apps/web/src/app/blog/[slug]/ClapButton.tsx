@@ -18,9 +18,7 @@ export default function ClapButton({ postId, initialClaps }: Props) {
   useEffect(() => {
     let id = localStorage.getItem('blog_session_id');
     if (!id) {
-      id = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      id = crypto.randomUUID();
       localStorage.setItem('blog_session_id', id);
     }
     setSessionId(id);

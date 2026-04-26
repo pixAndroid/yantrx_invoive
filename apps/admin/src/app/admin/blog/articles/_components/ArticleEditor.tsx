@@ -90,6 +90,7 @@ export default function ArticleEditor({ postId }: Props) {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIdRef = useRef<string | undefined>(postId);
+  const dataRef = useRef<ArticleData | null>(null);
 
   const [data, setData] = useState<ArticleData>({
     title: '',
@@ -154,6 +155,7 @@ export default function ArticleEditor({ postId }: Props) {
           seoScore: post.seoScore || 0,
         };
         setData(loaded);
+        dataRef.current = loaded;
         if (editorRef.current) {
           editorRef.current.innerHTML = loaded.contentHtml;
         }
@@ -170,6 +172,7 @@ export default function ArticleEditor({ postId }: Props) {
     setData(prev => {
       const next = { ...prev, [field]: value };
       next.seoScore = calcSeoScore(next);
+      dataRef.current = next;
       return next;
     });
   }, []);
@@ -179,6 +182,7 @@ export default function ArticleEditor({ postId }: Props) {
       const next = { ...prev, title: value };
       if (!prev.id) next.slug = slugify(value);
       next.seoScore = calcSeoScore(next);
+      dataRef.current = next;
       return next;
     });
   };
@@ -189,6 +193,7 @@ export default function ArticleEditor({ postId }: Props) {
     setData(prev => {
       const next = { ...prev, contentHtml: html, content: editorRef.current?.innerText || '' };
       next.seoScore = calcSeoScore(next);
+      dataRef.current = next;
       return next;
     });
     scheduleAutoSave();
@@ -198,6 +203,7 @@ export default function ArticleEditor({ postId }: Props) {
     setData(prev => {
       const next = { ...prev, contentHtml: html, content: html.replace(/<[^>]+>/g, '') };
       next.seoScore = calcSeoScore(next);
+      dataRef.current = next;
       return next;
     });
     scheduleAutoSave();
@@ -212,10 +218,9 @@ export default function ArticleEditor({ postId }: Props) {
   };
 
   const doAutoSave = useCallback(async () => {
+    const current = dataRef.current;
+    if (!current) return;
     setAutoSaveStatus('saving');
-    const current = await new Promise<ArticleData>(resolve => {
-      setData(d => { resolve(d); return d; });
-    });
     try {
       await savePost(current, true);
     } catch {
