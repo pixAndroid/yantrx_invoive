@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate, Phone } from 'lucide-react';
+import { Settings, Shield, Bell, Globe, Database, Key, Save, CheckCircle, LayoutTemplate, Phone, Info } from 'lucide-react';
 import { adminFetch } from '@/lib/api';
 
 const SETTING_SECTIONS = [
@@ -73,6 +73,17 @@ const CONTACT_DEFAULTS = {
   hoursNote: 'Extended support hours during GST filing deadlines (20th – 22nd of each month).',
 };
 
+const ABOUT_STATS_DEFAULTS = {
+  stat1Value: '10+',
+  stat1Label: 'Products Built',
+  stat2Value: '500+',
+  stat2Label: 'Businesses Served',
+  stat3Value: '5+',
+  stat3Label: 'Industries Covered',
+  stat4Value: '3+',
+  stat4Label: 'Years Building',
+};
+
 export default function AdminSettingsPage() {
   const [formData, setFormData] = useState<Record<string, string>>({
     platformName: 'Yantrix',
@@ -94,6 +105,9 @@ export default function AdminSettingsPage() {
   const [homeHeader, setHomeHeader] = useState<Record<string, string>>(HOME_HEADER_DEFAULTS);
   const [headerLoading, setHeaderLoading] = useState(true);
 
+  const [aboutStats, setAboutStats] = useState<Record<string, string>>(ABOUT_STATS_DEFAULTS);
+  const [aboutStatsLoading, setAboutStatsLoading] = useState(true);
+
   const [contactDetails, setContactDetails] = useState<Record<string, string>>(CONTACT_DEFAULTS);
   const [contactLoading, setContactLoading] = useState(true);
 
@@ -111,6 +125,18 @@ export default function AdminSettingsPage() {
       })
       .catch(() => {})
       .finally(() => setHeaderLoading(false));
+
+    adminFetch('/admin/settings/about-stats')
+      .then((res: any) => {
+        if (res.success && res.data) {
+          setAboutStats(prev => ({
+            ...prev,
+            ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null && v !== '')),
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAboutStatsLoading(false));
 
     adminFetch('/admin/settings/contact')
       .then((res: any) => {
@@ -130,6 +156,10 @@ export default function AdminSettingsPage() {
       adminFetch('/admin/settings/home-header', {
         method: 'PUT',
         body: JSON.stringify(homeHeader),
+      }),
+      adminFetch('/admin/settings/about-stats', {
+        method: 'PUT',
+        body: JSON.stringify(aboutStats),
       }),
       adminFetch('/admin/settings/contact', {
         method: 'PUT',
@@ -299,6 +329,48 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+
+        {/* About Page Stats Config */}
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-800 bg-gray-800/50">
+            <Info className="h-5 w-5 text-orange-400" />
+            <h2 className="text-base font-semibold text-white">About Page Stats</h2>
+          </div>
+          <div className="p-6 space-y-6">
+            {aboutStatsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : (
+              <div>
+                <p className="text-sm font-medium text-gray-400 mb-3">Stats displayed on the About page</p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {([1, 2, 3, 4] as const).map(n => (
+                    <div key={n} className="rounded-xl border border-gray-700 bg-gray-800/50 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Stat {n}</p>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-1">Value</label>
+                        <input
+                          type="text"
+                          value={aboutStats[`stat${n}Value`]}
+                          onChange={e => setAboutStats(prev => ({ ...prev, [`stat${n}Value`]: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-1">Label</label>
+                        <input
+                          type="text"
+                          value={aboutStats[`stat${n}Label`]}
+                          onChange={e => setAboutStats(prev => ({ ...prev, [`stat${n}Label`]: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -1078,6 +1078,8 @@ model SiteConfig {
   stat2Label         String?
   stat3Value         String?
   stat3Label         String?
+  stat4Value         String?
+  stat4Label         String?
   // Contact Details
   contactEmail       String?
   contactPhone       String?

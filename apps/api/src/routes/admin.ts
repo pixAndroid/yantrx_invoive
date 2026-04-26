@@ -768,6 +768,51 @@ router.put('/settings/home-header', async (req: AuthenticatedRequest, res: Respo
   } catch (error) { next(error); }
 });
 
+// ─── About Page Stats Config ──────────────────────────────────────────────
+
+const ABOUT_STATS_KEY = 'about_stats';
+
+const ABOUT_STATS_DEFAULTS = {
+  stat1Value: '10+',
+  stat1Label: 'Products Built',
+  stat2Value: '500+',
+  stat2Label: 'Businesses Served',
+  stat3Value: '5+',
+  stat3Label: 'Industries Covered',
+  stat4Value: '3+',
+  stat4Label: 'Years Building',
+};
+
+router.get('/settings/about-stats', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const config = await prisma.siteConfig.findUnique({ where: { key: ABOUT_STATS_KEY } });
+    res.json({ success: true, data: config ?? { key: ABOUT_STATS_KEY, ...ABOUT_STATS_DEFAULTS } });
+  } catch (error) { next(error); }
+});
+
+router.put('/settings/about-stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const ALLOWED_FIELDS = [
+      'stat1Value', 'stat1Label', 'stat2Value', 'stat2Label',
+      'stat3Value', 'stat3Label', 'stat4Value', 'stat4Label',
+    ];
+
+    const data: Record<string, string | null> = {};
+    for (const field of ALLOWED_FIELDS) {
+      if (req.body[field] !== undefined) {
+        data[field] = req.body[field] ?? null;
+      }
+    }
+
+    const config = await prisma.siteConfig.upsert({
+      where: { key: ABOUT_STATS_KEY },
+      create: { key: ABOUT_STATS_KEY, ...data },
+      update: data,
+    });
+    res.json({ success: true, data: config });
+  } catch (error) { next(error); }
+});
+
 // ─── Contact Details Settings ─────────────────────────────────────────────
 
 const CONTACT_DETAILS_KEY = 'contact_details';
