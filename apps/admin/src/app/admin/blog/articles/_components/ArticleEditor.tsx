@@ -409,9 +409,9 @@ export default function ArticleEditor({ postId }: Props) {
         />
 
         {/* Editor */}
-        <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+        <div className="bg-gray-900 border border-gray-700 rounded-xl">
           {/* Editor Toolbar */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50 flex-wrap gap-2">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/80 flex-wrap gap-2 sticky top-0 z-10 rounded-t-xl backdrop-blur-sm">
             <div className="flex items-center gap-1 flex-wrap">
               {/* Mode toggle */}
               <button
