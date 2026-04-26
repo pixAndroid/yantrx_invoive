@@ -5,21 +5,14 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   FileText, BarChart3, Shield, Zap, CheckCircle, Star,
-  ArrowRight, IndianRupee, Users, TrendingUp,
-  Menu, X, LayoutDashboard, ShoppingCart, Building2,
+  ArrowRight, IndianRupee, Users, TrendingUp, LayoutDashboard,
+  ShoppingCart, Building2,
   UtensilsCrossed, Car, MapPin, Briefcase, Settings,
   Smartphone, Cloud, Bot, Repeat, Link2, Headphones, Wrench,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import HeroSection from '@/components/layout/HeroSection';
 import { isAuthenticated, getUserData, apiFetch, isSafeImageUrl } from '@/lib/api';
-
-const NAV_LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/tools', label: 'Tools' },
-  { href: '/services', label: 'Services' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-];
 
 const PRODUCTS = [
   { icon: FileText, title: 'GST Invoice Tool', desc: 'Professional GST billing, invoicing and compliance in one place.', href: '/tools/gst-invoice', color: 'text-indigo-600', badge: 'FREE' },
@@ -148,7 +141,6 @@ const HOME_HEADER_DEFAULTS = {
 };
 
 export default function HomePage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [initials, setInitials] = useState('');
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
@@ -212,158 +204,14 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ─── Navbar ──────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-xl">
-        <div className="container-wide">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">Y</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Yantrix Labs</span>
-            </Link>
-
-            <div className="hidden md:flex items-center gap-8">
-              {NAV_LINKS.map(link => (
-                <Link key={link.href} href={link.href} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="hidden md:flex items-center gap-3">
-              {loggedIn ? (
-                <>
-                  <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 px-4 py-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                  <Link href="/dashboard" className="flex-shrink-0">
-                    <div className="h-9 w-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center ring-2 ring-indigo-200 hover:ring-indigo-400 transition-all">
-                      {businessLogo ? (
-                        <img src={businessLogo} alt={businessName || 'Business Logo'} className="h-full w-full object-contain" />
-                      ) : (
-                        <span className="text-white text-xs font-bold">{initials}</span>
-                      )}
-                    </div>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-gray-900 px-4 py-2">
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/contact"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
-                  >
-                    Get Started
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </>
-              )}
-            </div>
-
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2">
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-2">
-            {NAV_LINKS.map(link => (
-              <Link key={link.href} href={link.href} className="block py-2 text-sm font-medium text-gray-700" onClick={() => setMobileMenuOpen(false)}>
-                {link.label}
-              </Link>
-            ))}
-            <div className="pt-2 space-y-2">
-              {loggedIn ? (
-                <Link href="/dashboard" className="flex items-center gap-2 py-2 text-sm font-medium text-gray-700" onClick={() => setMobileMenuOpen(false)}>
-                  <div className="h-7 w-7 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    {businessLogo ? (
-                      <img src={businessLogo} alt={businessName || 'Business'} className="h-full w-full object-contain" />
-                    ) : (
-                      <span className="text-white text-xs font-bold">{initials}</span>
-                    )}
-                  </div>
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link href="/dashboard" className="block py-2 text-sm font-medium text-gray-700">Dashboard</Link>
-                  <Link href="/contact" className="block rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white">Get Started</Link>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </nav>
-
-      {/* ─── HERO ────────────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-24 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-r from-indigo-400/15 to-purple-400/15 blur-3xl rounded-full pointer-events-none" />
-
-        <div className="container-wide relative">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-4xl mx-auto"
-          >
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 mb-6">
-              <Zap className="h-3.5 w-3.5" />
-              {homeHeader.badgeText}
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight leading-[1.1] mb-6">
-              {homeHeader.titleLine1}
-              <span className="block gradient-text">{homeHeader.titleGradientText}</span>
-            </h1>
-
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-              {homeHeader.description}
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Link
-                href="/tools"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white hover:bg-indigo-700 transition-all active:scale-[0.98] shadow-lg shadow-indigo-200"
-              >
-                {homeHeader.primaryBtnLabel}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-8 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                {homeHeader.secondaryBtnLabel}
-              </Link>
-            </div>
-
-            {/* Stat cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
-              {[
-                { value: homeHeader.stat1Value, label: homeHeader.stat1Label },
-                { value: homeHeader.stat2Value, label: homeHeader.stat2Label },
-                { value: homeHeader.stat3Value, label: homeHeader.stat3Label },
-              ].map((stat, i) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.1 }}
-                  className="bg-white/80 backdrop-blur rounded-2xl border border-gray-100 shadow-sm px-6 py-4 text-center"
-                >
-                  <p className="text-2xl font-bold text-indigo-600">{stat.value}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* ─── Navbar + Hero (premium dark) ───────────────────────────────── */}
+      <HeroSection
+        homeHeader={homeHeader}
+        loggedIn={loggedIn}
+        businessLogo={businessLogo}
+        businessName={businessName}
+        initials={initials}
+      />
 
       {/* ─── TRUST STRIP ─────────────────────────────────────────────────── */}
       <section className="py-16 bg-gray-50 border-y border-gray-100">

@@ -225,6 +225,27 @@
   @apply bg-gray-300;
 }
 
+/* Hero section — particle float */
+@keyframes heroParticleFloat {
+  0%   { transform: translateY(0px)   translateX(0px);   opacity: var(--p-op, 0.12); }
+  50%  { transform: translateY(-10px) translateX(4px);   opacity: calc(var(--p-op, 0.12) * 1.8); }
+  100% { transform: translateY(-6px)  translateX(-4px);  opacity: var(--p-op, 0.12); }
+}
+
+/* Hero data-stream line sweep */
+@keyframes heroStreamSweep {
+  0%   { opacity: 0.04; }
+  50%  { opacity: 0.14; }
+  100% { opacity: 0.04; }
+}
+
+.hero-stream-line-1 {
+  animation: heroStreamSweep 5s ease-in-out infinite;
+}
+.hero-stream-line-2 {
+  animation: heroStreamSweep 7s ease-in-out 2s infinite;
+}
+
 /* Skeleton shimmer */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
