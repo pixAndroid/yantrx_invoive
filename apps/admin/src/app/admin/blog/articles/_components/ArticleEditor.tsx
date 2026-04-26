@@ -6,7 +6,7 @@ import { adminFetch, API_URL, getAdminToken } from '@/lib/api';
 import {
   Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Link2, Image, Code, Quote, ChevronDown, ChevronUp,
-  Save, Eye, EyeOff, Check, Loader2, Type, Search, Upload, X, FileImage,
+  Save, Eye, EyeOff, Check, Loader2, Type, Search, Upload, X, FileImage, Trash2,
 } from 'lucide-react';
 
 interface Category { id: string; name: string; slug: string; color: string | null }
@@ -477,6 +477,19 @@ export default function ArticleEditor({ postId }: Props) {
     requestAnimationFrame(() => {
       if (activeImgEl) setImgRect(activeImgEl.getBoundingClientRect());
     });
+  };
+
+  const deleteImage = () => {
+    if (!activeImgEl) return;
+    const wrapper = activeImgEl.closest('[data-img-block]') as HTMLElement | null;
+    if (wrapper) {
+      wrapper.remove();
+    } else {
+      activeImgEl.remove();
+    }
+    setActiveImgEl(null);
+    setImgRect(null);
+    handleEditorInput();
   };
 
   const startImgResize = (e: ReactMouseEvent<HTMLDivElement>) => {
@@ -1149,6 +1162,15 @@ export default function ArticleEditor({ postId }: Props) {
             className="w-16 bg-gray-700 text-white text-xs px-1.5 py-0.5 rounded border border-gray-600 focus:outline-none focus:border-indigo-500"
           />
           <span className="text-xs text-gray-400">px</span>
+          <div className="w-px h-4 bg-gray-600 mx-1" />
+          <button
+            type="button"
+            title="Delete Image"
+            onClick={deleteImage}
+            className="p-1 text-red-400 hover:text-red-300 hover:bg-gray-700 rounded transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         {/* Resize handle – bottom-right corner */}
