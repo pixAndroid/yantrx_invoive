@@ -1,7 +1,7 @@
 'use client';
 
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { Mail, Phone, Clock, MessageCircle, Headphones, FileText, ChevronRight, CheckCircle2, Building2, Globe } from 'lucide-react';
+import { Mail, Phone, Clock, Headphones, FileText, ChevronRight, CheckCircle2, Building2, Globe } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { API_URL } from '@/lib/api';
 
@@ -72,42 +72,6 @@ export default function ContactPage() {
       .catch(() => {});
   }, []);
 
-  const contactMethods = [
-    {
-      icon: Mail,
-      title: 'Email Support',
-      description: "Send us a detailed message and we'll respond within 2 hours on business days.",
-      value: contact.contactEmail,
-      href: `mailto:${contact.contactEmail}`,
-      iconBg: 'bg-indigo-100',
-      iconColor: 'text-indigo-600',
-      valueBg: 'bg-indigo-50',
-      valueColor: 'text-indigo-700',
-    },
-    {
-      icon: Phone,
-      title: 'Phone Support',
-      description: 'Talk to a real person. Available Monday to Saturday, 9 AM – 6 PM IST.',
-      value: contact.contactPhone,
-      href: contact.contactPhoneHref,
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600',
-      valueBg: 'bg-emerald-50',
-      valueColor: 'text-emerald-700',
-    },
-    {
-      icon: MessageCircle,
-      title: 'Live Chat',
-      description: 'Chat with our team directly in the app. Average response time under 5 minutes.',
-      value: 'Available in-app',
-      href: '/auth/login',
-      iconBg: 'bg-violet-100',
-      iconColor: 'text-violet-600',
-      valueBg: 'bg-violet-50',
-      valueColor: 'text-violet-700',
-    },
-  ];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -153,30 +117,9 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Contact Methods */}
+      {/* Contact Form + Business Info */}
       <section className="py-16 bg-white">
         <div className="container-wide">
-          <div className="grid md:grid-cols-3 gap-6 mb-20">
-            {contactMethods.map(method => (
-              <a
-                key={method.title}
-                href={method.href}
-                className="group relative bg-white rounded-2xl border border-gray-100 p-7 hover:border-indigo-200 hover:shadow-xl transition-all duration-300 text-left overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 to-indigo-50/0 group-hover:from-indigo-50/30 group-hover:to-purple-50/20 transition-all duration-500 rounded-2xl" />
-                <div className={`relative inline-flex h-14 w-14 items-center justify-center rounded-2xl ${method.iconBg} mb-5`}>
-                  <method.icon className={`h-6 w-6 ${method.iconColor}`} />
-                </div>
-                <h3 className="relative font-bold text-gray-900 text-base mb-2">{method.title}</h3>
-                <p className="relative text-sm text-gray-500 mb-4 leading-relaxed">{method.description}</p>
-                <span className={`relative inline-flex items-center gap-1 text-sm font-semibold ${method.valueColor} ${method.valueBg} px-3 py-1 rounded-full`}>
-                  {method.value}
-                </span>
-              </a>
-            ))}
-          </div>
-
-          {/* Contact Form + Business Info */}
           <div className="grid lg:grid-cols-5 gap-10 items-start">
             {/* Form — LEFT */}
             <div className="lg:col-span-3 order-2 lg:order-1">
@@ -314,6 +257,26 @@ export default function ContactPage() {
                 <div className="mt-5 pt-5 border-t border-white/20 flex items-center gap-2 text-sm text-indigo-200">
                   <Globe className="h-4 w-4 flex-shrink-0" />
                   <a href={`https://${contact.officeWebsite}`} className="hover:text-white transition-colors">{contact.officeWebsite}</a>
+                </div>
+              </div>
+
+              {/* Contact Details */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-7">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900">Contact Us</h3>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <a href={`mailto:${contact.contactEmail}`} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition-colors">
+                    <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span>{contact.contactEmail}</span>
+                  </a>
+                  <a href={contact.contactPhoneHref} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition-colors">
+                    <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span>{contact.contactPhone}</span>
+                  </a>
                 </div>
               </div>
 
