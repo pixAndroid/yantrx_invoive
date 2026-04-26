@@ -28,6 +28,7 @@ import crmRoutes from './routes/crm';
 import toolsRoutes from './routes/tools';
 import contactRoutes from './routes/contact';
 import settingsRoutes from './routes/settings';
+import blogRoutes from './routes/blog';
 
 const app = express();
 
@@ -120,6 +121,7 @@ app.use('/api/v1/crm', crmRoutes);
 app.use('/api/v1/tools', toolsRoutes);
 app.use('/api/v1/contact', contactRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/blog', blogRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────────────────────
 app.use((_req, res) => {

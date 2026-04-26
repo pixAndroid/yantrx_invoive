@@ -1114,3 +1114,171 @@ model TeamMember {
 
   @@map("team_members")
 }
+
+// ─── Blog ─────────────────────────────────────────────────────────────────
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum BlogSchemaType {
+  ARTICLE
+  HOWTO
+  FAQ
+  PRODUCT
+  NEWSARTICLE
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  color       String?
+  icon        String?
+  parentId    String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   BlogCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children BlogCategory[] @relation("CategoryHierarchy")
+  posts    BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  color     String?
+  createdAt DateTime @default(now())
+
+  posts BlogPostTag[]
+
+  @@map("blog_tags")
+}
+
+model BlogPost {
+  id             String         @id @default(cuid())
+  title          String
+  slug           String         @unique
+  excerpt        String?
+  content        String         @db.Text
+  contentHtml    String?        @db.Text
+  coverImage     String?
+  status         BlogPostStatus @default(DRAFT)
+  categoryId     String?
+  authorId       String?
+  authorName     String         @default("Yantrix Labs")
+  authorAvatar   String?
+  authorBio      String?
+  readTime       Int?
+  wordCount      Int?
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  isFeatured     Boolean        @default(false)
+  totalViews     Int            @default(0)
+  uniqueViews    Int            @default(0)
+  totalClaps     Int            @default(0)
+  popularityScore Float         @default(0)
+
+  seoTitle        String?
+  seoDescription  String?
+  focusKeyword    String?
+  canonicalUrl    String?
+  ogTitle         String?
+  ogDescription   String?
+  ogImage         String?
+  twitterImage    String?
+  schemaType      BlogSchemaType @default(ARTICLE)
+  breadcrumbTitle String?
+  robotsIndex     Boolean        @default(true)
+  robotsFollow    Boolean        @default(true)
+  seoScore        Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category  BlogCategory?  @relation(fields: [categoryId], references: [id])
+  tags      BlogPostTag[]
+  views     BlogView[]
+  claps     BlogClap[]
+  revisions BlogRevision[]
+
+  @@map("blog_posts")
+}
+
+model BlogPostTag {
+  postId String
+  tagId  String
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("blog_post_tags")
+}
+
+model BlogView {
+  id        String   @id @default(cuid())
+  postId    String
+  sessionId String?
+  ipHash    String?
+  country   String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("blog_views")
+}
+
+model BlogClap {
+  id        String   @id @default(cuid())
+  postId    String
+  sessionId String
+  count     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, sessionId])
+  @@map("blog_claps")
+}
+
+model BlogRevision {
+  id        String   @id @default(cuid())
+  postId    String
+  content   String   @db.Text
+  title     String
+  savedBy   String?
+  createdAt DateTime @default(now())
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("blog_revisions")
+}
+
+model BlogMedia {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  url          String
+  mimeType     String
+  size         Int
+  alt          String?
+  caption      String?
+  folder       String?
+  width        Int?
+  height       Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("blog_media")
+}
