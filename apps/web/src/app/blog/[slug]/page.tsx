@@ -4,8 +4,12 @@ import { notFound } from 'next/navigation';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import ReadingProgress from './ReadingProgress';
 import ClapButton from './ClapButton';
-import ShareButtons from './ShareButtons';
-import { Clock, Eye, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArticleHeader } from '@/components/blog/ArticleHeader';
+import { TableOfContents } from '@/components/blog/TableOfContents';
+import { RelatedPosts } from '@/components/blog/RelatedPosts';
+import { ShareButtons } from '@/components/blog/ShareButtons';
+import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
+import { ArrowLeft, ArrowRight, Eye } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
@@ -34,6 +38,7 @@ interface Post {
   robotsFollow: boolean;
   category: { id: string; name: string; slug: string; color: string | null } | null;
   tags: Array<{ tag: { id: string; name: string; slug: string; color: string | null } }>;
+  isFeatured: boolean;
 }
 
 interface PageProps {
@@ -59,9 +64,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!result) return { title: 'Article Not Found' };
   const { post } = result;
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://yantrixlabs.com';
+
   return {
     title: post.seoTitle || post.title,
     description: post.seoDescription || post.excerpt || undefined,
+    alternates: { canonical: `${siteUrl}/blog/${post.slug}` },
     robots: {
       index: post.robotsIndex,
       follow: post.robotsFollow,
@@ -73,6 +81,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: 'article',
       publishedTime: post.publishedAt || undefined,
       authors: [post.authorName],
+      url: `${siteUrl}/blog/${post.slug}`,
+      siteName: 'Yantrix Labs',
     },
     twitter: {
       card: 'summary_large_image',
@@ -81,11 +91,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: post.ogImage ? [post.ogImage] : post.coverImage ? [post.coverImage] : [],
     },
   };
-}
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function extractToc(html: string): Array<{ id: string; text: string; level: number }> {
@@ -126,6 +131,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     image: post.coverImage || post.ogImage,
     author: { '@type': 'Person', name: post.authorName },
     datePublished: post.publishedAt,
+    url: pageUrl,
     publisher: {
       '@type': 'Organization',
       name: 'Yantrix Labs',
@@ -133,215 +139,222 @@ export default async function BlogPostPage({ params }: PageProps) {
     },
   };
 
+  // Cast for component compatibility (adding missing fields with defaults)
+  const postForComponents = {
+    ...post,
+    isFeatured: post.isFeatured ?? false,
+    totalClaps: post.totalClaps ?? 0,
+    totalViews: post.totalViews ?? 0,
+  };
+
+  const relatedForComponents = related.map(r => ({
+    ...r,
+    isFeatured: false,
+    totalClaps: r.totalClaps ?? 0,
+  }));
+
   return (
     <PublicLayout>
+      {/* Reading progress bar */}
       <ReadingProgress />
 
-      {/* JSON-LD */}
+      {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       <div className="bg-white min-h-screen pt-1">
-        {/* Hero */}
-        <header className="max-w-4xl mx-auto px-4 pt-12 pb-8">
-          {post.category && (
-            <div className="mb-4">
-              <span
-                className="text-xs font-semibold px-3 py-1 rounded-full"
-                style={{
-                  background: post.category.color ? `${post.category.color}20` : '#eef2ff',
-                  color: post.category.color || '#6366f1',
-                }}
-              >
-                {post.category.name}
-              </span>
-            </div>
-          )}
-          <h1 className="text-3xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">
-            {post.title}
-          </h1>
-          {post.excerpt && (
-            <p className="text-xl text-gray-500 leading-relaxed mb-6">{post.excerpt}</p>
-          )}
+        {/* Article Header */}
+        <ArticleHeader post={postForComponents} />
 
-          {/* Author row */}
-          <div className="flex items-center justify-between flex-wrap gap-4 pb-6 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              {post.authorAvatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={post.authorAvatar} alt="" className="h-10 w-10 rounded-full object-cover" />
-              ) : (
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                  {post.authorName.charAt(0)}
-                </div>
-              )}
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{post.authorName}</p>
-                <div className="flex items-center gap-3 text-xs text-gray-400">
-                  <span>{formatDate(post.publishedAt)}</span>
-                  {post.readTime && (
-                    <>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {post.readTime} min read
-                      </span>
-                    </>
-                  )}
-                  <span>·</span>
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
-                    {post.totalViews.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <ShareButtons url={pageUrl} title={post.title} />
-          </div>
-        </header>
+        {/* Share buttons row (below header) */}
+        <div className="max-w-4xl mx-auto px-4 mb-6 flex items-center justify-between flex-wrap gap-3">
+          <Link
+            href="/blog"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            All Articles
+          </Link>
+          <ShareButtons url={pageUrl} title={post.title} />
+        </div>
 
         {/* Cover Image */}
         {post.coverImage && (
-          <div className="max-w-4xl mx-auto px-4 mb-10">
+          <div className="max-w-4xl mx-auto px-4 mb-12">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={post.coverImage}
               alt={post.title}
-              className="w-full h-64 md:h-96 object-cover rounded-2xl shadow-md"
+              className="w-full h-64 md:h-[28rem] object-cover rounded-3xl shadow-xl"
             />
           </div>
         )}
 
         {/* Content + Sidebar */}
-        <div className="max-w-6xl mx-auto px-4 pb-16 flex gap-12">
-          {/* Main Article */}
-          <article className="flex-1 max-w-3xl">
-            <div
-              className="blog-content"
-              dangerouslySetInnerHTML={{ __html: contentHtml }}
-            />
+        <div className="max-w-7xl mx-auto px-4 pb-16">
+          <div className="flex gap-12 items-start">
+            {/* ── Main Article ─────────────────────────────── */}
+            <article className="flex-1 min-w-0">
+              {/* Article body */}
+              <div
+                className="blog-content"
+                dangerouslySetInnerHTML={{ __html: contentHtml }}
+              />
 
-            {/* Tags */}
-            {post.tags.length > 0 && (
-              <div className="mt-10 pt-6 border-t border-gray-100 flex flex-wrap gap-2">
-                {post.tags.map(({ tag }) => (
-                  <Link
-                    key={tag.id}
-                    href={`/blog?tag=${tag.slug}`}
-                    className="text-xs px-3 py-1 rounded-full border hover:bg-gray-50 transition-colors"
-                    style={{ borderColor: tag.color || '#e5e7eb', color: tag.color || '#6b7280' }}
-                  >
-                    #{tag.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* Author Bio */}
-            {post.authorBio && (
-              <div className="mt-10 p-6 bg-gray-50 rounded-2xl">
-                <div className="flex items-start gap-4">
-                  {post.authorAvatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={post.authorAvatar} alt="" className="h-14 w-14 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
-                      {post.authorName.charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-bold text-gray-900">{post.authorName}</p>
-                    <p className="text-gray-600 text-sm mt-1 leading-relaxed">{post.authorBio}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Clap + Share */}
-            <div className="mt-10 flex items-center justify-between py-6 border-t border-b border-gray-100">
-              <ClapButton postId={post.id} initialClaps={post.totalClaps} />
-              <ShareButtons url={pageUrl} title={post.title} />
-            </div>
-
-            {/* Related Articles */}
-            {related.length > 0 && (
-              <div className="mt-10">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Related Articles</h2>
-                <div className="grid sm:grid-cols-3 gap-6">
-                  {related.map(rp => (
-                    <Link key={rp.id} href={`/blog/${rp.slug}`} className="group block">
-                      <article className="bg-gray-50 rounded-xl overflow-hidden hover:bg-gray-100 transition-colors">
-                        {rp.coverImage ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rp.coverImage} alt={rp.title} className="h-32 w-full object-cover" />
-                        ) : (
-                          <div className="h-32 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                            <span className="text-3xl">📄</span>
-                          </div>
-                        )}
-                        <div className="p-4">
-                          <p className="font-semibold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2 leading-snug">
-                            {rp.title}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">{formatDate(rp.publishedAt)}</p>
-                        </div>
-                      </article>
+              {/* Tags */}
+              {post.tags.length > 0 && (
+                <div className="mt-10 pt-6 border-t border-gray-100 flex flex-wrap gap-2">
+                  {post.tags.map(({ tag }) => (
+                    <Link
+                      key={tag.id}
+                      href={`/blog?tag=${tag.slug}`}
+                      className="text-xs px-3 py-1.5 rounded-full border hover:bg-gray-50 transition-colors font-medium"
+                      style={{ borderColor: tag.color || '#e5e7eb', color: tag.color || '#6b7280' }}
+                    >
+                      #{tag.name}
                     </Link>
                   ))}
                 </div>
+              )}
+
+              {/* Clap + Share bar */}
+              <div className="mt-10 flex items-center justify-between py-6 border-t border-b border-gray-100">
+                <ClapButton postId={post.id} initialClaps={post.totalClaps} />
+                <ShareButtons url={pageUrl} title={post.title} />
               </div>
-            )}
 
-            {/* CTA */}
-            <div className="mt-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-8 text-white text-center">
-              <h3 className="text-2xl font-bold mb-2">Ready to transform your business?</h3>
-              <p className="text-indigo-100 mb-6">Join thousands of businesses using Yantrix Labs tools.</p>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 bg-white text-indigo-600 font-semibold px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors"
-              >
-                Get Started Free
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </article>
-
-          {/* TOC Sidebar */}
-          {toc.length > 1 && (
-            <aside className="hidden lg:block w-60 flex-shrink-0">
-              <div className="sticky top-8">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                  Table of Contents
-                </h4>
-                <nav className="space-y-1">
-                  {toc.map(item => (
-                    <a
-                      key={item.id}
-                      href={`#${item.id}`}
-                      className={`block text-sm text-gray-600 hover:text-indigo-600 transition-colors py-1 leading-snug ${
-                        item.level === 3 ? 'pl-3 text-xs' : ''
-                      }`}
-                    >
-                      {item.text}
-                    </a>
-                  ))}
-                </nav>
-
-                <div className="mt-8 flex gap-4 text-xs text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
-                    {post.totalViews.toLocaleString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    👏
-                    {post.totalClaps}
-                  </span>
+              {/* Author Bio */}
+              {post.authorBio && (
+                <div className="mt-10 p-7 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-3xl border border-gray-100">
+                  <div className="flex items-start gap-5">
+                    {post.authorAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={post.authorAvatar}
+                        alt={post.authorName}
+                        className="h-16 w-16 rounded-2xl object-cover flex-shrink-0 shadow-sm"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-2xl flex-shrink-0 shadow-sm">
+                        {post.authorName.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5">Written by</p>
+                      <p className="font-bold text-gray-900 text-lg">{post.authorName}</p>
+                      <p className="text-gray-500 text-sm mt-2 leading-relaxed">{post.authorBio}</p>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Related Posts */}
+              <RelatedPosts posts={relatedForComponents} />
+
+              {/* Newsletter CTA */}
+              <NewsletterCTA />
+
+              {/* Prev / Next Navigation */}
+              {related.length > 0 && (
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Link
+                    href={`/blog/${related[0].slug}`}
+                    className="group flex items-start gap-3 p-5 rounded-2xl border border-gray-100 bg-white hover:shadow-md hover:border-indigo-100 transition-all duration-200"
+                  >
+                    <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 transition-colors mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Previous</p>
+                      <p className="text-sm font-bold text-gray-800 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-snug">
+                        {related[0].title}
+                      </p>
+                    </div>
+                  </Link>
+                  {related[1] && (
+                    <Link
+                      href={`/blog/${related[1].slug}`}
+                      className="group flex items-start gap-3 p-5 rounded-2xl border border-gray-100 bg-white hover:shadow-md hover:border-indigo-100 transition-all duration-200 text-right justify-end"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Next</p>
+                        <p className="text-sm font-bold text-gray-800 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-snug">
+                          {related[1].title}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 transition-colors mt-0.5 flex-shrink-0" />
+                    </Link>
+                  )}
+                </div>
+              )}
+            </article>
+
+            {/* ── Sticky Right Sidebar ──────────────────────── */}
+            <aside className="hidden lg:flex flex-col gap-6 w-64 flex-shrink-0">
+              <div className="sticky top-24 space-y-6">
+                {/* Table of Contents */}
+                {toc.length > 1 && (
+                  <div className="bg-gray-50 rounded-2xl p-5">
+                    <TableOfContents items={toc} />
+                  </div>
+                )}
+
+                {/* Share Buttons */}
+                <div className="bg-gray-50 rounded-2xl p-5">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Share</h4>
+                  <ShareButtons url={pageUrl} title={post.title} />
+                </div>
+
+                {/* Stats */}
+                <div className="bg-gray-50 rounded-2xl p-5">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Stats</h4>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Eye className="h-3.5 w-3.5 text-gray-400" />
+                        Views
+                      </span>
+                      <span className="font-semibold text-gray-800">{post.totalViews.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        👏 Claps
+                      </span>
+                      <span className="font-semibold text-gray-800">{post.totalClaps.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Related in sidebar */}
+                {related.length > 0 && (
+                  <div className="bg-gray-50 rounded-2xl p-5">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+                      Related Articles
+                    </h4>
+                    <div className="space-y-4">
+                      {related.slice(0, 3).map(rp => (
+                        <Link key={rp.id} href={`/blog/${rp.slug}`} className="group flex gap-3 items-start">
+                          <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-indigo-50 to-purple-50">
+                            {rp.coverImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={rp.coverImage} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center">
+                                <span className="text-lg">📄</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700 group-hover:text-indigo-600 transition-colors line-clamp-3 leading-snug">
+                            {rp.title}
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </aside>
-          )}
+          </div>
         </div>
       </div>
     </PublicLayout>
