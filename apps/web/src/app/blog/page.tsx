@@ -53,7 +53,7 @@ export default function BlogPage() {
       .catch(() => {});
   }, []);
 
-  const featured = posts.find(p => p.isFeatured) || posts[0];
+  const featured = posts.find(p => p.isFeatured);
   const remaining = posts.filter(p => p.id !== featured?.id);
 
   // Paginate remaining posts
