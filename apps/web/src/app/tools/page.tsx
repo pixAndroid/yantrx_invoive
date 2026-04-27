@@ -24,6 +24,7 @@ interface CMSTool {
   ctaText: string | null;
   ctaUrl: string | null;
   viewCount: number;
+  sortOrder: number;
 }
 
 const FALLBACK_PRODUCTS = [
@@ -106,8 +107,12 @@ export default function ToolsPage() {
       if (!res.ok) throw new Error('API error');
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        setCmsTools(data.data);
-        if (data.data.length === 0 && !search && !activeCategory) {
+        const sorted = [...data.data].sort((a: CMSTool, b: CMSTool) => {
+          const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+          return orderDiff !== 0 ? orderDiff : a.id.localeCompare(b.id);
+        });
+        setCmsTools(sorted);
+        if (sorted.length === 0 && !search && !activeCategory) {
           setUseFallback(true);
         } else {
           setUseFallback(false);
