@@ -6,6 +6,7 @@ import { adminFetch } from '@/lib/api';
 import {
   BookOpen, Eye, Heart, Star, Plus, Tag, Image, BarChart2,
   FileText, TrendingUp, Clock, CheckCircle, Archive,
+  Edit2, ExternalLink, Trash2, CheckSquare, Square,
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -26,28 +27,57 @@ interface DashboardStats {
     seoScore: number | null;
     publishedAt: string | null;
     coverImage: string | null;
+    authorName: string | null;
+    category: { id: string; name: string; color: string | null } | null;
   }>;
   avgSeoScore: number;
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  PUBLISHED: 'text-green-400',
-  DRAFT: 'text-gray-400',
-  SCHEDULED: 'text-blue-400',
-  ARCHIVED: 'text-orange-400',
+const STATUS_BADGE: Record<string, string> = {
+  DRAFT: 'bg-gray-700 text-gray-300',
+  PUBLISHED: 'bg-green-900/50 text-green-400 border border-green-800',
+  SCHEDULED: 'bg-blue-900/50 text-blue-400 border border-blue-800',
+  ARCHIVED: 'bg-orange-900/50 text-orange-400 border border-orange-800',
 };
 
 export default function BlogDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
+  const loadStats = () => {
+    setLoading(true);
     adminFetch<{ success: boolean; data: DashboardStats }>('/blog/stats/dashboard')
       .then(d => setStats(d.data))
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadStats(); }, []);
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const posts = stats?.topPosts ?? [];
+    setSelected(prev => prev.size === posts.length ? new Set() : new Set(posts.map(p => p.id)));
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) return;
+    try {
+      await adminFetch(`/blog/${id}`, { method: 'DELETE' });
+      loadStats();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to delete article.');
+    }
+  };
 
   if (loading) {
     return (
@@ -82,8 +112,6 @@ export default function BlogDashboardPage() {
     { label: 'Archived', value: stats?.archived ?? 0, icon: Archive, color: 'text-orange-400', bg: 'bg-orange-400/10' },
     { label: 'Avg SEO Score', value: stats?.avgSeoScore ?? 0, icon: Star, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
   ];
-
-  const maxViews = Math.max(...(stats?.topPosts.map(p => p.totalViews) ?? [1]), 1);
 
   return (
     <div className="p-8 bg-gray-950 min-h-screen space-y-8">
@@ -146,54 +174,159 @@ export default function BlogDashboardPage() {
       </div>
 
       {/* Top Posts */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-indigo-400" />
-          Top Performing Articles
-        </h2>
+      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+          <h2 className="text-white font-semibold flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-indigo-400" />
+            Top Performing Articles
+          </h2>
+          <Link
+            href="/admin/blog/articles"
+            className="text-indigo-400 hover:text-indigo-300 text-xs"
+          >
+            View all →
+          </Link>
+        </div>
         {stats?.topPosts.length === 0 ? (
-          <p className="text-gray-500 text-sm">No articles yet.</p>
+          <p className="text-gray-500 text-sm p-6">No articles yet.</p>
         ) : (
-          <div className="space-y-4">
-            {stats?.topPosts.map(post => (
-              <div key={post.id} className="flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-white text-sm font-medium truncate">{post.title}</p>
-                    <span className={`text-xs ${STATUS_COLOR[post.status] || 'text-gray-400'}`}>
+          <table className="w-full">
+            <thead className="bg-gray-800/50">
+              <tr>
+                <th className="px-4 py-3 text-left">
+                  <button onClick={selectAll} className="text-gray-400 hover:text-white">
+                    {selected.size > 0 && selected.size === (stats?.topPosts.length ?? 0) ? (
+                      <CheckSquare className="h-4 w-4" />
+                    ) : (
+                      <Square className="h-4 w-4" />
+                    )}
+                  </button>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Article</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Author</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Views</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Claps</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">SEO</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {stats?.topPosts.map(post => (
+                <tr key={post.id} className="hover:bg-gray-800/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <button onClick={() => toggleSelect(post.id)} className="text-gray-400 hover:text-white">
+                      {selected.has(post.id) ? (
+                        <CheckSquare className="h-4 w-4 text-indigo-400" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      {post.coverImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={post.coverImage}
+                          alt=""
+                          className="h-10 w-16 object-cover rounded-md flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-16 bg-gray-800 rounded-md flex-shrink-0 flex items-center justify-center">
+                          <span className="text-gray-600 text-xs">No img</span>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-medium truncate max-w-[200px]">{post.title}</p>
+                        <p className="text-gray-500 text-xs truncate max-w-[200px]">{post.slug}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {post.category ? (
+                      <span
+                        className="text-xs px-2 py-1 rounded-full"
+                        style={{
+                          background: post.category.color ? `${post.category.color}20` : '#374151',
+                          color: post.category.color || '#9ca3af',
+                        }}
+                      >
+                        {post.category.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-1 rounded-full ${STATUS_BADGE[post.status] ?? 'bg-gray-700 text-gray-300'}`}>
                       {post.status}
                     </span>
-                  </div>
-                  <div className="w-full bg-gray-800 rounded-full h-1.5">
-                    <div
-                      className="bg-indigo-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.round((post.totalViews / maxViews) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-gray-400 flex-shrink-0">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
-                    {post.totalViews.toLocaleString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-3 w-3" />
-                    {post.totalClaps}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Star className="h-3 w-3" />
-                    {post.seoScore ?? '-'}
-                  </span>
-                  <Link
-                    href={`/admin/blog/articles/${post.id}/edit`}
-                    className="text-indigo-400 hover:text-indigo-300"
-                  >
-                    Edit
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-sm">{post.authorName ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                    {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-1 text-gray-400 text-xs">
+                      <Eye className="h-3 w-3" />
+                      {post.totalViews.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-1 text-gray-400 text-xs">
+                      <Heart className="h-3 w-3" />
+                      {post.totalClaps}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {post.seoScore != null ? (
+                      <span
+                        className={`text-xs font-medium flex items-center gap-1 ${
+                          post.seoScore >= 80
+                            ? 'text-green-400'
+                            : post.seoScore >= 50
+                            ? 'text-yellow-400'
+                            : 'text-red-400'
+                        }`}
+                      >
+                        <Star className="h-3 w-3" />
+                        {post.seoScore}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/blog/articles/${post.id}/edit`}
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Link>
+                      <a
+                        href={`/blog/${post.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        onClick={() => handleDelete(post.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
