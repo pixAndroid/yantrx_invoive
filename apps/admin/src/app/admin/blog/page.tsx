@@ -70,9 +70,13 @@ export default function BlogDashboardPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this article?')) return;
-    await adminFetch(`/blog/${id}`, { method: 'DELETE' });
-    loadStats();
+    if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) return;
+    try {
+      await adminFetch(`/blog/${id}`, { method: 'DELETE' });
+      loadStats();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to delete article.');
+    }
   };
 
   if (loading) {
