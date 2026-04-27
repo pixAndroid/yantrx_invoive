@@ -28,7 +28,7 @@ export function ShareButtons({ url, title, compact = false }: Props) {
     : 'p-2.5 rounded-xl transition-all duration-150 hover:scale-110 shadow-sm';
 
   return (
-    <div className={`flex items-center gap-2 ${compact ? '' : ''}`}>
+    <div className="flex items-center gap-2">
       {!compact && <span className="text-sm text-gray-400 font-medium mr-1">Share</span>}
       <a
         href={twitterUrl}

@@ -15,7 +15,8 @@ export function NewsletterCTA({ onSubscribe }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!email || !emailRegex.test(email)) return;
     setStatus('loading');
     try {
       if (onSubscribe) {
