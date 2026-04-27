@@ -120,6 +120,7 @@ export default function ArticleEditor({ postId }: Props) {
 
   // Media picker state
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'inline' | 'cover'>('inline');
   const [pickerMedia, setPickerMedia] = useState<MediaItem[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
@@ -363,10 +364,11 @@ export default function ArticleEditor({ postId }: Props) {
     if (sel && sel.rangeCount > 0) {
       savedRangeRef.current = sel.getRangeAt(0).cloneRange();
     }
-    openMediaPicker();
+    openMediaPicker('inline');
   };
 
-  const openMediaPicker = async () => {
+  const openMediaPicker = async (mode: 'inline' | 'cover' = 'inline') => {
+    setPickerMode(mode);
     setPickerSearch('');
     setPickerError(null);
     setMediaPickerOpen(true);
@@ -382,7 +384,11 @@ export default function ArticleEditor({ postId }: Props) {
   };
 
   const handlePickerSelect = (url: string) => {
-    insertImageAtCursor(url);
+    if (pickerMode === 'cover') {
+      update('coverImage', url);
+    } else {
+      insertImageAtCursor(url);
+    }
     setMediaPickerOpen(false);
   };
 
@@ -828,12 +834,23 @@ export default function ArticleEditor({ postId }: Props) {
         {/* Cover Image */}
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-3">
           <h3 className="text-white font-semibold text-sm">Cover Image</h3>
-          <input
-            value={data.coverImage}
-            onChange={e => update('coverImage', e.target.value)}
-            placeholder="https://example.com/image.jpg"
-            className="w-full bg-gray-800 text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-indigo-500 placeholder-gray-600"
-          />
+          <div className="flex gap-2">
+            <input
+              value={data.coverImage}
+              onChange={e => update('coverImage', e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              className="flex-1 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-indigo-500 placeholder-gray-600"
+            />
+            <button
+              type="button"
+              onClick={() => openMediaPicker('cover')}
+              className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shrink-0"
+              title="Pick from media library"
+            >
+              <FileImage className="h-4 w-4" />
+              Pick
+            </button>
+          </div>
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={data.coverImage} alt="" className="w-full h-32 object-cover rounded-lg" />
