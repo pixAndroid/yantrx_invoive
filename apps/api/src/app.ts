@@ -30,6 +30,7 @@ import toolsRoutes from './routes/tools';
 import contactRoutes from './routes/contact';
 import settingsRoutes from './routes/settings';
 import blogRoutes from './routes/blog';
+import faqRoutes from './routes/faq';
 
 const app = express();
 
@@ -126,6 +127,7 @@ app.use('/api/v1/tools', toolsRoutes);
 app.use('/api/v1/contact', contactRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/blog', blogRoutes);
+app.use('/api/v1/faqs', faqRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────────────────────
 app.use((_req, res) => {
