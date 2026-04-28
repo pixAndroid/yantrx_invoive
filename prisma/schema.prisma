@@ -1282,3 +1282,17 @@ model BlogMedia {
 
   @@map("blog_media")
 }
+
+// ─── FAQs ─────────────────────────────────────────────────────────────────
+
+model Faq {
+  id          String   @id @default(cuid())
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("faqs")
+}

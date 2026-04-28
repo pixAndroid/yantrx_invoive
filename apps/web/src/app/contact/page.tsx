@@ -23,28 +23,34 @@ const CONTACT_DEFAULTS = {
   hoursNote: 'Extended support hours during GST filing deadlines (20th – 22nd of each month).',
 };
 
-const FAQS = [
+const DEFAULT_FAQS = [
   {
+    id: 'default-1',
     question: 'How do I get started with Yantrix?',
     answer: 'Sign up for a free account at yantrix.in/auth/register. Add your business GSTIN, and you can start creating invoices immediately. No credit card required.',
   },
   {
+    id: 'default-2',
     question: 'Can I import my existing data?',
     answer: 'Yes. You can import customers and products via CSV. For invoice history, contact our support team and we\'ll help you migrate your data.',
   },
   {
+    id: 'default-3',
     question: 'Is Yantrix GST compliant?',
     answer: 'Absolutely. Yantrix is fully compliant with the CGST Act, SGST Act, and IGST Act. Our invoices meet all requirements including e-invoicing for applicable businesses.',
   },
   {
+    id: 'default-4',
     question: 'What payment methods do you accept?',
     answer: 'We accept all major credit/debit cards, UPI, net banking, and wallets through our payment partner Razorpay.',
   },
   {
+    id: 'default-5',
     question: 'Can I cancel my subscription anytime?',
     answer: 'Yes. You can cancel your subscription from Settings > Billing. Your plan remains active until the end of the billing period.',
   },
   {
+    id: 'default-6',
     question: 'Do you offer a free trial?',
     answer: 'Yes. Our Free plan is available with no time limit. Paid plans come with a 14-day money-back guarantee.',
   },
@@ -55,8 +61,9 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [contact, setContact] = useState(CONTACT_DEFAULTS);
+  const [faqs, setFaqs] = useState(DEFAULT_FAQS);
 
   useEffect(() => {
     fetch(`${API_URL}/settings/contact-details`)
@@ -67,6 +74,15 @@ export default function ContactPage() {
             ...prev,
             ...Object.fromEntries(Object.entries(res.data).filter(([, v]) => v != null && v !== '')),
           }));
+        }
+      })
+      .catch(() => {});
+
+    fetch(`${API_URL}/faqs/public`)
+      .then(r => r.json())
+      .then((res: any) => {
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setFaqs(res.data);
         }
       })
       .catch(() => {});
@@ -337,16 +353,16 @@ export default function ContactPage() {
           </div>
 
           <div className="space-y-3">
-            {FAQS.map((faq, idx) => (
-              <div key={idx} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            {faqs.map((faq) => (
+              <div key={faq.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <button
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
                   className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
                 >
                   <span className="font-medium text-gray-900 text-sm">{faq.question}</span>
-                  <ChevronRight className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform ${openFaq === idx ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform ${openFaq === faq.id ? 'rotate-90' : ''}`} />
                 </button>
-                {openFaq === idx && (
+                {openFaq === faq.id && (
                   <div className="px-6 pb-5">
                     <p className="text-sm text-gray-600 leading-relaxed">{faq.answer}</p>
                   </div>
