@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenue[]>([]);
   const [planFeatures, setPlanFeatures] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeBar, setActiveBar] = useState<number | null>(null);
   const router = useRouter();
   const userData = getUserData();
   const firstName = userData.name?.split(' ')[0] || 'there';
@@ -161,6 +162,20 @@ export default function DashboardPage() {
   const maxRevenue = Math.max(...chartData, 1);
   const currentMonth = new Date().getMonth();
 
+  const niceMax = (() => {
+    if (maxRevenue <= 1) return 100;
+    const mag = Math.pow(10, Math.floor(Math.log10(maxRevenue)));
+    const n = maxRevenue / mag;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+  })();
+  const Y_TICKS = 4;
+  const CHART_HEIGHT = 160;
+  const yTickValues = Array.from({ length: Y_TICKS + 1 }, (_, i) => (niceMax / Y_TICKS) * i);
+  const formatRevenue = (v: number) =>
+    v >= 100000 ? `₹${(v / 100000).toFixed(1)}L`
+    : v >= 1000 ? `₹${(v / 1000).toFixed(0)}K`
+    : `₹${Math.round(v)}`;
+
   const QUICK_ACTIONS = [
     { href: '/invoices/new', label: 'Create Invoice', icon: FileText, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', hoverBg: 'hover:bg-indigo-50', hoverBorder: 'hover:border-indigo-200' },
     { href: '/customers/new', label: 'Add Customer', icon: Users, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', hoverBg: 'hover:bg-emerald-50', hoverBorder: 'hover:border-emerald-200' },
@@ -254,55 +269,103 @@ export default function DashboardPage() {
           </div>
 
           {loading ? (
-            <div className="flex items-end gap-1.5 h-44 px-1">
-              {MONTHS.map((_, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5">
-                  <div className="w-full rounded-t-md skeleton" style={{ height: `${30 + (idx % 5) * 14}px` }} />
-                  <span className="text-[10px] text-gray-300">{MONTHS[idx]}</span>
-                </div>
-              ))}
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-end gap-1" style={{ height: `${CHART_HEIGHT + 28}px` }}>
+                {MONTHS.map((_, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center justify-end gap-1.5">
+                    <div className="w-full rounded-t-md skeleton" style={{ height: `${30 + (idx % 5) * 14}px` }} />
+                    <span className="text-[10px] text-gray-300">{MONTHS[idx]}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="shrink-0 flex flex-col-reverse justify-between" style={{ width: '38px', height: `${CHART_HEIGHT}px`, marginBottom: '28px' }}>
+                {yTickValues.map((_, i) => (
+                  <div key={i} className="skeleton h-2.5 rounded w-full" />
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="flex items-end gap-1.5 h-44 px-1">
-              {chartData.map((value, idx) => {
-                const height = Math.max(4, (value / maxRevenue) * 160);
-                const isCurrentMonth = idx === currentMonth;
-                const hasValue = value > 0;
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group/bar">
-                    <div
-                      className="w-full rounded-t-md relative overflow-hidden cursor-pointer transition-all duration-200 group-hover/bar:brightness-95"
-                      style={{ height: `${height}px` }}
-                    >
-                      <div className="absolute inset-0 bg-gray-100/80 rounded-t-md" />
-                      {hasValue && (
-                        <div
-                          className={`absolute bottom-0 left-0 right-0 rounded-t-md transition-all duration-300 ${
-                            isCurrentMonth
-                              ? 'bg-gradient-to-t from-indigo-600 to-violet-500'
-                              : 'bg-gradient-to-t from-indigo-400 to-indigo-300'
-                          }`}
-                          style={{ height: '100%' }}
-                        />
-                      )}
-                      {hasValue && (
-                        <div className="absolute inset-x-0 -top-8 flex justify-center opacity-0 group-hover/bar:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
-                          <span className="text-[10px] font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-md whitespace-nowrap">
-                            {value >= 100000
-                              ? `₹${(value / 100000).toFixed(1)}L`
-                              : value >= 1000
-                              ? `₹${(value / 1000).toFixed(1)}K`
-                              : `₹${Math.round(value)}`}
-                          </span>
+            <div className="flex gap-2">
+              {/* Bars + gridlines */}
+              <div className="relative flex-1" style={{ height: `${CHART_HEIGHT + 28}px` }}>
+                {/* Horizontal gridlines */}
+                {yTickValues.map((tick, i) => (
+                  <div
+                    key={i}
+                    className="absolute left-0 right-0 border-t border-dashed border-gray-100"
+                    style={{ bottom: `${28 + (tick / niceMax) * CHART_HEIGHT}px` }}
+                  />
+                ))}
+                {/* Bars */}
+                <div className="absolute inset-x-0 bottom-0 top-0 flex items-end gap-1">
+                  {chartData.map((value, idx) => {
+                    const barH = Math.max(4, (value / niceMax) * CHART_HEIGHT);
+                    const isCurrentMonth = idx === currentMonth;
+                    const hasValue = value > 0;
+                    const isActive = activeBar === idx;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex-1 flex flex-col items-center group/bar cursor-pointer"
+                        style={{ height: '100%' }}
+                        onClick={() => setActiveBar(isActive ? null : idx)}
+                      >
+                        {/* Chart area (flex-1) with tooltip + bar */}
+                        <div className="relative flex-1 w-full flex items-end">
+                          {/* Tooltip */}
+                          {hasValue && (
+                            <div
+                              className={`absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-all duration-150 ${
+                                isActive
+                                  ? 'opacity-100 -translate-y-1'
+                                  : 'opacity-0 group-hover/bar:opacity-100 group-hover/bar:-translate-y-1'
+                              }`}
+                              style={{ bottom: `${barH + 8}px` }}
+                            >
+                              <div className="bg-gray-900 text-white rounded-xl shadow-2xl px-3 py-2 whitespace-nowrap text-center min-w-[64px]">
+                                <p className="text-[9px] text-gray-400 font-medium leading-none mb-1">{MONTHS[idx]} {currentYear}</p>
+                                <p className="text-xs font-bold leading-none">{formatRevenue(value)}</p>
+                              </div>
+                              <div className="w-0 h-0 absolute left-1/2 -translate-x-1/2 top-full border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-gray-900" />
+                            </div>
+                          )}
+                          {/* Bar */}
+                          <div
+                            className="w-full rounded-t-lg relative overflow-hidden transition-all duration-200"
+                            style={{ height: `${barH}px` }}
+                          >
+                            <div className="absolute inset-0 rounded-t-lg bg-gray-100/80" />
+                            {hasValue && (
+                              <div
+                                className={`absolute inset-0 rounded-t-lg transition-all duration-300 ${
+                                  isCurrentMonth || isActive
+                                    ? 'bg-gradient-to-t from-indigo-600 to-violet-500'
+                                    : 'bg-gradient-to-t from-indigo-400 to-indigo-300 group-hover/bar:from-indigo-500 group-hover/bar:to-violet-400'
+                                }`}
+                              />
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <span className={`text-[10px] font-medium transition-colors ${isCurrentMonth ? 'text-indigo-600' : 'text-gray-400'}`}>
-                      {MONTHS[idx]}
-                    </span>
-                  </div>
-                );
-              })}
+                        {/* Month label */}
+                        <span className={`text-[10px] font-medium mt-1.5 leading-none ${isCurrentMonth ? 'text-indigo-600' : 'text-gray-400'}`}>
+                          {MONTHS[idx]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Y-axis labels */}
+              <div
+                className="flex flex-col-reverse justify-between shrink-0"
+                style={{ width: '38px', height: `${CHART_HEIGHT}px`, marginBottom: '28px' }}
+              >
+                {yTickValues.map((tick, i) => (
+                  <span key={i} className="text-[9px] font-medium text-gray-400 text-right leading-none">
+                    {formatRevenue(tick)}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </motion.div>
