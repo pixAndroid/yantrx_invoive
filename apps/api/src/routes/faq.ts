@@ -43,7 +43,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
     const { question, answer, isPublished } = req.body;
 
     if (!question || !answer) {
-      res.status(400).json({ success: false, error: 'question and answer are required' });
+      res.status(400).json({ success: false, error: 'Question and answer are required' });
       return;
     }
 
@@ -71,7 +71,7 @@ router.put('/reorder', async (req: AuthenticatedRequest, res: Response, next: Ne
     const { ids } = req.body as { ids: string[] };
 
     if (!Array.isArray(ids)) {
-      res.status(400).json({ success: false, error: 'ids array is required' });
+      res.status(400).json({ success: false, error: 'A valid array of FAQ IDs is required for reordering' });
       return;
     }
 

@@ -135,8 +135,11 @@ export default function AdminFaqPage() {
       if (data.success) {
         setFaqs(prev => prev.map(f => f.id === faq.id ? data.data : f));
       }
-    } catch {}
-    setActionLoading(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update FAQ visibility');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // ─── Drag-and-drop reordering ──────────────────────────────────────────────
@@ -168,8 +171,11 @@ export default function AdminFaqPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ids: faqs.map(f => f.id) }),
       });
-    } catch {}
-    setReordering(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save FAQ order');
+    } finally {
+      setReordering(false);
+    }
   };
 
   return (
