@@ -190,7 +190,7 @@ router.post('/razorpay-order', async (req: AuthenticatedRequest, res: Response, 
     const prefill = {
       name: req.user!.name || business?.name || '',
       email: req.user!.email || business?.email || '',
-      contact: req.user!.phone || business?.phone || '',
+      contact: business?.phone || req.user!.phone || '',
     };
 
     res.json({
