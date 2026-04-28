@@ -65,6 +65,53 @@ router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunct
       data: { status: 'EXPIRED' },
     });
 
+    // Auto-renew free plan when no premium plan is active and the free plan is expired
+    const activeStatuses = ['ACTIVE', 'TRIAL'] as const;
+    const activePremiumSub = await prisma.subscription.findFirst({
+      where: {
+        businessId,
+        status: { in: activeStatuses },
+        plan: { slug: { not: 'free' } },
+      },
+    });
+
+    if (!activePremiumSub) {
+      const expiredFreeSub = await prisma.subscription.findFirst({
+        where: {
+          businessId,
+          status: 'EXPIRED',
+          plan: { slug: 'free' },
+        },
+        orderBy: { endDate: 'desc' },
+        include: { plan: true },
+      });
+
+      if (expiredFreeSub) {
+        // Check there is no already-active free subscription (edge case guard)
+        const activeFreeSub = await prisma.subscription.findFirst({
+          where: { businessId, status: { in: activeStatuses }, plan: { slug: 'free' } },
+        });
+
+        if (!activeFreeSub) {
+          const { endDate: newEndDate, amount: newAmount } = getPlanBillingDetails(expiredFreeSub.plan);
+          await prisma.subscription.create({
+            data: {
+              businessId,
+              planId: expiredFreeSub.planId,
+              status: 'ACTIVE',
+              startDate: new Date(),
+              endDate: newEndDate,
+              amount: newAmount,
+            },
+          });
+          await prisma.business.update({
+            where: { id: businessId },
+            data: { planId: expiredFreeSub.planId },
+          });
+        }
+      }
+    }
+
     const subs = await prisma.subscription.findMany({
       where: { businessId },
       include: { plan: true },
